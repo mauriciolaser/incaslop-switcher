@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(grep -E '\\\\.\\(md|txt|json|js|jsx|ts|tsx|html|css|glb\\)$')",
+      "Bash(npx vite:*)"
+    ]
+  }
+}

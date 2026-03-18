@@ -1,0 +1,46 @@
+import { useGame } from '../context/GameContext'
+
+export default function GameOver() {
+  const { phase, lastResult, fighter1, fighter2, nextRound } = useGame()
+
+  if (phase !== 'result' || !lastResult) return null
+
+  const winner = lastResult.winnerSide === 'left' ? fighter1 : fighter2
+
+  return (
+    <div className="modal-overlay">
+      <div className="result-modal">
+        <h2 className="result-title">Pelea Terminada!</h2>
+
+        <div className="winner-announce">
+          <span className="winner-name">{winner.name}</span>
+          <span className="winner-label">GANA!</span>
+        </div>
+
+        <div className="winner-hp">
+          HP restante: {winner.hp} / {winner.maxHp}
+        </div>
+
+        {lastResult.betResult === 'win' && (
+          <div className="bet-result win">
+            Ganaste +{lastResult.stake} monedas!
+          </div>
+        )}
+        {lastResult.betResult === 'lose' && (
+          <div className="bet-result lose">
+            Perdiste -{lastResult.stake} monedas
+          </div>
+        )}
+        {lastResult.betResult === 'none' && (
+          <div className="bet-result none">
+            No apostaste esta ronda
+          </div>
+        )}
+
+        <button className="next-round-btn" onClick={nextRound}>
+          Siguiente Ronda
+        </button>
+      </div>
+    </div>
+  )
+}

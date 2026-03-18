@@ -1,0 +1,516 @@
+.game-container {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+/* === HUD === */
+.battle-hud {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 24px;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 8px 24px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+}
+
+.hud-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.hud-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #888;
+}
+
+.hud-value {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.hud-value.coins {
+  color: #ffcc00;
+}
+
+.hud-value.phase {
+  color: #66ccff;
+  font-size: 14px;
+}
+
+/* === Health Bars === */
+.health-bars-overlay {
+  position: absolute;
+  top: 70px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 24px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.health-bar-container {
+  width: 280px;
+}
+
+.health-bar-container.right {
+  text-align: right;
+}
+
+.fighter-name {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  text-shadow: 0 0 8px rgba(0,0,0,0.8);
+}
+
+.health-bar-container.left .fighter-name {
+  color: #ff6644;
+}
+
+.health-bar-container.right .fighter-name {
+  color: #4488ff;
+}
+
+.live-odds {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffcc00;
+  margin-left: 8px;
+}
+
+.health-bar-container.right .live-odds {
+  margin-left: 0;
+  margin-right: 8px;
+}
+
+.health-bar-bg {
+  width: 100%;
+  height: 14px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 7px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+.health-bar-fill {
+  height: 100%;
+  border-radius: 7px;
+  transition: width 0.4s ease, background-color 0.4s ease;
+}
+
+.health-bar-text {
+  font-size: 11px;
+  margin-top: 2px;
+  color: #ccc;
+}
+
+.fighter-stats {
+  font-size: 10px;
+  color: #888;
+  margin-top: 2px;
+}
+
+.fighter-efectos {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.health-bar-container.right .fighter-efectos {
+  justify-content: flex-end;
+}
+
+.efecto-badge {
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: #000;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* === Battle Log === */
+.battle-log {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  width: 320px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 12px;
+  padding: 12px;
+  z-index: 10;
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(8px);
+}
+
+.battle-log-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #666;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding-bottom: 4px;
+}
+
+.log-entry {
+  font-size: 12px;
+  padding: 3px 0;
+  line-height: 1.4;
+}
+
+.log-hit { color: #ddd; }
+.log-crit { color: #ff4444; font-weight: 700; }
+.log-miss { color: #888; font-style: italic; }
+.log-death { color: #ff6600; font-weight: 700; }
+.log-info { color: #666; font-style: italic; }
+.log-special { color: #cc88ff; font-weight: 700; }
+.log-dot { color: #44cc44; font-style: italic; }
+.log-stun { color: #ffcc44; font-style: italic; }
+
+.battle-log::-webkit-scrollbar {
+  width: 4px;
+}
+.battle-log::-webkit-scrollbar-track {
+  background: transparent;
+}
+.battle-log::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 2px;
+}
+
+/* === Modal Overlay === */
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(4px);
+}
+
+/* === Betting Modal === */
+.betting-modal {
+  background: linear-gradient(145deg, #1a1a2e, #16213e);
+  border: 1px solid rgba(255, 170, 0, 0.3);
+  border-radius: 20px;
+  padding: 32px;
+  text-align: center;
+  max-width: 560px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+.betting-modal h2 {
+  font-size: 24px;
+  color: #ffcc00;
+  margin-bottom: 16px;
+}
+
+.timer-circle {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 16px;
+}
+
+.timer-circle svg {
+  width: 100%;
+  height: 100%;
+}
+
+.timer-circle circle:last-child {
+  transition: stroke-dasharray 1s linear;
+}
+
+.timer-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffaa00;
+}
+
+.stake-display {
+  font-size: 16px;
+  margin-bottom: 20px;
+  color: #aaa;
+}
+
+.stake-amount {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffcc00;
+}
+
+/* === Odds Bar === */
+.odds-bar-container {
+  margin-bottom: 16px;
+}
+
+.odds-bar {
+  display: flex;
+  height: 32px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.odds-fill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  transition: width 0.4s ease;
+  min-width: 40px;
+}
+
+.odds-fill.left {
+  background: linear-gradient(90deg, #ff6644, #cc4422);
+}
+
+.odds-fill.right {
+  background: linear-gradient(90deg, #2266cc, #4488ff);
+}
+
+.odds-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.odds-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #666;
+  visibility: hidden;
+}
+
+.odds-label.left { visibility: visible; }
+.odds-label.right { visibility: visible; }
+
+.fighter-odds {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 8px;
+  color: #ffcc00;
+}
+
+.fighters-preview {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.fighter-card {
+  flex: 1;
+  padding: 16px;
+  border-radius: 12px;
+  border: 2px solid rgba(255,255,255,0.1);
+  transition: border-color 0.3s, transform 0.2s;
+}
+
+.fighter-card.left {
+  background: rgba(255, 100, 68, 0.1);
+}
+
+.fighter-card.right {
+  background: rgba(68, 136, 255, 0.1);
+}
+
+.fighter-card.selected {
+  border-color: #ffcc00;
+  transform: scale(1.03);
+  box-shadow: 0 0 20px rgba(255, 204, 0, 0.2);
+}
+
+.fighter-card-name {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.fighter-card.left .fighter-card-name { color: #ff6644; }
+.fighter-card.right .fighter-card-name { color: #4488ff; }
+
+.fighter-card-stats {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vs-divider {
+  font-size: 28px;
+  font-weight: 900;
+  color: #ffcc00;
+  text-shadow: 0 0 20px rgba(255, 204, 0, 0.4);
+}
+
+.bet-button {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.bet-button.bet-left {
+  background: linear-gradient(135deg, #ff6644, #cc4422);
+  color: white;
+}
+
+.bet-button.bet-right {
+  background: linear-gradient(135deg, #4488ff, #2266cc);
+  color: white;
+}
+
+.bet-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.bet-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.no-coins-warning {
+  color: #ff4444;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.start-early-btn {
+  padding: 10px 28px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ccc;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.start-early-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+/* === Result Modal === */
+.result-modal {
+  background: linear-gradient(145deg, #1a1a2e, #16213e);
+  border: 1px solid rgba(255, 204, 0, 0.3);
+  border-radius: 20px;
+  padding: 40px;
+  text-align: center;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+.result-title {
+  font-size: 20px;
+  color: #888;
+  margin-bottom: 16px;
+}
+
+.winner-announce {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.winner-name {
+  font-size: 28px;
+  font-weight: 900;
+  color: #ffcc00;
+  text-shadow: 0 0 20px rgba(255, 204, 0, 0.3);
+}
+
+.winner-label {
+  font-size: 14px;
+  letter-spacing: 3px;
+  color: #aaa;
+}
+
+.winner-hp {
+  font-size: 14px;
+  color: #888;
+  margin-bottom: 20px;
+}
+
+.bet-result {
+  font-size: 18px;
+  font-weight: 700;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.bet-result.win {
+  background: rgba(0, 200, 0, 0.15);
+  color: #44ff44;
+  border: 1px solid rgba(0, 200, 0, 0.3);
+}
+
+.bet-result.lose {
+  background: rgba(200, 0, 0, 0.15);
+  color: #ff4444;
+  border: 1px solid rgba(200, 0, 0, 0.3);
+}
+
+.bet-result.none {
+  background: rgba(255, 255, 255, 0.05);
+  color: #888;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.next-round-btn {
+  padding: 12px 32px;
+  background: linear-gradient(135deg, #ffcc00, #ff9900);
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a2e;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.next-round-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 204, 0, 0.3);
+}
