@@ -2,6 +2,7 @@ import { useRef, useEffect, useMemo } from 'react'
 import { useGLTF } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { Box3, Vector3 } from 'three'
+import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
 export default function Fighter({ modelPath, position, opponentPosition, side, hp, maxHp, isAttacking, alive, onDebug }) {
   const outerRef = useRef()
@@ -28,9 +29,9 @@ export default function Fighter({ modelPath, position, opponentPosition, side, h
     logHierarchy(scene)
   }, [scene, side])
 
-  // Deep clone with independent materials, centered at origin
+  // Deep clone with SkeletonUtils (properly re-binds bones for SkinnedMesh)
   const clonedScene = useMemo(() => {
-    const clone = scene.clone(true)
+    const clone = skeletonClone(scene)
     clone.traverse((child) => {
       if (child.isMesh) {
         child.castShadow = true
@@ -40,14 +41,6 @@ export default function Fighter({ modelPath, position, opponentPosition, side, h
         }
       }
     })
-    // Center the model geometry so it sits at the group's origin
-    const box = new Box3().setFromObject(clone)
-    const center = new Vector3()
-    box.getCenter(center)
-    clone.position.set(-center.x, -box.min.y, -center.z)
-
-    console.log(`%c[${side}] clone center: (${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)})  min.y: ${box.min.y.toFixed(2)}  final offset: (${clone.position.x.toFixed(2)}, ${clone.position.y.toFixed(2)}, ${clone.position.z.toFixed(2)})`, 'color: cyan')
-
     return clone
   }, [scene, side])
 
