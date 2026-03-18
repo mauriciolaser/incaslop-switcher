@@ -15,6 +15,19 @@ export default function Fighter({ modelPath, position, opponentPosition, side, h
   const prevHpRef = useRef(hp)
   const debugFrameRef = useRef(0)
 
+  // Log full scene hierarchy on first load
+  useEffect(() => {
+    const logHierarchy = (obj, indent = '') => {
+      const pos = `pos(${obj.position.x.toFixed(2)}, ${obj.position.y.toFixed(2)}, ${obj.position.z.toFixed(2)})`
+      const scl = `scl(${obj.scale.x.toFixed(2)}, ${obj.scale.y.toFixed(2)}, ${obj.scale.z.toFixed(2)})`
+      const type = obj.isMesh ? 'Mesh' : obj.isGroup ? 'Group' : obj.type
+      console.log(`${indent}[${type}] "${obj.name || '(no name)'}" ${pos} ${scl}`)
+      obj.children.forEach(c => logHierarchy(c, indent + '  '))
+    }
+    console.log(`%c=== GLB HIERARCHY: ${side} ===`, 'color: yellow; font-weight: bold')
+    logHierarchy(scene)
+  }, [scene, side])
+
   // Deep clone with independent materials, centered at origin
   const clonedScene = useMemo(() => {
     const clone = scene.clone(true)
@@ -32,6 +45,9 @@ export default function Fighter({ modelPath, position, opponentPosition, side, h
     const center = new Vector3()
     box.getCenter(center)
     clone.position.set(-center.x, -box.min.y, -center.z)
+
+    console.log(`%c[${side}] clone center: (${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)})  min.y: ${box.min.y.toFixed(2)}  final offset: (${clone.position.x.toFixed(2)}, ${clone.position.y.toFixed(2)}, ${clone.position.z.toFixed(2)})`, 'color: cyan')
+
     return clone
   }, [scene, side])
 
@@ -130,9 +146,21 @@ export default function Fighter({ modelPath, position, opponentPosition, side, h
 
   const fighterScale = side === 'left' ? 1.0 : 0.95
 
+  const debugColor = side === 'left' ? '#ff0000' : '#0000ff'
+
   return (
     // Outer group: base position — never touched by useFrame
     <group ref={outerRef} position={position}>
+      {/* DEBUG: visible cube at group origin to confirm position */}
+      <mesh position={[0, 1.5, 0]}>
+        <boxGeometry args={[0.4, 0.4, 0.4]} />
+        <meshBasicMaterial color={debugColor} wireframe={false} transparent opacity={0.7} />
+      </mesh>
+      {/* DEBUG: tall pole from group origin */}
+      <mesh position={[0, 1, 0]}>
+        <cylinderGeometry args={[0.03, 0.03, 2, 6]} />
+        <meshBasicMaterial color={debugColor} />
+      </mesh>
       {/* Inner group: animation offsets only */}
       <group ref={animRef}>
         <primitive
