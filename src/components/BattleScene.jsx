@@ -1,6 +1,8 @@
+import { useRef, useCallback } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei'
 import Fighter from './Fighter'
+import SceneDebug from './SceneDebug'
 import { useGame } from '../context/GameContext'
 import model1Url from '../assets/models/model1.glb?url'
 import model2Url from '../assets/models/model2.glb?url'
@@ -103,6 +105,11 @@ function Lights() {
 
 export default function BattleScene() {
   const { fighter1, fighter2, currentTurn } = useGame()
+  const debugData = useRef({})
+
+  const handleDebug = useCallback((info) => {
+    debugData.current[info.side] = info
+  }, [])
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}>
@@ -125,6 +132,7 @@ export default function BattleScene() {
           maxHp={fighter1.maxHp}
           isAttacking={currentTurn}
           alive={fighter1.alive}
+          onDebug={handleDebug}
         />
         <Fighter
           key="fighter-right"
@@ -136,7 +144,10 @@ export default function BattleScene() {
           maxHp={fighter2.maxHp}
           isAttacking={currentTurn}
           alive={fighter2.alive}
+          onDebug={handleDebug}
         />
+
+        <SceneDebug debugData={debugData} />
 
         <ContactShadows
           position={[0, -0.19, 0]}

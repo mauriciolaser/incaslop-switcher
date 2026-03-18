@@ -3,7 +3,8 @@ import { useGLTF } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { Box3, Vector3 } from 'three'
 
-export default function Fighter({ modelPath, position, opponentPosition, side, hp, maxHp, isAttacking, alive }) {
+export default function Fighter({ modelPath, position, opponentPosition, side, hp, maxHp, isAttacking, alive, onDebug }) {
+  const outerRef = useRef()
   // Inner group ref — only used for animation OFFSETS (relative to [0,0,0])
   const animRef = useRef()
   const { scene } = useGLTF(modelPath)
@@ -12,6 +13,7 @@ export default function Fighter({ modelPath, position, opponentPosition, side, h
   const deathRef = useRef(0)
   const hitFlashRef = useRef(0)
   const prevHpRef = useRef(hp)
+  const debugFrameRef = useRef(0)
 
   // Deep clone with independent materials, centered at origin
   const clonedScene = useMemo(() => {
@@ -99,13 +101,38 @@ export default function Fighter({ modelPath, position, opponentPosition, side, h
     }
 
     animRef.current.position.set(ox, bobY, oz)
+
+    // Debug reporting (every ~30 frames to avoid spam)
+    if (onDebug && outerRef.current) {
+      debugFrameRef.current++
+      if (debugFrameRef.current % 30 === 0) {
+        const worldPos = new Vector3()
+        outerRef.current.getWorldPosition(worldPos)
+
+        const box = new Box3().setFromObject(outerRef.current)
+        const bboxCenter = new Vector3()
+        const bboxSize = new Vector3()
+        box.getCenter(bboxCenter)
+        box.getSize(bboxSize)
+
+        onDebug({
+          side,
+          expectedPos: position,
+          worldPos: [+worldPos.x.toFixed(2), +worldPos.y.toFixed(2), +worldPos.z.toFixed(2)],
+          bboxCenter: [+bboxCenter.x.toFixed(2), +bboxCenter.y.toFixed(2), +bboxCenter.z.toFixed(2)],
+          bboxSize: [+bboxSize.x.toFixed(2), +bboxSize.y.toFixed(2), +bboxSize.z.toFixed(2)],
+          cloneInternalPos: clonedScene.position.toArray().map(v => +v.toFixed(2)),
+          scale: fighterScale,
+        })
+      }
+    }
   })
 
   const fighterScale = side === 'left' ? 1.0 : 0.95
 
   return (
     // Outer group: base position — never touched by useFrame
-    <group position={position}>
+    <group ref={outerRef} position={position}>
       {/* Inner group: animation offsets only */}
       <group ref={animRef}>
         <primitive

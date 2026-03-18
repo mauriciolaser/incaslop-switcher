@@ -1,0 +1,142 @@
+# .github/workflows/deploy.yml
+# ------------------------------------------------------------
+# ► Despliegue manual (workflow_dispatch) vía FTP
+# ► Stack: React + Vite  •  Node LTS 22.16.0
+# ------------------------------------------------------------
+
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: "Activa pasos extra de diagnostico"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 0) Inicio del workflow
+      - name: ⏩ Inicio del workflow
+        run: |
+          echo "🚀 Comenzando despliegue por FTP..."
+          echo "Branch/ref: ${{ github.ref }}"
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "Debug activado: ${{ inputs.debug }}"
+
+      # 1) Checkout del código
+      - name: ⤵️  Checkout código
+        uses: actions/checkout@v4
+
+      # 2) Setup de Node.js LTS
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.16.0
+          cache: npm
+
+      # 3) Instalar dependencias
+      - name: 📦 Instalar dependencias
+        run: npm ci
+
+      - name: 🧪 Debug de entorno del workflow
+        if: ${{ inputs.debug }}
+        run: |
+          echo "Runner: $(uname -a)"
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Repositorio: ${{ github.repository }}"
+          echo "Evento: ${{ github.event_name }}"
+          echo "Workspace: ${{ github.workspace }}"
+
+      - name: 🔍 Verificar secretos requeridos
+        if: ${{ inputs.debug }}
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_DESTINATION: ${{ secrets.FTP_DESTINATION }}
+          VITE_GA_ID: ${{ secrets.VITE_GA_ID }}
+        run: |
+          missing=0
+          for key in FTP_HOST FTP_USERNAME FTP_PASSWORD FTP_DESTINATION VITE_GA_ID; do
+            value="${!key}"
+            if [ -z "$value" ]; then
+              echo "::error::$key no esta definido en GitHub Secrets"
+              missing=1
+            else
+              echo "$key presente"
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+      # 4) Crear archivo .env con variables de entorno
+      - name: 🔐 Crear archivo .env
+        run: |
+          echo "VITE_GA_ID=${{ secrets.VITE_GA_ID }}" >> .env
+          echo "✔️  Variables de entorno configuradas"
+
+      - name: 🧾 Debug del .env generado
+        if: ${{ inputs.debug }}
+        run: |
+          echo "Contenido de .env con valores ocultos:"
+          sed -E 's/=.*/=[MASKED]/' .env
+
+      # 5) Compilar proyecto con Vite
+      - name: 🏗️  Compilar proyecto
+        run: |
+          echo "🔨 Construyendo con Vite..."
+          npm run build
+          echo "✔️  Build completado en dist/"
+
+      - name: 📦 Debug del artefacto generado
+        if: ${{ inputs.debug }}
+        run: |
+          if [ ! -d dist ]; then
+            echo "::error::No existe la carpeta dist despues del build"
+            exit 1
+          fi
+          echo "Archivos generados en dist:"
+          find dist -maxdepth 3 -type f | sort
+          echo "Tamano total:"
+          du -sh dist
+
+      # 6) Mensaje antes de deploy
+      - name: 📤 Preparando subida FTP
+        run: echo "🔄 Cargando carpeta dist/ a tu hosting..."
+
+      - name: 🛰️  Debug previo al FTP
+        if: ${{ inputs.debug }}
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_DESTINATION: ${{ secrets.FTP_DESTINATION }}
+        run: |
+          echo "Destino FTP configurado:"
+          echo "Host presente: $([ -n \"$FTP_HOST\" ] && echo yes || echo no)"
+          echo "Usuario presente: $([ -n \"$FTP_USERNAME\" ] && echo yes || echo no)"
+          echo "Directorio remoto presente: $([ -n \"$FTP_DESTINATION\" ] && echo yes || echo no)"
+
+      # 7) Despliegue vía FTP
+      - name: 🚚 Upload via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server:               ${{ secrets.FTP_HOST }}
+          username:             ${{ secrets.FTP_USERNAME }}
+          password:             ${{ secrets.FTP_PASSWORD }}
+          protocol:             ftp
+          port:                 21
+          local-dir:            dist/
+          server-dir:           ${{ secrets.FTP_DESTINATION }}
+          security:             loose
+          dangerous-clean-slate: false
+
+      # 8) Fin del workflow
+      - name: ✅ Fin del workflow
+        run: echo "🎉 Deploy completado con éxito."
