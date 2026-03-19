@@ -9,7 +9,10 @@
       "Bash(git remote:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(node -e \"console.log\\(require\\(''three/package.json''\\).version\\)\")",
+      "Bash(node -e \"console.log\\(require\\(''@react-three/fiber/package.json''\\).version\\)\")",
+      "Bash(node -e \"console.log\\(require\\(''@react-three/drei/package.json''\\).version\\)\")"
     ]
   }
 }

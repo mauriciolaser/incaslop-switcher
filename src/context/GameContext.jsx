@@ -1,17 +1,18 @@
 import { createContext, useContext, useReducer, useCallback } from 'react'
-import { generateFighter, generateStake } from '../utils/battleEngine'
+import { DEFAULT_STAKE, generateFighter, healSurvivor, normalizeStake } from '../utils/battleEngine'
+import { prepareFighterForMatch } from '../utils/fighterFactory'
 
-const GameContext = createContext(null)
+export const GameContext = createContext(null)
 
 const INITIAL_COINS = 500
 
 const initialState = {
-  phase: 'betting',
-  fighter1: generateFighter('left'),
-  fighter2: generateFighter('right'),
+  phase: 'intro',
+  fighter1: prepareFighterForMatch(generateFighter('left'), 'left'),
+  fighter2: prepareFighterForMatch(generateFighter('right'), 'right'),
   round: 1,
   coins: INITIAL_COINS,
-  stake: generateStake(),
+  stake: DEFAULT_STAKE,
   bet: null,
   battleLog: [],
   currentTurn: null,
@@ -23,6 +24,13 @@ function gameReducer(state, action) {
   switch (action.type) {
     case 'PLACE_BET':
       return { ...state, bet: action.side }
+
+    case 'START_BETTING':
+      return {
+        ...state,
+        phase: 'betting',
+        currentTurn: null,
+      }
 
     case 'START_BATTLE':
       return {
@@ -69,23 +77,43 @@ function gameReducer(state, action) {
       }
     }
 
+    case 'SET_STAKE':
+      return { ...state, stake: action.stake }
+
+    case 'SET_FIGHTERS': {
+      return {
+        ...state,
+        phase: 'intro',
+        fighter1: prepareFighterForMatch(action.fighter1, 'left'),
+        fighter2: prepareFighterForMatch(action.fighter2, 'right'),
+        bet: null,
+        battleLog: [],
+        currentTurn: null,
+        winner: null,
+        lastResult: null,
+        stake: normalizeStake(state.stake, state.coins),
+      }
+    }
+
+    case 'RESET_GAME':
+      return {
+        ...initialState,
+        fighter1: prepareFighterForMatch(generateFighter('left'), 'left'),
+        fighter2: prepareFighterForMatch(generateFighter('right'), 'right'),
+      }
+
     case 'NEXT_ROUND': {
       const survivorKey = state.winner === 'left' ? 'fighter1' : 'fighter2'
-      const survivor = state[survivorKey]
-      const healAmount = Math.floor(survivor.maxHp * 0.2)
-      const healedSurvivor = {
-        ...survivor,
-        hp: Math.min(survivor.maxHp, survivor.hp + healAmount),
-      }
+      const healedSurvivor = healSurvivor(state[survivorKey])
       const newOpponent = generateFighter(state.winner === 'left' ? 'right' : 'left')
 
       return {
         ...state,
-        phase: 'betting',
-        fighter1: state.winner === 'left' ? healedSurvivor : newOpponent,
-        fighter2: state.winner === 'right' ? healedSurvivor : newOpponent,
+        phase: 'intro',
+        fighter1: prepareFighterForMatch(state.winner === 'left' ? healedSurvivor : newOpponent, 'left'),
+        fighter2: prepareFighterForMatch(state.winner === 'right' ? healedSurvivor : newOpponent, 'right'),
         round: state.round + 1,
-        stake: generateStake(),
+        stake: normalizeStake(state.stake, state.coins),
         bet: null,
         battleLog: [],
         currentTurn: null,
@@ -99,11 +127,15 @@ function gameReducer(state, action) {
   }
 }
 
-export function GameProvider({ children }) {
+export function LocalGameProvider({ children }) {
   const [state, dispatch] = useReducer(gameReducer, initialState)
 
   const placeBet = useCallback((side) => {
     dispatch({ type: 'PLACE_BET', side })
+  }, [])
+
+  const startBetting = useCallback(() => {
+    dispatch({ type: 'START_BETTING' })
   }, [])
 
   const startBattle = useCallback(() => {
@@ -126,25 +158,47 @@ export function GameProvider({ children }) {
     dispatch({ type: 'FIGHT_ENDED', winnerSide, loserSide })
   }, [])
 
+  const setStake = useCallback((stake) => {
+    dispatch({ type: 'SET_STAKE', stake })
+  }, [])
+
   const nextRound = useCallback(() => {
     dispatch({ type: 'NEXT_ROUND' })
+  }, [])
+
+  const setFighters = useCallback((fighter1, fighter2) => {
+    dispatch({ type: 'SET_FIGHTERS', fighter1, fighter2 })
+  }, [])
+
+  const resetGame = useCallback(() => {
+    dispatch({ type: 'RESET_GAME' })
   }, [])
 
   return (
     <GameContext.Provider value={{
       ...state,
+      isOnline: false,
+      connectionStatus: 'local',
+      countdown: null,
+      onlineError: null,
       placeBet,
+      startBetting,
       startBattle,
       addLog,
       updateFighter,
       setCurrentTurn,
       fightEnded,
+      setStake,
       nextRound,
+      setFighters,
+      resetGame,
     }}>
       {children}
     </GameContext.Provider>
   )
 }
+
+export const GameProvider = LocalGameProvider
 
 export function useGame() {
   const ctx = useContext(GameContext)

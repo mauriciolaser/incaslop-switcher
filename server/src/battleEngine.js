@@ -1,29 +1,76 @@
-import ataques from '../data/ataques.json'
-import { generateRandomRosterFighter } from './fighterFactory'
+import crypto from 'node:crypto'
+import { ataques, personajes } from './gameData.js'
 
-export const STAKE_OPTIONS = [5, 10, 20, 100]
+export const INITIAL_COINS = 500
 export const DEFAULT_STAKE = 10
+export const STAKE_OPTIONS = [5, 10, 20, 100]
+export const INTRO_DURATION_MS = 5000
+export const BETTING_DURATION_MS = 15000
+export const TURN_DELAY_MS = 1800
+export const RESULT_DURATION_MS = 7000
+export const MAX_LOG_ENTRIES = 60
 
-export function generateFighter(side) {
-  return generateRandomRosterFighter(side)
+function randomInt(min, max) {
+  return min + Math.floor(Math.random() * (max - min + 1))
+}
+
+function pickRandomDialog(dialogos = []) {
+  if (!dialogos.length) return 'Hoy alguien cae en la arena.'
+  return dialogos[Math.floor(Math.random() * dialogos.length)]
+}
+
+export function createUserKey() {
+  return crypto.randomBytes(24).toString('hex')
+}
+
+export function createFighter(side, overrides = {}) {
+  const personaje = personajes[Math.floor(Math.random() * personajes.length)]
+  const maxHp = overrides.maxHp ?? 100
+  const hp = Math.min(overrides.hp ?? maxHp, maxHp)
+
+  return {
+    id: overrides.id ?? `${Date.now()}-${Math.random()}`,
+    personajeId: personaje.id,
+    side,
+    name: personaje.name,
+    maxHp,
+    hp,
+    attack: overrides.attack ?? randomInt(personaje.attackRange[0], personaje.attackRange[1]),
+    defense: overrides.defense ?? randomInt(personaje.defenseRange[0], personaje.defenseRange[1]),
+    speed: overrides.speed ?? randomInt(personaje.speedRange[0], personaje.speedRange[1]),
+    alive: overrides.alive ?? hp > 0,
+    efectos: overrides.efectos ?? [],
+    bio: personaje.bio,
+    dialogos: personaje.dialogos,
+    introDialog: overrides.introDialog ?? pickRandomDialog(personaje.dialogos),
+  }
+}
+
+export function refreshIntroDialog(fighter, side = fighter.side) {
+  const personaje = personajes.find((item) => item.id === fighter.personajeId)
+  return {
+    ...fighter,
+    side,
+    introDialog: pickRandomDialog(personaje?.dialogos ?? fighter.dialogos),
+    alive: fighter.alive ?? fighter.hp > 0,
+    efectos: (fighter.efectos ?? []).map((efecto) => ({ ...efecto })),
+  }
 }
 
 export function pickAtaque(attacker) {
-  // Try to trigger a special attack
   for (const especial of ataques.especiales) {
     if (Math.random() < especial.probabilidad) {
       return { ...especial, esEspecial: true }
     }
   }
-  // Fallback to a random basic attack
+
   const basico = ataques.basicos[Math.floor(Math.random() * ataques.basicos.length)]
   return { ...basico, esEspecial: false }
 }
 
 export function calculateDamage(attacker, defender, ataque) {
-  // Check precision (miss)
   let precisionMod = ataque.precision
-  const cegueraEfecto = attacker.efectos.find(e => e.id === 'ceguera')
+  const cegueraEfecto = attacker.efectos.find((e) => e.id === 'ceguera')
   if (cegueraEfecto) {
     precisionMod *= ataques.efectos.ceguera.reduccion_precision
   }
@@ -34,9 +81,8 @@ export function calculateDamage(attacker, defender, ataque) {
 
   const isCrit = Math.random() < 0.15
 
-  // Base damage scaled by attack power and ataque power multiplier
   let attackStat = attacker.attack
-  const miedoEfecto = attacker.efectos.find(e => e.id === 'miedo')
+  const miedoEfecto = attacker.efectos.find((e) => e.id === 'miedo')
   if (miedoEfecto) {
     attackStat = Math.floor(attackStat * ataques.efectos.miedo.reduccion_ataque)
   }
@@ -44,7 +90,7 @@ export function calculateDamage(attacker, defender, ataque) {
   const baseDamage = attackStat * (0.8 + Math.random() * 0.4) * ataque.poder
 
   let defenseStat = defender.defense
-  const congeladoEfecto = defender.efectos.find(e => e.id === 'congelamiento')
+  const congeladoEfecto = defender.efectos.find((e) => e.id === 'congelamiento')
   if (congeladoEfecto) {
     defenseStat = Math.floor(defenseStat * ataques.efectos.congelamiento.reduccion_defensa)
   }
@@ -73,8 +119,7 @@ export function applyEfecto(fighter, efectoId) {
   const efectoData = ataques.efectos[efectoId]
   if (!efectoData) return fighter
 
-  // Don't stack same effect, just refresh duration
-  const existing = fighter.efectos.findIndex(e => e.id === efectoId)
+  const existing = fighter.efectos.findIndex((e) => e.id === efectoId)
   const newEfecto = { id: efectoId, ...efectoData, turnosRestantes: efectoData.duracion }
   const efectos = [...fighter.efectos]
 
@@ -113,23 +158,13 @@ export function tickEfectos(fighter) {
 }
 
 export function isStunned(fighter) {
-  return fighter.efectos.some(e => e.pierde_turno)
+  return fighter.efectos.some((e) => e.pierde_turno)
 }
 
 export function healSurvivor(fighter) {
   const healAmount = Math.floor(fighter.maxHp * 0.2)
   const newHp = Math.min(fighter.maxHp, fighter.hp + healAmount)
-  return { ...fighter, hp: newHp, efectos: [] }
-}
-
-export function normalizeStake(stake, coins) {
-  if (coins >= stake) return stake
-
-  const affordableStake = [...STAKE_OPTIONS]
-    .reverse()
-    .find(option => option <= coins)
-
-  return affordableStake ?? STAKE_OPTIONS[0]
+  return { ...fighter, hp: newHp, efectos: [], alive: true }
 }
 
 export function determineTurnOrder(fighter1, fighter2) {
@@ -137,4 +172,14 @@ export function determineTurnOrder(fighter1, fighter2) {
     return [fighter1.side, fighter2.side]
   }
   return [fighter2.side, fighter1.side]
+}
+
+export function clampStake(stake, coins) {
+  if (coins >= stake) return stake
+  const affordable = [...STAKE_OPTIONS].reverse().find((option) => option <= coins)
+  return affordable ?? STAKE_OPTIONS[0]
+}
+
+export function trimBattleLog(entries = []) {
+  return entries.slice(-MAX_LOG_ENTRIES)
 }

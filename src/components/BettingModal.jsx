@@ -1,27 +1,32 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useGame } from '../context/GameContext'
 import { useBattle } from '../hooks/useBattle'
+import { useTournament } from '../context/TournamentContext'
+import { STAKE_OPTIONS } from '../utils/battleEngine'
+import { calculateWinOdds } from '../utils/odds'
+import { getRoundName } from '../utils/tournamentEngine'
 
 const BET_TIMER = 15
 
-function calcOdds(f1, f2) {
-  const power1 = f1.attack * 1.2 + f1.defense * 0.8 + f1.speed * 0.5 + (f1.hp / f1.maxHp) * 10
-  const power2 = f2.attack * 1.2 + f2.defense * 0.8 + f2.speed * 0.5 + (f2.hp / f2.maxHp) * 10
-  const total = power1 + power2
-  const pct1 = Math.round((power1 / total) * 100)
-  const pct2 = 100 - pct1
-  return { pct1, pct2 }
-}
-
 export default function BettingModal() {
-  const { phase, fighter1, fighter2, stake, coins, bet, placeBet } = useGame()
+  const { phase, fighter1, fighter2, stake, coins, bet, placeBet, setStake, isOnline, countdown, connectionStatus } = useGame()
   const { runBattle } = useBattle()
+  const { mode, bracket, currentGlobalMatchIdx } = useTournament()
   const [timer, setTimer] = useState(BET_TIMER)
+  const displayedTimer = isOnline ? countdown ?? BET_TIMER : timer
   const intervalRef = useRef(null)
   const startedRef = useRef(false)
-  const odds = useMemo(() => calcOdds(fighter1, fighter2), [fighter1, fighter2])
+  const odds = useMemo(
+    () => calculateWinOdds(fighter1, fighter2, { simulations: 360 }),
+    [fighter1, fighter2],
+  )
 
   useEffect(() => {
+    if (isOnline) {
+      startedRef.current = false
+      return undefined
+    }
+
     if (phase !== 'betting') {
       startedRef.current = false
       return
@@ -45,14 +50,21 @@ export default function BettingModal() {
     }, 1000)
 
     return () => clearInterval(intervalRef.current)
-  }, [phase, runBattle])
+  }, [isOnline, phase, runBattle])
 
   const handleBet = (side) => {
+    if (isOnline && connectionStatus !== 'connected') return
     if (coins < stake) return
-    placeBet(side)
+    Promise.resolve(placeBet(side)).catch(() => {})
+  }
+
+  const handleStakeChange = (value) => {
+    if (bet !== null || coins < value) return
+    setStake(value)
   }
 
   const handleStartEarly = () => {
+    if (isOnline) return
     clearInterval(intervalRef.current)
     if (!startedRef.current) {
       startedRef.current = true
@@ -65,7 +77,11 @@ export default function BettingModal() {
   return (
     <div className="modal-overlay">
       <div className="betting-modal">
-        <h2>Ronda de Apuestas</h2>
+        <h2>
+          {mode === 'torneo' && currentGlobalMatchIdx != null
+            ? getRoundName(bracket, bracket[currentGlobalMatchIdx]?.round)
+            : 'Ronda de Apuestas'}
+        </h2>
 
         <div className="timer-circle">
           <svg viewBox="0 0 100 100">
@@ -80,19 +96,31 @@ export default function BettingModal() {
               fill="none"
               stroke="#ffaa00"
               strokeWidth="5"
-              strokeDasharray={`${(timer / BET_TIMER) * 283} 283`}
+              strokeDasharray={`${(displayedTimer / BET_TIMER) * 283} 283`}
               strokeLinecap="round"
               transform="rotate(-90 50 50)"
             />
           </svg>
-          <span className="timer-text">{timer}s</span>
+          <span className="timer-text">{displayedTimer}s</span>
         </div>
 
         <div className="stake-display">
           Apuesta: <span className="stake-amount">{stake}</span> monedas
         </div>
 
-        {/* Odds bar */}
+        <div className="stake-options">
+          {STAKE_OPTIONS.map(option => (
+            <button
+              key={option}
+              className={`stake-chip ${stake === option ? 'selected' : ''}`}
+              onClick={() => handleStakeChange(option)}
+              disabled={bet !== null || coins < option}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+
         <div className="odds-bar-container">
           <div className="odds-bar">
             <div className="odds-fill left" style={{ width: `${odds.pct1}%` }}>
@@ -103,8 +131,8 @@ export default function BettingModal() {
             </div>
           </div>
           <div className="odds-labels">
-            <span className="odds-label left">{odds.pct1 >= odds.pct2 ? 'Favorito' : ''}</span>
-            <span className="odds-label right">{odds.pct2 > odds.pct1 ? 'Favorito' : ''}</span>
+            <span className="odds-label left">{odds.favorite === 'left' ? 'Favorito' : ''}</span>
+            <span className="odds-label right">{odds.favorite === 'right' ? 'Favorito' : ''}</span>
           </div>
         </div>
 
@@ -120,7 +148,7 @@ export default function BettingModal() {
             <button
               className="bet-button bet-left"
               onClick={() => handleBet('left')}
-              disabled={bet !== null || coins < stake}
+              disabled={bet !== null || coins < stake || (isOnline && connectionStatus !== 'connected')}
             >
               {bet === 'left' ? 'Apostado!' : 'Apostar'}
             </button>
@@ -139,7 +167,7 @@ export default function BettingModal() {
             <button
               className="bet-button bet-right"
               onClick={() => handleBet('right')}
-              disabled={bet !== null || coins < stake}
+              disabled={bet !== null || coins < stake || (isOnline && connectionStatus !== 'connected')}
             >
               {bet === 'right' ? 'Apostado!' : 'Apostar'}
             </button>
@@ -150,9 +178,17 @@ export default function BettingModal() {
           <div className="no-coins-warning">No tienes suficientes monedas para apostar</div>
         )}
 
-        <button className="start-early-btn" onClick={handleStartEarly}>
-          {bet ? 'Comenzar Pelea!' : 'Saltar (sin apuesta)'}
-        </button>
+        {isOnline ? (
+          <div className="online-bet-note">
+            {bet
+              ? `Apuesta registrada. La pelea comenzara en ${countdown ?? '--'}s.`
+              : 'La pelea online comenzara automaticamente cuando cierre la ventana de apuestas.'}
+          </div>
+        ) : (
+          <button className="start-early-btn" onClick={handleStartEarly}>
+            {bet ? 'Comenzar Pelea!' : 'Saltar (sin apuesta)'}
+          </button>
+        )}
       </div>
     </div>
   )

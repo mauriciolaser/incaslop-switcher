@@ -1,11 +1,9 @@
 import { useRef, useEffect, useMemo } from 'react'
 import { useGLTF } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
-import { Box3, Vector3 } from 'three'
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
-export default function Fighter({ modelPath, position, opponentPosition, side, hp, maxHp, isAttacking, alive, onDebug }) {
-  const outerRef = useRef()
+export default function Fighter({ modelPath, position, opponentPosition, side, hp, maxHp, isAttacking, alive }) {
   // Inner group ref — only used for animation OFFSETS (relative to [0,0,0])
   const animRef = useRef()
   const { scene } = useGLTF(modelPath)
@@ -14,20 +12,6 @@ export default function Fighter({ modelPath, position, opponentPosition, side, h
   const deathRef = useRef(0)
   const hitFlashRef = useRef(0)
   const prevHpRef = useRef(hp)
-  const debugFrameRef = useRef(0)
-
-  // Log full scene hierarchy on first load
-  useEffect(() => {
-    const logHierarchy = (obj, indent = '') => {
-      const pos = `pos(${obj.position.x.toFixed(2)}, ${obj.position.y.toFixed(2)}, ${obj.position.z.toFixed(2)})`
-      const scl = `scl(${obj.scale.x.toFixed(2)}, ${obj.scale.y.toFixed(2)}, ${obj.scale.z.toFixed(2)})`
-      const type = obj.isMesh ? 'Mesh' : obj.isGroup ? 'Group' : obj.type
-      console.log(`${indent}[${type}] "${obj.name || '(no name)'}" ${pos} ${scl}`)
-      obj.children.forEach(c => logHierarchy(c, indent + '  '))
-    }
-    console.log(`%c=== GLB HIERARCHY: ${side} ===`, 'color: yellow; font-weight: bold')
-    logHierarchy(scene)
-  }, [scene, side])
 
   // Deep clone with SkeletonUtils (properly re-binds bones for SkinnedMesh)
   const clonedScene = useMemo(() => {
@@ -110,50 +94,13 @@ export default function Fighter({ modelPath, position, opponentPosition, side, h
     }
 
     animRef.current.position.set(ox, bobY, oz)
-
-    // Debug reporting (every ~30 frames to avoid spam)
-    if (onDebug && outerRef.current) {
-      debugFrameRef.current++
-      if (debugFrameRef.current % 30 === 0) {
-        const worldPos = new Vector3()
-        outerRef.current.getWorldPosition(worldPos)
-
-        const box = new Box3().setFromObject(outerRef.current)
-        const bboxCenter = new Vector3()
-        const bboxSize = new Vector3()
-        box.getCenter(bboxCenter)
-        box.getSize(bboxSize)
-
-        onDebug({
-          side,
-          expectedPos: position,
-          worldPos: [+worldPos.x.toFixed(2), +worldPos.y.toFixed(2), +worldPos.z.toFixed(2)],
-          bboxCenter: [+bboxCenter.x.toFixed(2), +bboxCenter.y.toFixed(2), +bboxCenter.z.toFixed(2)],
-          bboxSize: [+bboxSize.x.toFixed(2), +bboxSize.y.toFixed(2), +bboxSize.z.toFixed(2)],
-          cloneInternalPos: clonedScene.position.toArray().map(v => +v.toFixed(2)),
-          scale: fighterScale,
-        })
-      }
-    }
   })
 
   const fighterScale = side === 'left' ? 1.0 : 0.95
 
-  const debugColor = side === 'left' ? '#ff0000' : '#0000ff'
-
   return (
     // Outer group: base position — never touched by useFrame
-    <group ref={outerRef} position={position}>
-      {/* DEBUG: visible cube at group origin to confirm position */}
-      <mesh position={[0, 1.5, 0]}>
-        <boxGeometry args={[0.4, 0.4, 0.4]} />
-        <meshBasicMaterial color={debugColor} wireframe={false} transparent opacity={0.7} />
-      </mesh>
-      {/* DEBUG: tall pole from group origin */}
-      <mesh position={[0, 1, 0]}>
-        <cylinderGeometry args={[0.03, 0.03, 2, 6]} />
-        <meshBasicMaterial color={debugColor} />
-      </mesh>
+    <group position={position}>
       {/* Inner group: animation offsets only */}
       <group ref={animRef}>
         <primitive

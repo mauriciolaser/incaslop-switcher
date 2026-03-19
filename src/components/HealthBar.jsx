@@ -1,13 +1,6 @@
 import { useMemo } from 'react'
 import { useGame } from '../context/GameContext'
-
-function calcLiveOdds(f1, f2) {
-  const power1 = f1.attack * 1.2 + f1.defense * 0.8 + f1.speed * 0.5 + (f1.hp / f1.maxHp) * 10
-  const power2 = f2.attack * 1.2 + f2.defense * 0.8 + f2.speed * 0.5 + (f2.hp / f2.maxHp) * 10
-  const total = power1 + power2
-  const pct1 = Math.round((power1 / total) * 100)
-  return { pct1, pct2: 100 - pct1 }
-}
+import { calculateWinOdds } from '../utils/odds'
 
 function Bar({ fighter, side, oddsPct }) {
   const pct = Math.max(0, (fighter.hp / fighter.maxHp) * 100)
@@ -50,7 +43,10 @@ function Bar({ fighter, side, oddsPct }) {
 
 export default function HealthBars() {
   const { fighter1, fighter2 } = useGame()
-  const odds = useMemo(() => calcLiveOdds(fighter1, fighter2), [fighter1, fighter2])
+  const odds = useMemo(
+    () => calculateWinOdds(fighter1, fighter2, { simulations: 180 }),
+    [fighter1, fighter2],
+  )
 
   return (
     <div className="health-bars-overlay">

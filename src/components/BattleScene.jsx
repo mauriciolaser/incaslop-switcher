@@ -1,9 +1,10 @@
-import { useRef, useCallback } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { useState, useEffect, useRef } from 'react'
+import { Canvas, useThree, useFrame } from '@react-three/fiber'
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei'
+import * as THREE from 'three'
 import Fighter from './Fighter'
-import SceneDebug from './SceneDebug'
 import { useGame } from '../context/GameContext'
+import { getCachedModelUrl } from '../utils/modelCache'
 import model1Url from '../assets/models/model1.glb?url'
 import model2Url from '../assets/models/model2.glb?url'
 
@@ -103,12 +104,138 @@ function Lights() {
   )
 }
 
+/* ── Over-the-shoulder camera parameters ── */
+const CAM_BACK = 1.6      // distance behind fighter
+const CAM_SHOULDER = 0.5   // right-shoulder offset
+const CAM_HEIGHT = 1.6     // camera Y
+const CAM_LOOK_HEIGHT = 0.8 // look-at Y on opponent
+const CAM_LERP_SPEED = 4
+
+function CameraController({ mode, orbitRef }) {
+  const { camera } = useThree()
+  const lerpPos = useRef(new THREE.Vector3())
+  const lerpLookAt = useRef(new THREE.Vector3())
+  const needsInit = useRef(true)
+
+  // When switching TO a fighter cam, snapshot current camera state for smooth transition
+  useEffect(() => {
+    if (mode !== 'libre') {
+      lerpPos.current.copy(camera.position)
+      const dir = new THREE.Vector3()
+      camera.getWorldDirection(dir)
+      lerpLookAt.current.copy(camera.position).add(dir.multiplyScalar(5))
+      needsInit.current = false
+    } else {
+      // Switching back to libre — re-enable orbit
+      needsInit.current = true
+      if (orbitRef.current) {
+        orbitRef.current.target.set(0, 0.5, 0)
+        orbitRef.current.enabled = true
+        orbitRef.current.update()
+      }
+    }
+  }, [mode])
+
+  useFrame((_, delta) => {
+    if (mode === 'libre') return
+
+    // Disable orbit while in fixed cam
+    if (orbitRef.current) orbitRef.current.enabled = false
+
+    const fighterPos = mode === 'peleador1' ? POS_LEFT : POS_RIGHT
+    const opponentPos = mode === 'peleador1' ? POS_RIGHT : POS_LEFT
+
+    // Forward direction (fighter → opponent)
+    const dx = opponentPos[0] - fighterPos[0]
+    const dz = opponentPos[2] - fighterPos[2]
+    const len = Math.sqrt(dx * dx + dz * dz)
+    const fwdX = dx / len
+    const fwdZ = dz / len
+
+    // Right = cross(up, forward) → [fwdZ, 0, -fwdX]
+    const rightX = fwdZ
+    const rightZ = -fwdX
+
+    const targetX = fighterPos[0] - fwdX * CAM_BACK + rightX * CAM_SHOULDER
+    const targetY = CAM_HEIGHT
+    const targetZ = fighterPos[2] - fwdZ * CAM_BACK + rightZ * CAM_SHOULDER
+
+    const lookX = opponentPos[0]
+    const lookY = CAM_LOOK_HEIGHT
+    const lookZ = opponentPos[2]
+
+    const t = 1 - Math.exp(-CAM_LERP_SPEED * delta)
+    lerpPos.current.lerp(new THREE.Vector3(targetX, targetY, targetZ), t)
+    lerpLookAt.current.lerp(new THREE.Vector3(lookX, lookY, lookZ), t)
+
+    camera.position.copy(lerpPos.current)
+    camera.lookAt(lerpLookAt.current)
+  })
+
+  return null
+}
+
+/* ── Camera selector UI ── */
+const camBtnBase = {
+  padding: '6px 14px',
+  border: '1px solid rgba(255,255,255,0.2)',
+  borderRadius: 6,
+  background: 'rgba(10,10,20,0.7)',
+  color: '#aab',
+  cursor: 'pointer',
+  fontSize: 13,
+  fontWeight: 500,
+  backdropFilter: 'blur(8px)',
+  transition: 'all 0.2s',
+}
+const camBtnActive = {
+  ...camBtnBase,
+  background: 'rgba(80,120,255,0.35)',
+  color: '#fff',
+  borderColor: 'rgba(100,140,255,0.6)',
+  boxShadow: '0 0 10px rgba(80,120,255,0.3)',
+}
+
+function CameraSelector({ mode, setMode }) {
+  const options = [
+    { key: 'libre', label: 'Libre' },
+    { key: 'peleador1', label: 'Peleador 1' },
+    { key: 'peleador2', label: 'Peleador 2' },
+  ]
+  return (
+    <div style={{
+      position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
+      display: 'flex', gap: 6, zIndex: 20, userSelect: 'none',
+    }}>
+      {options.map(o => (
+        <button
+          key={o.key}
+          onClick={() => setMode(o.key)}
+          style={mode === o.key ? camBtnActive : camBtnBase}
+          onMouseEnter={e => { if (mode !== o.key) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.4)' }}
+          onMouseLeave={e => { if (mode !== o.key) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export default function BattleScene() {
   const { fighter1, fighter2, currentTurn } = useGame()
-  const debugData = useRef({})
+  const [cachedUrls, setCachedUrls] = useState(null)
+  const [camMode, setCamMode] = useState('libre')
+  const orbitRef = useRef()
 
-  const handleDebug = useCallback((info) => {
-    debugData.current[info.side] = info
+  useEffect(() => {
+    let revoke = []
+    Promise.all([getCachedModelUrl(model1Url), getCachedModelUrl(model2Url)])
+      .then(([url1, url2]) => {
+        revoke = [url1, url2].filter(u => u.startsWith('blob:'))
+        setCachedUrls({ model1: url1, model2: url2 })
+      })
+    return () => revoke.forEach(u => URL.revokeObjectURL(u))
   }, [])
 
   return (
@@ -122,32 +249,34 @@ export default function BattleScene() {
         <Lights />
         <RingBase />
 
-        <Fighter
-          key="fighter-left"
-          modelPath={model1Url}
-          position={POS_LEFT}
-          opponentPosition={POS_RIGHT}
-          side="left"
-          hp={fighter1.hp}
-          maxHp={fighter1.maxHp}
-          isAttacking={currentTurn}
-          alive={fighter1.alive}
-          onDebug={handleDebug}
-        />
-        <Fighter
-          key="fighter-right"
-          modelPath={model2Url}
-          position={POS_RIGHT}
-          opponentPosition={POS_LEFT}
-          side="right"
-          hp={fighter2.hp}
-          maxHp={fighter2.maxHp}
-          isAttacking={currentTurn}
-          alive={fighter2.alive}
-          onDebug={handleDebug}
-        />
+        <CameraController mode={camMode} orbitRef={orbitRef} />
 
-        <SceneDebug debugData={debugData} />
+        {cachedUrls && (
+          <>
+            <Fighter
+              key="fighter-left"
+              modelPath={cachedUrls.model1}
+              position={POS_LEFT}
+              opponentPosition={POS_RIGHT}
+              side="left"
+              hp={fighter1.hp}
+              maxHp={fighter1.maxHp}
+              isAttacking={currentTurn}
+              alive={fighter1.alive}
+            />
+            <Fighter
+              key="fighter-right"
+              modelPath={cachedUrls.model2}
+              position={POS_RIGHT}
+              opponentPosition={POS_LEFT}
+              side="right"
+              hp={fighter2.hp}
+              maxHp={fighter2.maxHp}
+              isAttacking={currentTurn}
+              alive={fighter2.alive}
+            />
+          </>
+        )}
 
         <ContactShadows
           position={[0, -0.19, 0]}
@@ -158,6 +287,7 @@ export default function BattleScene() {
         />
 
         <OrbitControls
+          ref={orbitRef}
           enablePan={false}
           enableZoom={true}
           minDistance={6}
@@ -169,6 +299,8 @@ export default function BattleScene() {
         <Environment preset="night" />
         <fog attach="fog" args={['#050508', 16, 32]} />
       </Canvas>
+
+      <CameraSelector mode={camMode} setMode={setCamMode} />
     </div>
   )
 }
