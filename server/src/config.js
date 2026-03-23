@@ -9,7 +9,7 @@ export const DATA_DIR = path.join(ROOT_DIR, 'data')
 
 export const config = {
   port: Number(process.env.PORT || 3001),
-  sessionCookieName: process.env.SESSION_COOKIE_NAME || 'peru_polymarket_online',
+  sessionCookieName: process.env.SESSION_COOKIE_NAME || 'mechas_incaslop_online',
   db: {
     host: process.env.DB_HOST,
     port: Number(process.env.DB_PORT || 3306),
@@ -24,3 +24,4 @@ export function hasDatabaseConfig() {
   const { host, database, user, password } = config.db
   return Boolean(host && database && user && password)
 }
+

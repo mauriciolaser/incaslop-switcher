@@ -49,7 +49,7 @@ Nota MVP importante: el avance de fases depende de timers internos del proceso N
 
 El backend identifica a cada jugador por una cookie HTTP-only:
 
-- Nombre de cookie: `SESSION_COOKIE_NAME` (default: `peru_polymarket_online`).
+- Nombre de cookie: `SESSION_COOKIE_NAME` (default: `mechas_incaslop_online`).
 - Valor: `userKey` generado con `crypto.randomBytes(...)`.
 
 Con eso se guarda:
@@ -112,7 +112,7 @@ Para un VPS, lo recomendado es DB real; el fallback queda como modo de desarroll
 Ejemplo: `server/.env.example`
 
 - `PORT=3001`
-- `SESSION_COOKIE_NAME=peru_polymarket_online`
+- `SESSION_COOKIE_NAME=mechas_incaslop_online`
 - `ALLOW_FILE_FALLBACK=true|false`
 - `DB_HOST=...`
 - `DB_PORT=3306`
@@ -166,22 +166,32 @@ sudo mariadb
 Crea DB y usuario (ajusta nombres/clave):
 
 ```sql
-CREATE DATABASE peru_polymarket CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE mechas_incaslop CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER 'ppm'@'localhost' IDENTIFIED BY 'una_clave_larga';
-GRANT ALL PRIVILEGES ON peru_polymarket.* TO 'ppm'@'localhost';
+GRANT ALL PRIVILEGES ON mechas_incaslop.* TO 'ppm'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
 ### 4.3 Instalar Node.js y dependencias
 
-Necesitamos Node para correr el servidor. Usa una versión LTS (20 o 22).
+Necesitamos Node para correr el servidor. Usa una versión LTS (20 o 22). En AlmaLinux suele ser más simple usar módulos de DNF.
+
+Ejemplo (Node 20):
+
+```bash
+sudo dnf -y module list nodejs
+sudo dnf -y module enable nodejs:20
+sudo dnf -y install nodejs
+node -v
+npm -v
+```
 
 Luego (una vez que Node y npm estén disponibles):
 
 ```bash
-sudo mkdir -p /opt/peru-polymarket
-sudo chown -R $USER:$USER /opt/peru-polymarket
-cd /opt/peru-polymarket
+sudo mkdir -p /opt/mechas-incaslop
+sudo chown -R $USER:$USER /opt/mechas-incaslop
+cd /opt/mechas-incaslop
 
 git clone <tu-repo> .
 
@@ -196,19 +206,21 @@ Resultado:
 - frontend compilado en `dist/`
 - backend listo en `server/`
 
+Nota: si el frontend y el backend van en dominios distintos, define `VITE_ONLINE_API_BASE` al build del frontend para que apunte al backend (por ejemplo `https://api.tu-dominio.com/api/online`). Si comparten el mismo dominio con Nginx haciendo proxy en `/api/online`, no hace falta setear nada (default: `/api/online`).
+
 ### 4.4 Configurar `.env` del backend
 
 Crea `server/.env` (no lo comitees):
 
 ```bash
-cat > /opt/peru-polymarket/server/.env <<'EOF'
+cat > /opt/mechas-incaslop/server/.env <<'EOF'
 PORT=3001
-SESSION_COOKIE_NAME=peru_polymarket_online
+SESSION_COOKIE_NAME=mechas_incaslop_online
 ALLOW_FILE_FALLBACK=false
 
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_NAME=peru_polymarket
+DB_NAME=mechas_incaslop
 DB_USER=ppm
 DB_PASSWORD=una_clave_larga
 EOF
@@ -219,23 +231,23 @@ EOF
 Crea un usuario de sistema para correr Node:
 
 ```bash
-sudo useradd --system --create-home --shell /sbin/nologin peru-polymarket
-sudo chown -R peru-polymarket:peru-polymarket /opt/peru-polymarket
+sudo useradd --system --create-home --shell /sbin/nologin mechas-incaslop
+sudo chown -R mechas-incaslop:mechas-incaslop /opt/mechas-incaslop
 ```
 
-Crea el servicio `/etc/systemd/system/peru-polymarket-online.service`:
+Crea el servicio `/etc/systemd/system/mechas-incaslop-online.service`:
 
 ```ini
 [Unit]
-Description=Peru Polymarket Online Arena (Node/Express)
+Description=Mechas IncaSlop Online Arena (Node/Express)
 After=network.target mariadb.service
 
 [Service]
 Type=simple
-User=peru-polymarket
-WorkingDirectory=/opt/peru-polymarket/server
-EnvironmentFile=/opt/peru-polymarket/server/.env
-ExecStart=/usr/bin/node /opt/peru-polymarket/server/src/app.js
+User=mechas-incaslop
+WorkingDirectory=/opt/mechas-incaslop/server
+EnvironmentFile=/opt/mechas-incaslop/server/.env
+ExecStart=/usr/bin/node /opt/mechas-incaslop/server/src/app.js
 Restart=always
 RestartSec=2
 
@@ -251,8 +263,8 @@ Activa y levanta:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now peru-polymarket-online.service
-sudo journalctl -u peru-polymarket-online.service -f
+sudo systemctl enable --now mechas-incaslop-online.service
+sudo journalctl -u mechas-incaslop-online.service -f
 ```
 
 Healthcheck local:
@@ -263,14 +275,14 @@ curl -s http://127.0.0.1:3001/health
 
 ### 4.6 Nginx: SPA + reverse proxy del API
 
-Config recomendado (ejemplo `/etc/nginx/conf.d/peru-polymarket.conf`):
+Config recomendado (ejemplo `/etc/nginx/conf.d/mechas-incaslop.conf`):
 
 ```nginx
 server {
   listen 80;
   server_name tu-dominio.com;
 
-  root /opt/peru-polymarket/dist;
+  root /opt/mechas-incaslop/dist;
   index index.html;
 
   # API -> Node
@@ -338,4 +350,6 @@ Checklist mínimo producción:
 - systemd con restart automático.
 - Backups de MariaDB.
 - TLS habilitado.
+
+
 

@@ -20,7 +20,7 @@ function ModeSelector({ onSelect }) {
       <div className="mode-select-shell">
         <div className="mode-select-panel">
           <div className="mode-select-kicker">Selecciona tu experiencia</div>
-          <h1 className="mode-select-title">PERU POLYMARKET</h1>
+          <h1 className="mode-select-title">Mechas IncaSlop</h1>
           <p className="mode-select-subtitle">
             Elige si quieres jugar completamente local o mirar la arena compartida online.
           </p>
@@ -135,3 +135,4 @@ export default function App() {
 
   return <ModeSelector onSelect={setSessionMode} />
 }
+

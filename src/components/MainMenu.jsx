@@ -20,7 +20,7 @@ export default function MainMenu() {
   return (
     <div className="modal-overlay">
       <div className="main-menu">
-        <h1 className="menu-title">PERU POLYMARKET</h1>
+        <h1 className="menu-title">Mechas IncaSlop</h1>
         <p className="menu-subtitle">Arena de Combate</p>
 
         <div className="menu-buttons">
@@ -46,3 +46,4 @@ export default function MainMenu() {
     </div>
   )
 }
+

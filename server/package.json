@@ -1,5 +1,5 @@
 {
-  "name": "peru-polymarket-online-server",
+  "name": "mechas-incaslop-online-server",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -14,3 +14,4 @@
     "mysql2": "^3.14.1"
   }
 }
+

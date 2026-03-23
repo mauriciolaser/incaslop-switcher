@@ -1,4 +1,4 @@
-# Peru Polymarket - RPG Battle Betting Game
+# Mechas IncaSlop - RPG Battle Betting Game
 
 ## Overview
 A web-based RPG auto-battle game where two 3D fighters battle in turns. Users can bet on which fighter will win each round. Built with React + Vite + Three.js.
@@ -13,7 +13,7 @@ A web-based RPG auto-battle game where two 3D fighters battle in turns. Users ca
 
 ### Directory Structure
 ```
-peru-polymarket/
+mechas-incaslop/
 ├── public/
 ├── src/
 │   ├── assets/
@@ -133,3 +133,4 @@ peru-polymarket/
 - [ ] Sound effects (optional)
 - [ ] Visual effects (particles on hit)
 - [ ] Mobile responsive layout
+
