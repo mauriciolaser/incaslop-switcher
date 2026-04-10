@@ -8,6 +8,13 @@ import {
   fetchOnlineState,
   submitOnlineBet,
 } from '../utils/onlineApi'
+import { resolvePortraitUrl } from '../utils/portraitResolver'
+
+function resolveFighterPortrait(fighter) {
+  if (!fighter) return fighter
+  const resolved = resolvePortraitUrl(fighter.portraitUrl)
+  return resolved ? { ...fighter, portraitUrl: resolved } : fighter
+}
 
 const POLL_INTERVAL = 1500
 
@@ -60,8 +67,8 @@ function mapStateResponse(payload, previousState) {
 
   return {
     phase: remoteState.phase ?? previousState.phase,
-    fighter1: remoteState.fighter1 ?? previousState.fighter1,
-    fighter2: remoteState.fighter2 ?? previousState.fighter2,
+    fighter1: resolveFighterPortrait(remoteState.fighter1) ?? previousState.fighter1,
+    fighter2: resolveFighterPortrait(remoteState.fighter2) ?? previousState.fighter2,
     round: remoteState.round ?? previousState.round,
     battleLog: remoteState.battleLog ?? previousState.battleLog,
     currentTurn: remoteState.currentTurn ?? null,

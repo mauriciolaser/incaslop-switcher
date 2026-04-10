@@ -1,5 +1,6 @@
 import process from 'node:process'
 import express from 'express'
+import cors from 'cors'
 import cookieParser from 'cookie-parser'
 import { config } from './config.js'
 import { createStore } from './store/index.js'
@@ -9,6 +10,24 @@ import { createUserKey } from './battleEngine.js'
 const app = express()
 let arena = null
 
+if (config.trustProxy) {
+  app.set('trust proxy', 1)
+}
+
+const corsOptions = {
+  credentials: true,
+  origin(origin, callback) {
+    if (!origin || config.corsAllowedOrigins.length === 0) {
+      callback(null, true)
+      return
+    }
+
+    callback(null, config.corsAllowedOrigins.includes(origin))
+  },
+}
+
+app.use(cors(corsOptions))
+app.options('*', cors(corsOptions))
 app.use(express.json())
 app.use(cookieParser())
 
@@ -19,7 +38,7 @@ function getUserKey(req, res) {
     res.cookie(config.sessionCookieName, userKey, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: false,
+      secure: config.cookieSecure,
       maxAge: 1000 * 60 * 60 * 24 * 365,
       path: '/',
     })

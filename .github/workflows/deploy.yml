@@ -80,6 +80,7 @@ jobs:
       - name: 🔐 Crear archivo .env
         run: |
           echo "VITE_GA_ID=${{ secrets.VITE_GA_ID }}" >> .env
+          echo "VITE_ONLINE_API_BASE=${{ secrets.VITE_ONLINE_API_BASE }}" >> .env
           echo "✔️  Variables de entorno configuradas"
 
       - name: 🧾 Debug del .env generado

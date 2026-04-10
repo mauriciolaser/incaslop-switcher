@@ -1,3 +1,5 @@
+import { resolvePortraitUrl } from './portraitResolver'
+
 const DEFAULT_CANDIDATE_API_BASE = 'https://api.candidatos.incaslop.online'
 const PAGE_SIZE = 500
 const MIN_POOL_SIZE = 2
@@ -22,7 +24,8 @@ function getRetryDelay(attempt) {
 function normalizeCandidate(raw = {}) {
   const id = String(raw.id ?? '').trim()
   const name = String(raw.name ?? '').trim()
-  const portraitUrl = raw.portraitUrl || raw.imageUrl || null
+  const rawPortrait = raw.portraitImage || raw.portraitUrl || raw.imageUrl || null
+  const portraitUrl = resolvePortraitUrl(rawPortrait) ?? rawPortrait
   const typeKey = String(raw.typeKey ?? raw.type ?? '').trim().toLowerCase()
 
   if (!id || !name) return null
@@ -36,7 +39,6 @@ function normalizeCandidate(raw = {}) {
     typeKey,
     partyId: raw.partyId ?? null,
     portraitUrl,
-    imageUrl: raw.imageUrl || portraitUrl,
   }
 }
 

@@ -13,8 +13,26 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true })
 }
 
+function parseBoolean(value, defaultValue) {
+  if (value == null) {
+    return defaultValue
+  }
+
+  return value === 'true'
+}
+
+function parseAllowedOrigins(value) {
+  return (value || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+}
+
 export const config = {
   port: Number(process.env.PORT || 3001),
+  trustProxy: parseBoolean(process.env.TRUST_PROXY, process.env.NODE_ENV === 'production'),
+  cookieSecure: parseBoolean(process.env.COOKIE_SECURE, process.env.NODE_ENV === 'production'),
+  corsAllowedOrigins: parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS),
   sessionCookieName: process.env.SESSION_COOKIE_NAME || 'mechas_incaslop_online',
   candidateApiBaseUrl: process.env.CANDIDATE_API_BASE_URL || 'https://api.candidatos.incaslop.online',
   storeMode: process.env.ONLINE_STORE || 'sqlite',

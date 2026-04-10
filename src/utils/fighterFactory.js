@@ -3,6 +3,7 @@ import {
   pickRandomCandidate,
   pickUniqueCandidates,
 } from './candidateCatalog'
+import { resolvePortraitUrl } from './portraitResolver'
 
 const BALANCED_ATTACK_RANGE = [15, 25]
 const BALANCED_DEFENSE_RANGE = [4, 10]
@@ -34,11 +35,13 @@ function buildCandidateDialogs(candidate) {
 }
 
 export function buildCandidateProfile(candidate) {
+  const rawPortrait = candidate.portraitUrl ?? candidate.imageUrl ?? null
+  const portraitUrl = resolvePortraitUrl(rawPortrait) ?? rawPortrait
   return {
     id: String(candidate.id),
     candidateId: String(candidate.id),
     name: candidate.name,
-    portraitUrl: candidate.portraitUrl ?? candidate.imageUrl ?? null,
+    portraitUrl,
     party: candidate.party ?? '',
     region: candidate.region ?? '',
     type: candidate.type ?? '',

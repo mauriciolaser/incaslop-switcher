@@ -1,4 +1,11 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { config } from './config.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const LOCAL_CANDIDATES_PATH = path.join(__dirname, 'data', 'candidates.json')
 
 const PAGE_SIZE = 500
 const MIN_POOL_SIZE = 2
@@ -16,7 +23,8 @@ function getRetryDelay(attempt) {
 function normalizeCandidate(raw = {}) {
   const id = String(raw.id ?? '').trim()
   const name = String(raw.name ?? '').trim()
-  const portraitUrl = raw.portraitUrl || raw.imageUrl || null
+  // portraitImage es el campo autoritativo en candidates.json; portraitUrl/imageUrl como fallback
+  const portraitUrl = raw.portraitImage || raw.portraitUrl || raw.imageUrl || null
   const typeKey = String(raw.typeKey ?? raw.type ?? '').trim().toLowerCase()
 
   if (!id || !name) return null
@@ -25,12 +33,24 @@ function normalizeCandidate(raw = {}) {
     id,
     name,
     portraitUrl,
-    imageUrl: raw.imageUrl || portraitUrl,
     party: raw.party || '',
     region: raw.region || '',
     type: raw.type || '',
     typeKey,
     partyId: raw.partyId ?? null,
+  }
+}
+
+function loadLocalCandidates() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(LOCAL_CANDIDATES_PATH, 'utf8'))
+    if (!Array.isArray(raw)) return null
+    const candidates = raw.map(normalizeCandidate).filter(Boolean)
+    if (candidates.length < MIN_POOL_SIZE) return null
+    console.info(`[candidate-catalog] cargados ${candidates.length} candidatos desde archivo local`)
+    return candidates
+  } catch {
+    return null
   }
 }
 
@@ -86,6 +106,9 @@ async function fetchCandidatePoolOnce() {
 }
 
 export async function loadCandidatePoolWithRetry() {
+  const local = loadLocalCandidates()
+  if (local) return local
+
   let attempt = 0
 
   while (true) {
