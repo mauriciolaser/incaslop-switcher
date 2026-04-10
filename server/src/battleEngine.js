@@ -1,5 +1,5 @@
 import crypto from 'node:crypto'
-import { ataques, personajes } from './gameData.js'
+import { ataques } from './gameData.js'
 
 export const INITIAL_COINS = 500
 export const DEFAULT_STAKE = 10
@@ -9,6 +9,11 @@ export const BETTING_DURATION_MS = 15000
 export const TURN_DELAY_MS = 1800
 export const RESULT_DURATION_MS = 7000
 export const MAX_LOG_ENTRIES = 60
+const BALANCED_ATTACK_RANGE = [15, 25]
+const BALANCED_DEFENSE_RANGE = [4, 10]
+const BALANCED_SPEED_RANGE = [1, 10]
+
+let candidatePool = []
 
 function randomInt(min, max) {
   return min + Math.floor(Math.random() * (max - min + 1))
@@ -19,39 +24,76 @@ function pickRandomDialog(dialogos = []) {
   return dialogos[Math.floor(Math.random() * dialogos.length)]
 }
 
+function randomInRange([min, max]) {
+  return randomInt(min, max)
+}
+
+function getRandomCandidate() {
+  if (candidatePool.length < 2) {
+    throw new Error('Candidate pool no disponible en servidor.')
+  }
+  return candidatePool[Math.floor(Math.random() * candidatePool.length)]
+}
+
+function buildCandidateBio(candidate) {
+  const role = candidate.type || 'Candidato'
+  const region = candidate.region || 'region desconocida'
+  const party = candidate.party || 'sin partido'
+  return `${role} de ${region}, afiliado a ${party}. Entra a la arena con estrategia y resistencia.`
+}
+
+function buildCandidateDialogs(candidate) {
+  const firstName = candidate.name.split(' ')[0] || candidate.name
+  return [
+    `Soy ${firstName}. Esta ronda es mia.`,
+    'No subestimes mi ritmo en la arena.',
+    'Cada turno es una oportunidad para ganar.',
+  ]
+}
+
+export function setCandidatePool(candidates) {
+  if (!Array.isArray(candidates)) {
+    candidatePool = []
+    return
+  }
+  candidatePool = candidates.filter((candidate) => candidate?.id && candidate?.name)
+}
+
 export function createUserKey() {
   return crypto.randomBytes(24).toString('hex')
 }
 
 export function createFighter(side, overrides = {}) {
-  const personaje = personajes[Math.floor(Math.random() * personajes.length)]
+  const candidate = getRandomCandidate()
+  const dialogos = buildCandidateDialogs(candidate)
   const maxHp = overrides.maxHp ?? 100
   const hp = Math.min(overrides.hp ?? maxHp, maxHp)
 
   return {
     id: overrides.id ?? `${Date.now()}-${Math.random()}`,
-    personajeId: personaje.id,
+    personajeId: String(candidate.id),
     side,
-    name: personaje.name,
+    name: candidate.name,
+    portraitUrl: candidate.portraitUrl ?? null,
     maxHp,
     hp,
-    attack: overrides.attack ?? randomInt(personaje.attackRange[0], personaje.attackRange[1]),
-    defense: overrides.defense ?? randomInt(personaje.defenseRange[0], personaje.defenseRange[1]),
-    speed: overrides.speed ?? randomInt(personaje.speedRange[0], personaje.speedRange[1]),
+    attack: overrides.attack ?? randomInRange(BALANCED_ATTACK_RANGE),
+    defense: overrides.defense ?? randomInRange(BALANCED_DEFENSE_RANGE),
+    speed: overrides.speed ?? randomInRange(BALANCED_SPEED_RANGE),
     alive: overrides.alive ?? hp > 0,
     efectos: overrides.efectos ?? [],
-    bio: personaje.bio,
-    dialogos: personaje.dialogos,
-    introDialog: overrides.introDialog ?? pickRandomDialog(personaje.dialogos),
+    bio: buildCandidateBio(candidate),
+    dialogos,
+    introDialog: overrides.introDialog ?? pickRandomDialog(dialogos),
   }
 }
 
 export function refreshIntroDialog(fighter, side = fighter.side) {
-  const personaje = personajes.find((item) => item.id === fighter.personajeId)
+  const dialogs = Array.isArray(fighter.dialogos) ? fighter.dialogos : []
   return {
     ...fighter,
     side,
-    introDialog: pickRandomDialog(personaje?.dialogos ?? fighter.dialogos),
+    introDialog: pickRandomDialog(dialogs),
     alive: fighter.alive ?? fighter.hp > 0,
     efectos: (fighter.efectos ?? []).map((efecto) => ({ ...efecto })),
   }

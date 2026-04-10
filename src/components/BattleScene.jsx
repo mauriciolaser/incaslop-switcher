@@ -259,6 +259,7 @@ export default function BattleScene() {
               position={POS_LEFT}
               opponentPosition={POS_RIGHT}
               side="left"
+              portraitUrl={fighter1.portraitUrl}
               hp={fighter1.hp}
               maxHp={fighter1.maxHp}
               isAttacking={currentTurn}
@@ -270,6 +271,7 @@ export default function BattleScene() {
               position={POS_RIGHT}
               opponentPosition={POS_LEFT}
               side="right"
+              portraitUrl={fighter2.portraitUrl}
               hp={fighter2.hp}
               maxHp={fighter2.maxHp}
               isAttacking={currentTurn}

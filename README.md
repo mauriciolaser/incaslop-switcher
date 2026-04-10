@@ -72,6 +72,14 @@ npm --prefix server ci
 npm run build
 ```
 
+Opcional para frontend (si quieres apuntar a otro catalogo de candidatos):
+
+```bash
+cat > /opt/mechas-incaslop/.env.production <<'EOF'
+VITE_CANDIDATE_API_BASE=https://api.candidatos.incaslop.online
+EOF
+```
+
 ## 6) Configurar variables del backend
 
 Crea `server/.env`:
@@ -81,6 +89,7 @@ cat > /opt/mechas-incaslop/server/.env <<'EOF'
 PORT=3001
 SESSION_COOKIE_NAME=mechas_incaslop_online
 ALLOW_FILE_FALLBACK=false
+CANDIDATE_API_BASE_URL=https://api.candidatos.incaslop.online
 
 DB_HOST=127.0.0.1
 DB_PORT=3306

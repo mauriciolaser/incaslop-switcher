@@ -16,6 +16,7 @@ function createPlaceholderFighter(side) {
     personajeId: null,
     side,
     name: side === 'left' ? 'Conectando...' : 'Esperando rival...',
+    portraitUrl: null,
     maxHp: 100,
     hp: 100,
     attack: 0,

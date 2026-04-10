@@ -14,9 +14,11 @@ import {
   isStunned,
   pickAtaque,
   refreshIntroDialog,
+  setCandidatePool,
   tickEfectos,
   trimBattleLog,
 } from './battleEngine.js'
+import { loadCandidatePoolWithRetry } from './candidateCatalog.js'
 
 function nowIso(offsetMs = 0) {
   return new Date(Date.now() + offsetMs).toISOString()
@@ -40,6 +42,8 @@ export class OnlineArenaService {
 
   async init() {
     await this.store.init()
+    const candidatePool = await loadCandidatePoolWithRetry()
+    setCandidatePool(candidatePool)
     const persisted = await this.store.loadState()
     this.state = persisted ?? this.createInitialArenaState()
     await this.persistState()

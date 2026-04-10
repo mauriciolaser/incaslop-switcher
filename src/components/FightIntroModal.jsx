@@ -7,6 +7,13 @@ import { getMatchesInRound, getRoundName } from '../utils/tournamentEngine'
 function IntroCard({ fighter, side, oddsPct }) {
   return (
     <div className={`intro-fighter-card ${side}`}>
+      <div className="intro-fighter-portrait-wrap">
+        {fighter.portraitUrl ? (
+          <img className="intro-fighter-portrait" src={fighter.portraitUrl} alt={fighter.name} />
+        ) : (
+          <div className="intro-fighter-portrait-placeholder">Sin Foto</div>
+        )}
+      </div>
       <div className="intro-fighter-name">{fighter.name}</div>
       <div className="intro-fighter-odds">{oddsPct}% de probabilidad</div>
       <div className="intro-dialog-bubble">"{fighter.introDialog}"</div>

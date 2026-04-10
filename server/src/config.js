@@ -10,6 +10,7 @@ export const DATA_DIR = path.join(ROOT_DIR, 'data')
 export const config = {
   port: Number(process.env.PORT || 3001),
   sessionCookieName: process.env.SESSION_COOKIE_NAME || 'mechas_incaslop_online',
+  candidateApiBaseUrl: process.env.CANDIDATE_API_BASE_URL || 'https://api.candidatos.incaslop.online',
   db: {
     host: process.env.DB_HOST,
     port: Number(process.env.DB_PORT || 3306),

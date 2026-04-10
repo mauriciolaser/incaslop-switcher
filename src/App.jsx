@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { LocalGameProvider, useGame } from './context/GameContext'
 import { OnlineGameProvider } from './context/OnlineGameContext'
 import { TournamentProvider, useTournament } from './context/TournamentContext'
@@ -12,6 +12,7 @@ import GameOver from './components/GameOver'
 import MainMenu from './components/MainMenu'
 import TournamentBracket from './components/TournamentBracket'
 import TournamentResult from './components/TournamentResult'
+import { ensureCandidatePool, getCandidateApiBase } from './utils/candidateCatalog'
 import './App.css'
 
 function ModeSelector({ onSelect }) {
@@ -109,6 +110,43 @@ function LocalSession({ onExit }) {
   )
 }
 
+function LocalSessionGate({ onExit }) {
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    void ensureCandidatePool().then(() => {
+      if (!cancelled) {
+        setReady(true)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  if (!ready) {
+    return (
+      <div className="game-container">
+        <div className="candidate-loading-shell">
+          <div className="candidate-loading-panel">
+            <div className="candidate-loading-title">Conectando API de candidatos...</div>
+            <div className="candidate-loading-subtitle">
+              Reintentando automaticamente hasta cargar el catalogo.
+            </div>
+            <div className="candidate-loading-base">{getCandidateApiBase()}/v1/candidates</div>
+            <button className="session-exit-btn candidate-loading-back" onClick={onExit}>
+              Volver
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return <LocalSession onExit={onExit} />
+}
+
 function OnlineSession({ onExit }) {
   return (
     <OnlineGameProvider>
@@ -126,7 +164,7 @@ export default function App() {
   const [sessionMode, setSessionMode] = useState(null)
 
   if (sessionMode === 'local') {
-    return <LocalSession onExit={() => setSessionMode(null)} />
+    return <LocalSessionGate onExit={() => setSessionMode(null)} />
   }
 
   if (sessionMode === 'online') {

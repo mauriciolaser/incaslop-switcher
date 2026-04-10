@@ -138,6 +138,13 @@ export default function BettingModal() {
 
         <div className="fighters-preview">
           <div className={`fighter-card left ${bet === 'left' ? 'selected' : ''}`}>
+            <div className="fighter-card-portrait-wrap">
+              {fighter1.portraitUrl ? (
+                <img className="fighter-card-portrait" src={fighter1.portraitUrl} alt={fighter1.name} />
+              ) : (
+                <div className="fighter-card-portrait-placeholder">Sin Foto</div>
+              )}
+            </div>
             <div className="fighter-card-name">{fighter1.name}</div>
             <div className="fighter-odds">{odds.pct1}% prob.</div>
             <div className="fighter-card-stats">
@@ -157,6 +164,13 @@ export default function BettingModal() {
           <div className="vs-divider">VS</div>
 
           <div className={`fighter-card right ${bet === 'right' ? 'selected' : ''}`}>
+            <div className="fighter-card-portrait-wrap">
+              {fighter2.portraitUrl ? (
+                <img className="fighter-card-portrait" src={fighter2.portraitUrl} alt={fighter2.name} />
+              ) : (
+                <div className="fighter-card-portrait-placeholder">Sin Foto</div>
+              )}
+            </div>
             <div className="fighter-card-name">{fighter2.name}</div>
             <div className="fighter-odds">{odds.pct2}% prob.</div>
             <div className="fighter-card-stats">

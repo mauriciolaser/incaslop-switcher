@@ -12,4 +12,3 @@ function readJson(relativePath) {
 }
 
 export const ataques = readJson(path.join('src', 'data', 'ataques.json'))
-export const personajes = readJson(path.join('src', 'data', 'personajes.json'))

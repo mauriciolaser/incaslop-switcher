@@ -1,0 +1,93 @@
+import { config } from './config.js'
+
+const PAGE_SIZE = 500
+const MIN_POOL_SIZE = 2
+const RETRY_DELAYS_MS = [1000, 2000, 5000, 10000]
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function getRetryDelay(attempt) {
+  const index = Math.min(Math.max(attempt - 1, 0), RETRY_DELAYS_MS.length - 1)
+  return RETRY_DELAYS_MS[index]
+}
+
+function normalizeCandidate(raw = {}) {
+  const id = String(raw.id ?? '').trim()
+  const name = String(raw.name ?? '').trim()
+  const portraitUrl = raw.portraitUrl || raw.imageUrl || null
+
+  if (!id || !name) return null
+
+  return {
+    id,
+    name,
+    portraitUrl,
+    imageUrl: raw.imageUrl || null,
+    party: raw.party || '',
+    region: raw.region || '',
+    type: raw.type || '',
+  }
+}
+
+async function fetchCandidatesPage(page) {
+  const base = config.candidateApiBaseUrl.replace(/\/$/, '')
+  const url = `${base}/v1/candidates?page=${page}&pageSize=${PAGE_SIZE}`
+  const response = await fetch(url)
+  const data = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    throw new Error(data?.error || `HTTP ${response.status}`)
+  }
+
+  if (!Array.isArray(data?.candidates)) {
+    throw new Error('Candidate API payload invalido: candidates ausente.')
+  }
+
+  return data
+}
+
+async function fetchCandidatePoolOnce() {
+  const firstPage = await fetchCandidatesPage(1)
+  const totalPages = Math.max(1, Number(firstPage?.pagination?.totalPages || 1))
+  const targetPage = totalPages > 1
+    ? Math.floor(Math.random() * totalPages) + 1
+    : 1
+
+  const payload = targetPage === 1
+    ? firstPage
+    : await fetchCandidatesPage(targetPage)
+
+  const candidates = payload.candidates
+    .map(normalizeCandidate)
+    .filter(Boolean)
+
+  if (candidates.length < MIN_POOL_SIZE) {
+    throw new Error(`Pool insuficiente de candidatos (${candidates.length}).`)
+  }
+
+  return {
+    candidates,
+    targetPage,
+    totalPages,
+  }
+}
+
+export async function loadCandidatePoolWithRetry() {
+  let attempt = 0
+
+  while (true) {
+    attempt += 1
+
+    try {
+      const { candidates, targetPage, totalPages } = await fetchCandidatePoolOnce()
+      console.info(`[candidate-catalog] cargados ${candidates.length} candidatos desde pagina ${targetPage}/${totalPages}`)
+      return candidates
+    } catch (error) {
+      const delay = getRetryDelay(attempt)
+      console.error(`[candidate-catalog] intento ${attempt} fallido: ${error.message}. Reintentando en ${delay}ms.`)
+      await wait(delay)
+    }
+  }
+}
