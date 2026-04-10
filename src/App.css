@@ -1245,3 +1245,330 @@
     font-size: 28px;
   }
 }
+
+.home-shell {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at top, rgba(255, 204, 0, 0.14), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(76, 144, 255, 0.14), transparent 28%),
+    linear-gradient(180deg, #05070f, #0b1324 56%, #070912);
+}
+
+.home-panel {
+  width: min(980px, 92vw);
+  padding: 42px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(8, 12, 22, 0.84);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(18px);
+  text-align: center;
+}
+
+.home-title {
+  font-size: 52px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #ffcc00;
+  margin-bottom: 10px;
+}
+
+.home-subtitle {
+  max-width: 700px;
+  margin: 0 auto 28px;
+  line-height: 1.7;
+  color: #bcc6de;
+}
+
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.tournament-setup {
+  width: min(960px, 92vw);
+  padding: 32px;
+  border-radius: 24px;
+  background: linear-gradient(145deg, #171a31, #10182b);
+  border: 1px solid rgba(255, 204, 0, 0.2);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.46);
+}
+
+.setup-kicker {
+  font-size: 11px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: #8c95ac;
+  margin-bottom: 10px;
+}
+
+.setup-title {
+  font-size: 34px;
+  color: #ffcc00;
+  margin-bottom: 10px;
+}
+
+.setup-subtitle {
+  color: #bcc6de;
+  margin-bottom: 24px;
+}
+
+.setup-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.setup-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+
+.setup-field span {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #aeb7ce;
+}
+
+.setup-field select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #eef2ff;
+}
+
+.setup-field select:disabled {
+  opacity: 0.45;
+}
+
+.setup-preview {
+  min-height: 220px;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 20px;
+  align-items: center;
+  padding: 18px;
+  margin-bottom: 20px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.setup-preview-portrait-wrap {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.setup-preview-portrait {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.setup-preview-placeholder,
+.setup-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #9aa5c2;
+}
+
+.setup-preview-body h2 {
+  font-size: 28px;
+  color: #ffcc00;
+  margin-bottom: 8px;
+}
+
+.setup-preview-body p {
+  color: #dbe1ef;
+  margin-bottom: 6px;
+}
+
+.bracket-shell {
+  width: min(1380px, 96vw);
+  max-height: 92vh;
+  overflow: auto;
+  padding: 26px;
+  border-radius: 24px;
+  background: linear-gradient(145deg, #141a2c, #101624);
+  border: 1px solid rgba(255, 204, 0, 0.14);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.48);
+}
+
+.bracket-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  margin-bottom: 22px;
+}
+
+.bracket-header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.bracket-mirror-layout {
+  display: grid;
+  grid-template-columns: minmax(420px, 1fr) minmax(220px, 0.42fr) minmax(420px, 1fr);
+  gap: 18px;
+  align-items: center;
+}
+
+.bracket-side {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(200px, 1fr));
+  gap: 10px;
+  align-items: center;
+}
+
+.bracket-side.right .bracket-round {
+  direction: rtl;
+}
+
+.bracket-final-column {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+
+.bracket-fighter.player .bracket-fighter-name {
+  color: #7dd3fc;
+}
+
+.bracket-status-banner {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #d8e0f2;
+}
+
+.round-summary-modal {
+  width: min(560px, 92vw);
+  padding: 34px;
+  border-radius: 22px;
+  text-align: center;
+  background: linear-gradient(145deg, #161c31, #10182b);
+  border: 1px solid rgba(255, 204, 0, 0.24);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.46);
+}
+
+.round-summary-player {
+  margin-bottom: 18px;
+}
+
+.round-summary-player-name {
+  font-size: 26px;
+  font-weight: 900;
+  color: #ffcc00;
+  margin-bottom: 8px;
+}
+
+.round-summary-player-meta,
+.round-summary-copy {
+  color: #d8e0f2;
+  line-height: 1.6;
+}
+
+.online-players-panel {
+  position: absolute;
+  top: 96px;
+  right: 18px;
+  z-index: 18;
+  width: 280px;
+  max-height: calc(100vh - 120px);
+  overflow: auto;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(5, 8, 18, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.online-players-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #9fb3e7;
+  margin-bottom: 10px;
+}
+
+.online-players-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.online-player-row {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #e4ecff;
+  font-size: 13px;
+  border: 1px solid transparent;
+}
+
+.online-player-row.is-viewer {
+  border-color: rgba(255, 204, 0, 0.45);
+  color: #ffdd74;
+}
+
+.online-player-row.empty {
+  color: #95a1bb;
+}
+
+@media (max-width: 1200px) {
+  .bracket-mirror-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .bracket-side {
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .home-grid,
+  .setup-form,
+  .setup-preview {
+    grid-template-columns: 1fr;
+  }
+
+  .bracket-header {
+    flex-direction: column;
+  }
+
+  .bracket-header-actions {
+    justify-content: flex-start;
+  }
+
+  .bracket-side {
+    grid-template-columns: 1fr;
+  }
+
+  .online-players-panel {
+    position: static;
+    width: min(92vw, 420px);
+    margin: 88px auto 0;
+  }
+}

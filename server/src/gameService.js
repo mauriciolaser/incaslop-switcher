@@ -47,6 +47,7 @@ export class OnlineArenaService {
     const persisted = await this.store.loadState()
     this.state = persisted ?? this.createInitialArenaState()
     await this.persistState()
+    await this.store.cleanup()
     await this.catchUp()
     this.scheduleNextTick()
   }
@@ -102,10 +103,28 @@ export class OnlineArenaService {
     }
   }
 
-  async getStateForUser(userKey) {
+  async createSession(userKey) {
     await this.store.ensureUser(userKey)
-    const user = await this.store.getUserView(userKey, this.state.round, this.state.phase)
-    const effectiveLastResult = user.lastResult ?? (this.state.phase === 'result' && this.state.lastResult
+    return this.getStateForUser(userKey)
+  }
+
+  async leaveSession(userKey) {
+    await this.store.removeUser(userKey)
+    await this.store.cleanup()
+    return { ok: true }
+  }
+
+  async getStateForUser(userKey) {
+    const existing = await this.store.getPlayer(userKey)
+    if (!existing) {
+      await this.store.ensureUser(userKey)
+    } else {
+      await this.store.touchUser(userKey)
+    }
+    await this.store.cleanup()
+    const viewer = await this.store.getUserView(userKey, this.state.round, this.state.phase)
+    const players = await this.store.listActivePlayers()
+    const effectiveLastResult = viewer.lastResult ?? (this.state.phase === 'result' && this.state.lastResult
       ? {
           winnerSide: this.state.lastResult.winnerSide,
           betResult: 'none',
@@ -116,11 +135,11 @@ export class OnlineArenaService {
 
     return {
       state: this.buildPublicState(),
-      user: {
-        ...user,
+      viewer: {
+        ...viewer,
         lastResult: effectiveLastResult,
-        pendingStake: user.currentBet?.stake ?? DEFAULT_STAKE,
       },
+      players,
       latestEventId: this.state.latestEventId,
       serverTime: nowIso(),
     }
@@ -140,12 +159,20 @@ export class OnlineArenaService {
       throw new Error('Las apuestas no estan abiertas en este momento.')
     }
 
-    await this.store.ensureUser(userKey)
-    const user = await this.store.getUserView(userKey, this.state.round, this.state.phase)
-    const normalizedStake = clampStake(stake, user.coins)
+    const existing = await this.store.getPlayer(userKey)
+    if (!existing) {
+      await this.store.ensureUser(userKey)
+    }
+    const viewer = await this.store.getUserView(userKey, this.state.round, this.state.phase)
 
-    if (user.coins < normalizedStake) {
-      throw new Error('No tienes suficientes monedas para esa apuesta.')
+    if (viewer.status !== 'active') {
+      throw new Error('Tu run ya termino. Vuelve al home para iniciar otro.')
+    }
+
+    const normalizedStake = clampStake(stake, viewer.coins)
+
+    if (viewer.coins < normalizedStake) {
+      throw new Error('No tienes suficientes creditos para esa apuesta.')
     }
 
     await this.store.placeBet(userKey, {
@@ -177,6 +204,7 @@ export class OnlineArenaService {
         await this.advanceState()
       }
       await this.persistState()
+      await this.store.cleanup()
     } finally {
       this.processing = false
       this.scheduleNextTick()
@@ -224,7 +252,7 @@ export class OnlineArenaService {
   async processFightTurn() {
     const attackerSide = this.state.turnOrder[this.state.turnIndex % 2]
     let attacker = attackerSide === 'left' ? this.state.fighter1 : this.state.fighter2
-    let defender = attackerSide === 'left' ? this.state.fighter2 : this.state.fighter1
+    const defender = attackerSide === 'left' ? this.state.fighter2 : this.state.fighter1
     this.state.currentTurn = attackerSide
 
     const { fighter: tickedAttacker, dotDamage } = tickEfectos(attacker)
@@ -338,6 +366,7 @@ export class OnlineArenaService {
       winnerSide,
       logEntry: createLogEntry('info', `${winner.name} gana la ronda ${this.state.round}.`),
     })
+    await this.store.cleanup()
   }
 
   prepareNextRound() {
@@ -367,4 +396,3 @@ export class OnlineArenaService {
     }
   }
 }
-

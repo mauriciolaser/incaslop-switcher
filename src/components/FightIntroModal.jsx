@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useGame } from '../context/GameContext'
 import { useTournament } from '../context/TournamentContext'
+import { useBattle } from '../hooks/useBattle'
 import { calculateWinOdds } from '../utils/odds'
 import { getMatchesInRound, getRoundName } from '../utils/tournamentEngine'
 
@@ -28,15 +29,17 @@ function IntroCard({ fighter, side, oddsPct }) {
 
 export default function FightIntroModal() {
   const { phase, fighter1, fighter2, startBetting, isOnline, countdown } = useGame()
-  const { mode, bracket, currentGlobalMatchIdx } = useTournament()
+  const { runBattle } = useBattle()
+  const { stage, bracket, currentGlobalMatchIdx, watchMode } = useTournament()
   const odds = useMemo(
     () => calculateWinOdds(fighter1, fighter2, { simulations: 280 }),
     [fighter1, fighter2],
   )
 
   if (phase !== 'intro') return null
+  if (!isOnline && stage !== 'fighting') return null
 
-  const currentMatch = mode === 'torneo' && currentGlobalMatchIdx != null
+  const currentMatch = stage === 'fighting' && currentGlobalMatchIdx != null
     ? bracket[currentGlobalMatchIdx]
     : null
 
@@ -67,6 +70,10 @@ export default function FightIntroModal() {
           <div className="intro-online-status">
             {countdown != null ? `Comienza en ${countdown}s` : 'Esperando al servidor...'}
           </div>
+        ) : currentMatch ? (
+          <button className="next-round-btn" onClick={runBattle}>
+            {watchMode === 'player' ? 'Comenzar Combate' : 'Ver Pelea'}
+          </button>
         ) : (
           <button className="next-round-btn" onClick={startBetting}>
             Abrir Apuestas

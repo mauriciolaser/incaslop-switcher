@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useReducer, useCallback } from 'react'
 import { DEFAULT_STAKE, generateFighter, healSurvivor, normalizeStake } from '../utils/battleEngine'
 import { prepareFighterForMatch } from '../utils/fighterFactory'

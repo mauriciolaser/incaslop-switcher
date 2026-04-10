@@ -1,3 +1,4 @@
+import process from 'node:process'
 import express from 'express'
 import cookieParser from 'cookie-parser'
 import { config } from './config.js'
@@ -6,8 +7,7 @@ import { OnlineArenaService } from './gameService.js'
 import { createUserKey } from './battleEngine.js'
 
 const app = express()
-const store = createStore()
-const arena = new OnlineArenaService(store)
+let arena = null
 
 app.use(express.json())
 app.use(cookieParser())
@@ -29,8 +29,14 @@ function getUserKey(req, res) {
 
 app.post('/api/online/session', async (req, res) => {
   const userKey = getUserKey(req, res)
-  await store.ensureUser(userKey)
-  res.json({ ok: true })
+  const payload = await arena.createSession(userKey)
+  res.json(payload)
+})
+
+app.delete('/api/online/session', async (req, res) => {
+  const userKey = getUserKey(req, res)
+  const payload = await arena.leaveSession(userKey)
+  res.json(payload)
 })
 
 app.get('/api/online/state', async (req, res) => {
@@ -68,6 +74,8 @@ app.get('/health', (req, res) => {
 })
 
 async function start() {
+  const store = await createStore()
+  arena = new OnlineArenaService(store)
   await arena.init()
   app.listen(config.port, () => {
     console.log(`Online arena server listening on port ${config.port}`)

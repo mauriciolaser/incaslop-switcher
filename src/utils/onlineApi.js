@@ -25,6 +25,15 @@ export async function createOnlineSession() {
   return parseJsonResponse(response)
 }
 
+export async function closeOnlineSession() {
+  const response = await fetch(`${API_BASE}/session`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+
+  return parseJsonResponse(response)
+}
+
 export async function fetchOnlineState() {
   const response = await fetch(`${API_BASE}/state`, {
     credentials: 'include',

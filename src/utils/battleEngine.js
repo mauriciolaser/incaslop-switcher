@@ -8,7 +8,7 @@ export function generateFighter(side) {
   return generateRandomRosterFighter(side)
 }
 
-export function pickAtaque(attacker) {
+export function pickAtaque() {
   // Try to trigger a special attack
   for (const especial of ataques.especiales) {
     if (Math.random() < especial.probabilidad) {

@@ -10,51 +10,26 @@ import BettingModal from './components/BettingModal'
 import FightIntroModal from './components/FightIntroModal'
 import GameOver from './components/GameOver'
 import MainMenu from './components/MainMenu'
+import OnlinePlayersPanel from './components/OnlinePlayersPanel'
 import TournamentBracket from './components/TournamentBracket'
 import TournamentResult from './components/TournamentResult'
+import TournamentRoundSummary from './components/TournamentRoundSummary'
+import TournamentSetup from './components/TournamentSetup'
 import { ensureCandidatePool, getCandidateApiBase } from './utils/candidateCatalog'
 import './App.css'
 
-function ModeSelector({ onSelect }) {
-  return (
-    <div className="game-container">
-      <div className="mode-select-shell">
-        <div className="mode-select-panel">
-          <div className="mode-select-kicker">Selecciona tu experiencia</div>
-          <h1 className="mode-select-title">Mechas IncaSlop</h1>
-          <p className="mode-select-subtitle">
-            Elige si quieres jugar completamente local o mirar la arena compartida online.
-          </p>
-
-          <div className="mode-select-grid">
-            <button className="mode-card local" onClick={() => onSelect('local')}>
-              <span className="mode-card-title">LOCAL</span>
-              <span className="mode-card-desc">
-                Todo corre en tu navegador. Incluye infinito y torneo, como hasta ahora.
-              </span>
-            </button>
-
-            <button className="mode-card online" onClick={() => onSelect('online')}>
-              <span className="mode-card-title">ONLINE</span>
-              <span className="mode-card-desc">
-                Pelea infinita compartida con polling. Todos observan el mismo combate.
-              </span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function SessionToolbar({ onExit }) {
-  const { isOnline, connectionStatus, onlineError } = useGame()
+function SessionToolbar({ label, onExit }) {
+  const { isOnline, connectionStatus, onlineError, viewer } = useGame()
 
   return (
     <div className="session-toolbar">
       <div className={`session-pill ${isOnline ? 'online' : 'local'}`}>
-        {isOnline ? 'ONLINE' : 'LOCAL'}
+        {label}
       </div>
+
+      {viewer?.label && (
+        <div className="session-connection connected">{viewer.label}</div>
+      )}
 
       {isOnline && (
         <div className={`session-connection ${connectionStatus}`}>
@@ -65,52 +40,56 @@ function SessionToolbar({ onExit }) {
       )}
 
       <button className="session-exit-btn" onClick={onExit}>
-        Cambiar Modo
+        Volver al Home
       </button>
     </div>
   )
 }
 
-function SharedArena() {
-  const { mode, tournamentPhase } = useTournament()
+function SharedArena({ sessionType, onExit }) {
   const { phase } = useGame()
-  const inTournamentMatchFlow = mode === 'torneo' && tournamentPhase === 'fighting'
-  const inMatchFlow = mode === 'endless' || mode === 'online' || inTournamentMatchFlow
-  const showCombatUI = inMatchFlow && phase !== 'intro'
+  const { stage } = useTournament()
+  const showTournamentCombatUI = sessionType === 'tournament' && stage === 'fighting' && phase !== 'intro'
+  const showEndlessCombatUI = sessionType === 'endless' && phase !== 'intro'
+  const showCombatUI = showTournamentCombatUI || showEndlessCombatUI
+  const showHud = sessionType === 'endless' || stage !== 'setup'
 
   return (
     <>
       <BattleScene />
-      <MainMenu />
+      <SessionToolbar label={sessionType === 'endless' ? 'ENDLESS' : 'TOURNAMENT'} onExit={onExit} />
+      {showHud && <BattleHUD sessionType={sessionType} />}
 
-      {mode !== 'menu' && <BattleHUD />}
       {showCombatUI && <HealthBars />}
       {showCombatUI && <BattleLog />}
-      {inMatchFlow && <FightIntroModal />}
-      {inMatchFlow && <BettingModal />}
 
-      {(mode === 'endless' || mode === 'online') && <GameOver />}
+      {sessionType === 'endless' && <OnlinePlayersPanel />}
+      {sessionType === 'endless' && <FightIntroModal />}
+      {sessionType === 'endless' && <BettingModal />}
+      {sessionType === 'endless' && <GameOver onExitHome={onExit} />}
 
-      {mode === 'torneo' && tournamentPhase === 'bracket' && <TournamentBracket />}
-      {mode === 'torneo' && <TournamentResult />}
+      {sessionType === 'tournament' && <TournamentSetup />}
+      {sessionType === 'tournament' && <TournamentBracket />}
+      {sessionType === 'tournament' && <FightIntroModal />}
+      {sessionType === 'tournament' && <TournamentResult onExitHome={onExit} />}
+      {sessionType === 'tournament' && <TournamentRoundSummary />}
     </>
   )
 }
 
-function LocalSession({ onExit }) {
+function TournamentSession({ onExit }) {
   return (
     <LocalGameProvider>
-      <TournamentProvider initialMode="menu">
+      <TournamentProvider>
         <div className="game-container">
-          <SessionToolbar onExit={onExit} />
-          <SharedArena />
+          <SharedArena sessionType="tournament" onExit={onExit} />
         </div>
       </TournamentProvider>
     </LocalGameProvider>
   )
 }
 
-function LocalSessionGate({ onExit }) {
+function TournamentSessionGate({ onExit }) {
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
@@ -130,9 +109,9 @@ function LocalSessionGate({ onExit }) {
       <div className="game-container">
         <div className="candidate-loading-shell">
           <div className="candidate-loading-panel">
-            <div className="candidate-loading-title">Conectando API de candidatos...</div>
+            <div className="candidate-loading-title">Cargando congresistas desde API...</div>
             <div className="candidate-loading-subtitle">
-              Reintentando automaticamente hasta cargar el catalogo.
+              Preparando el roster completo para el selector y el bracket de 32.
             </div>
             <div className="candidate-loading-base">{getCandidateApiBase()}/v1/candidates</div>
             <button className="session-exit-btn candidate-loading-back" onClick={onExit}>
@@ -144,16 +123,15 @@ function LocalSessionGate({ onExit }) {
     )
   }
 
-  return <LocalSession onExit={onExit} />
+  return <TournamentSession onExit={onExit} />
 }
 
-function OnlineSession({ onExit }) {
+function EndlessSession({ onExit }) {
   return (
     <OnlineGameProvider>
-      <TournamentProvider initialMode="online">
+      <TournamentProvider>
         <div className="game-container">
-          <SessionToolbar onExit={onExit} />
-          <SharedArena />
+          <SharedArena sessionType="endless" onExit={onExit} />
         </div>
       </TournamentProvider>
     </OnlineGameProvider>
@@ -161,16 +139,15 @@ function OnlineSession({ onExit }) {
 }
 
 export default function App() {
-  const [sessionMode, setSessionMode] = useState(null)
+  const [route, setRoute] = useState('home')
 
-  if (sessionMode === 'local') {
-    return <LocalSessionGate onExit={() => setSessionMode(null)} />
+  if (route === 'endless') {
+    return <EndlessSession onExit={() => setRoute('home')} />
   }
 
-  if (sessionMode === 'online') {
-    return <OnlineSession onExit={() => setSessionMode(null)} />
+  if (route === 'tournament') {
+    return <TournamentSessionGate onExit={() => setRoute('home')} />
   }
 
-  return <ModeSelector onSelect={setSessionMode} />
+  return <MainMenu onSelect={setRoute} />
 }
-

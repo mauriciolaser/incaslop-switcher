@@ -1,15 +1,20 @@
-import { hasDatabaseConfig, config } from '../config.js'
-import { FileStore } from './fileStore.js'
-import { MySQLStore } from './mysqlStore.js'
+import { config } from '../config.js'
 
-export function createStore() {
-  if (hasDatabaseConfig()) {
-    return new MySQLStore()
+export async function createStore() {
+  if (config.storeMode === 'memory') {
+    const { MemoryStore } = await import('./memoryStore.js')
+    return new MemoryStore()
   }
 
-  if (config.allowFileFallback) {
+  if (config.storeMode === 'sqlite') {
+    const { SQLiteStore } = await import('./sqliteStore.js')
+    return new SQLiteStore()
+  }
+
+  if (config.storeMode === 'file') {
+    const { FileStore } = await import('./fileStore.js')
     return new FileStore()
   }
 
-  throw new Error('No database configuration found and file fallback is disabled.')
+  throw new Error(`ONLINE_STORE invalido: ${config.storeMode}`)
 }

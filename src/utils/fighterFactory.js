@@ -1,4 +1,8 @@
-import { getCandidatePoolOrThrow, pickRandomCandidate } from './candidateCatalog'
+import {
+  getLegislativeCandidatePool,
+  pickRandomCandidate,
+  pickUniqueCandidates,
+} from './candidateCatalog'
 
 const BALANCED_ATTACK_RANGE = [15, 25]
 const BALANCED_DEFENSE_RANGE = [4, 10]
@@ -29,11 +33,17 @@ function buildCandidateDialogs(candidate) {
   ]
 }
 
-function buildCandidateProfile(candidate) {
+export function buildCandidateProfile(candidate) {
   return {
     id: String(candidate.id),
+    candidateId: String(candidate.id),
     name: candidate.name,
     portraitUrl: candidate.portraitUrl ?? candidate.imageUrl ?? null,
+    party: candidate.party ?? '',
+    region: candidate.region ?? '',
+    type: candidate.type ?? '',
+    typeKey: candidate.typeKey ?? '',
+    partyId: candidate.partyId ?? null,
     attackRange: BALANCED_ATTACK_RANGE,
     defenseRange: BALANCED_DEFENSE_RANGE,
     speedRange: BALANCED_SPEED_RANGE,
@@ -47,10 +57,16 @@ export function instantiateRosterFighter(personaje, overrides = {}) {
   const hp = Math.min(overrides.hp ?? maxHp, maxHp)
 
   return {
-    id: overrides.id ?? Date.now() + Math.random(),
+    id: overrides.id ?? `${personaje.id}-${Math.random().toString(36).slice(2, 10)}`,
     personajeId: String(personaje.id),
+    candidateId: String(personaje.candidateId ?? personaje.id),
     name: personaje.name,
     portraitUrl: personaje.portraitUrl ?? null,
+    party: personaje.party ?? '',
+    region: personaje.region ?? '',
+    type: personaje.type ?? '',
+    typeKey: personaje.typeKey ?? '',
+    partyId: personaje.partyId ?? null,
     side: overrides.side ?? null,
     maxHp,
     hp,
@@ -61,28 +77,32 @@ export function instantiateRosterFighter(personaje, overrides = {}) {
     efectos: overrides.efectos ?? [],
     bio: personaje.bio,
     dialogos: personaje.dialogos,
+    isPlayer: overrides.isPlayer ?? false,
     introDialog: overrides.introDialog ?? pickRandomDialog(personaje.dialogos),
   }
 }
 
-export function generateRandomRosterFighter(side) {
-  const candidate = pickRandomCandidate()
-  const personaje = buildCandidateProfile(candidate)
-  return instantiateRosterFighter(personaje, { side })
+export function createFighterFromCandidate(candidate, overrides = {}) {
+  return instantiateRosterFighter(buildCandidateProfile(candidate), overrides)
 }
 
-export function createTournamentRoster(count = 16) {
-  const pool = getCandidatePoolOrThrow()
-  const shuffled = [...pool].sort(() => Math.random() - 0.5)
-  const selected = shuffled.slice(0, Math.min(count, shuffled.length))
+export function generateRandomRosterFighter(side) {
+  const candidate = pickRandomCandidate()
+  return createFighterFromCandidate(candidate, { side })
+}
 
-  while (selected.length < count) {
-    selected.push(pool[Math.floor(Math.random() * pool.length)])
-  }
+export function createTournamentRoster(selectedCandidate, count = 32) {
+  const pool = getLegislativeCandidatePool()
+  const selected = createFighterFromCandidate(selectedCandidate, {
+    isPlayer: true,
+  })
+  const rivals = pickUniqueCandidates(count - 1, {
+    pool,
+    excludeIds: [selectedCandidate.id],
+  }).map((candidate) => createFighterFromCandidate(candidate))
 
-  return selected
-    .map(candidate => buildCandidateProfile(candidate))
-    .map(personaje => instantiateRosterFighter(personaje))
+  const roster = [selected, ...rivals]
+  return roster.sort(() => Math.random() - 0.5)
 }
 
 export function prepareFighterForMatch(fighter, side = fighter.side) {
@@ -90,7 +110,7 @@ export function prepareFighterForMatch(fighter, side = fighter.side) {
     ...fighter,
     side,
     alive: fighter.alive ?? fighter.hp > 0,
-    efectos: fighter.efectos ?? [],
+    efectos: (fighter.efectos ?? []).map((efecto) => ({ ...efecto })),
     introDialog: pickRandomDialog(fighter.dialogos),
   }
 }

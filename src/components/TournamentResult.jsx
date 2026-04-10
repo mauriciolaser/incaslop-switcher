@@ -6,17 +6,17 @@ function ChampionScreen({ champion, onNewTournament, onMenu }) {
   return (
     <div className="modal-overlay">
       <div className="result-modal champion-modal">
-        <h2 className="champion-title">CAMPEON DEL TORNEO</h2>
+        <h2 className="champion-title">Campeon del Tournament</h2>
         <div className="champion-name">{champion.name}</div>
         <div className="champion-stats">
-          ATK {champion.attack} &middot; DEF {champion.defense} &middot; SPD {champion.speed}
+          {champion.party || champion.region || champion.type}
         </div>
         <div className="champion-buttons">
           <button className="next-round-btn" onClick={onNewTournament}>
-            NUEVO TORNEO
+            Nuevo Tournament
           </button>
           <button className="menu-back-btn" onClick={onMenu}>
-            MENU PRINCIPAL
+            Volver al Home
           </button>
         </div>
       </div>
@@ -24,35 +24,43 @@ function ChampionScreen({ champion, onNewTournament, onMenu }) {
   )
 }
 
-export default function TournamentResult() {
+export default function TournamentResult({ onExitHome }) {
   const { phase, lastResult, fighter1, fighter2, resetGame } = useGame()
-  const { mode, tournamentPhase, bracket, currentGlobalMatchIdx, matchResult, champion, initTournament, resetTournament, tournamentSize } = useTournament()
+  const {
+    stage,
+    bracket,
+    currentMatch,
+    resolveMatch,
+    champion,
+    selectedCandidate,
+    initTournament,
+  } = useTournament()
 
   const handleNewTournament = () => {
     resetGame()
-    initTournament(tournamentSize)
+    if (selectedCandidate) {
+      initTournament(selectedCandidate, 32)
+    }
   }
 
-  // Champion screen
-  if (mode === 'torneo' && tournamentPhase === 'champion' && champion) {
+  if (stage === 'champion' && champion) {
     return (
       <ChampionScreen
         champion={champion}
         onNewTournament={handleNewTournament}
-        onMenu={resetTournament}
+        onMenu={onExitHome}
       />
     )
   }
 
-  // Match result in tournament mode
-  if (mode !== 'torneo' || phase !== 'result' || !lastResult || tournamentPhase !== 'fighting') return null
+  if (stage !== 'fighting' || phase !== 'result' || !lastResult || !currentMatch) return null
 
   const winner = lastResult.winnerSide === 'left' ? fighter1 : fighter2
-  const currentMatch = bracket[currentGlobalMatchIdx]
-  const roundName = currentMatch ? getRoundName(bracket, currentMatch.round) : ''
+  const loser = lastResult.winnerSide === 'left' ? fighter2 : fighter1
+  const roundName = getRoundName(bracket, currentMatch.round)
 
-  const handleViewBracket = () => {
-    matchResult(lastResult.winnerSide, winner)
+  const handleContinue = () => {
+    resolveMatch(lastResult.winnerSide, winner, loser)
   }
 
   return (
@@ -62,31 +70,15 @@ export default function TournamentResult() {
 
         <div className="winner-announce">
           <span className="winner-name">{winner.name}</span>
-          <span className="winner-label">GANA!</span>
+          <span className="winner-label">GANA</span>
         </div>
 
         <div className="winner-hp">
           HP restante: {winner.hp} / {winner.maxHp}
         </div>
 
-        {lastResult.betResult === 'win' && (
-          <div className="bet-result win">
-            Ganaste +{lastResult.stake} monedas!
-          </div>
-        )}
-        {lastResult.betResult === 'lose' && (
-          <div className="bet-result lose">
-            Perdiste -{lastResult.stake} monedas
-          </div>
-        )}
-        {lastResult.betResult === 'none' && (
-          <div className="bet-result none">
-            No apostaste esta ronda
-          </div>
-        )}
-
-        <button className="next-round-btn" onClick={handleViewBracket}>
-          Ver Bracket
+        <button className="next-round-btn" onClick={handleContinue}>
+          Continuar
         </button>
       </div>
     </div>

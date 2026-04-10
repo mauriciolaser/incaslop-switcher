@@ -1,12 +1,10 @@
 import { useGame } from '../context/GameContext'
-import { useTournament } from '../context/TournamentContext'
 
-export default function GameOver() {
-  const { phase, lastResult, fighter1, fighter2, nextRound, isOnline, countdown } = useGame()
-  const { mode } = useTournament()
+export default function GameOver({ onExitHome }) {
+  const { phase, lastResult, fighter1, fighter2, nextRound, isOnline, countdown, gameOver } = useGame()
 
-  if (mode === 'torneo') return null
-  if (phase !== 'result' || !lastResult) return null
+  if (!lastResult) return null
+  if (!isOnline && phase !== 'result') return null
 
   const winner = lastResult.winnerSide === 'left' ? fighter1 : fighter2
 
@@ -40,7 +38,11 @@ export default function GameOver() {
           </div>
         )}
 
-        {isOnline ? (
+        {isOnline && gameOver ? (
+          <button className="next-round-btn" onClick={onExitHome}>
+            Volver al Home
+          </button>
+        ) : isOnline ? (
           <div className="online-result-note">
             La siguiente ronda comenzara automaticamente{countdown != null ? ` en ${countdown}s` : '.'}
           </div>

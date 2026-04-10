@@ -134,7 +134,7 @@ function CameraController({ mode, orbitRef }) {
         orbitRef.current.update()
       }
     }
-  }, [mode])
+  }, [camera, mode, orbitRef])
 
   useFrame((_, delta) => {
     if (mode === 'libre') return

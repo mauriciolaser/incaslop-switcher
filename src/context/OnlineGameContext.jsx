@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { GameContext } from './GameContext'
 import { DEFAULT_STAKE, STAKE_OPTIONS, normalizeStake } from '../utils/battleEngine'
 import {
+  closeOnlineSession,
   createOnlineSession,
   fetchOnlineEvents,
   fetchOnlineState,
@@ -34,7 +35,7 @@ function createInitialState() {
     fighter1: createPlaceholderFighter('left'),
     fighter2: createPlaceholderFighter('right'),
     round: 1,
-    coins: 500,
+    coins: 10,
     stake: DEFAULT_STAKE,
     bet: null,
     battleLog: [],
@@ -45,12 +46,17 @@ function createInitialState() {
     connectionStatus: 'connecting',
     countdown: null,
     onlineError: null,
+    latestEventId: 0,
+    viewer: null,
+    players: [],
+    gameOver: false,
   }
 }
 
 function mapStateResponse(payload, previousState) {
   const remoteState = payload.state ?? {}
-  const user = payload.user ?? {}
+  const viewer = payload.viewer ?? {}
+  const players = Array.isArray(payload.players) ? payload.players : previousState.players
 
   return {
     phase: remoteState.phase ?? previousState.phase,
@@ -60,23 +66,24 @@ function mapStateResponse(payload, previousState) {
     battleLog: remoteState.battleLog ?? previousState.battleLog,
     currentTurn: remoteState.currentTurn ?? null,
     winner: remoteState.winner ?? null,
-    lastResult: user.lastResult ?? remoteState.lastResult ?? null,
-    coins: user.coins ?? previousState.coins,
-    stake: normalizeStake(user.pendingStake ?? previousState.stake ?? DEFAULT_STAKE, user.coins ?? previousState.coins),
-    bet: user.currentBet?.side ?? null,
+    lastResult: viewer.lastResult ?? remoteState.lastResult ?? (viewer.gameOver ? previousState.lastResult : null),
+    coins: viewer.coins ?? previousState.coins,
+    stake: normalizeStake(viewer.pendingStake ?? previousState.stake ?? DEFAULT_STAKE, viewer.coins ?? previousState.coins),
+    bet: viewer.currentBet?.side ?? null,
     countdown: typeof remoteState.countdown === 'number' ? remoteState.countdown : null,
     latestEventId: payload.latestEventId ?? previousState.latestEventId ?? 0,
+    viewer,
+    players,
+    gameOver: Boolean(viewer.gameOver),
   }
 }
 
 export function OnlineGameProvider({ children }) {
-  const [state, setState] = useState(() => ({
-    ...createInitialState(),
-    latestEventId: 0,
-  }))
+  const [state, setState] = useState(createInitialState)
   const latestEventIdRef = useRef(0)
   const pollingRef = useRef(null)
   const stateRef = useRef(state)
+  const leaveRef = useRef(false)
 
   stateRef.current = state
 
@@ -106,15 +113,14 @@ export function OnlineGameProvider({ children }) {
       latestEventIdRef.current = payload.latestEventId ?? latestEventIdRef.current
 
       setState((current) => {
-        const knownLogLength = current.battleLog.length
         const appendedEntries = payload.events
-          .map(event => event.payload?.logEntry)
+          .map((event) => event.payload?.logEntry)
           .filter(Boolean)
 
         return {
           ...current,
           battleLog: appendedEntries.length > 0
-            ? [...current.battleLog.slice(Math.max(0, knownLogLength - 60)), ...appendedEntries].slice(-60)
+            ? [...current.battleLog, ...appendedEntries].slice(-60)
             : current.battleLog,
         }
       })
@@ -139,9 +145,9 @@ export function OnlineGameProvider({ children }) {
 
     async function bootstrap() {
       try {
-        await createOnlineSession()
+        const payload = await createOnlineSession()
         if (cancelled) return
-        await refreshState()
+        syncFromSnapshot(payload)
       } catch (error) {
         if (cancelled) return
         setState((current) => ({
@@ -162,11 +168,17 @@ export function OnlineGameProvider({ children }) {
       if (pollingRef.current) {
         window.clearInterval(pollingRef.current)
       }
+      if (!leaveRef.current) {
+        void closeOnlineSession().catch(() => {})
+      }
     }
-  }, [refreshState, runPollingCycle])
+  }, [runPollingCycle, syncFromSnapshot])
 
   const placeBet = useCallback(async (side) => {
     try {
+      if (stateRef.current.gameOver) {
+        throw new Error('Tu run ya termino. Vuelve al home para iniciar otro.')
+      }
       const amount = normalizeStake(stateRef.current.stake, stateRef.current.coins)
       const payload = await submitOnlineBet({ side, amount })
       syncFromSnapshot(payload)
@@ -184,6 +196,15 @@ export function OnlineGameProvider({ children }) {
       ...current,
       stake: normalizeStake(stake, current.coins),
     }))
+  }, [])
+
+  const leaveOnlineSession = useCallback(async () => {
+    leaveRef.current = true
+    try {
+      await closeOnlineSession()
+    } catch {
+      // noop
+    }
   }, [])
 
   const contextValue = useMemo(() => ({
@@ -204,7 +225,8 @@ export function OnlineGameProvider({ children }) {
       setStake(stake)
     },
     refreshOnlineState: refreshState,
-  }), [placeBet, refreshState, setStake, state])
+    leaveOnlineSession,
+  }), [leaveOnlineSession, placeBet, refreshState, setStake, state])
 
   return (
     <GameContext.Provider value={contextValue}>

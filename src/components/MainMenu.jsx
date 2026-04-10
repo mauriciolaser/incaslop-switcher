@@ -1,49 +1,29 @@
-import { useTournament } from '../context/TournamentContext'
-import { useGame } from '../context/GameContext'
-
-export default function MainMenu() {
-  const { mode, setMode, initTournament } = useTournament()
-  const { resetGame } = useGame()
-
-  if (mode !== 'menu') return null
-
-  const handleEndless = () => {
-    resetGame()
-    setMode('endless')
-  }
-
-  const handleTorneo = (size) => {
-    resetGame()
-    initTournament(size)
-  }
-
+export default function MainMenu({ onSelect }) {
   return (
-    <div className="modal-overlay">
-      <div className="main-menu">
-        <h1 className="menu-title">Mechas IncaSlop</h1>
-        <p className="menu-subtitle">Arena de Combate</p>
+    <div className="home-shell">
+      <div className="home-panel">
+        <div className="setup-kicker">Mechas IncaSlop</div>
+        <h1 className="home-title">Selecciona el Modo</h1>
+        <p className="home-subtitle">
+          Endless es la arena online permanente. Tournament te deja elegir un congresista y llevarlo por una llave de 32.
+        </p>
 
-        <div className="menu-buttons">
-          <button className="menu-btn endless" onClick={handleEndless}>
-            <span className="menu-btn-icon">&#9876;</span>
-            <span className="menu-btn-label">MODO INFINITO</span>
-            <span className="menu-btn-desc">Peleas sin fin, apuesta y sobrevive</span>
+        <div className="home-grid">
+          <button className="mode-card online" onClick={() => onSelect('endless')}>
+            <span className="mode-card-title">ENDLESS</span>
+            <span className="mode-card-desc">
+              Apuesta en la arena permanente, mira a los jugadores conectados y sobrevive todo lo posible.
+            </span>
           </button>
 
-          <button className="menu-btn torneo short" onClick={() => handleTorneo(8)}>
-            <span className="menu-btn-icon">&#9878;</span>
-            <span className="menu-btn-label">TORNEO CORTO</span>
-            <span className="menu-btn-desc">8 peleadores, bracket rapido</span>
-          </button>
-
-          <button className="menu-btn torneo" onClick={() => handleTorneo(16)}>
-            <span className="menu-btn-icon">&#9813;</span>
-            <span className="menu-btn-label">MODO TORNEO</span>
-            <span className="menu-btn-desc">16 peleadores, eliminacion directa</span>
+          <button className="mode-card local" onClick={() => onSelect('tournament')}>
+            <span className="mode-card-title">TOURNAMENT</span>
+            <span className="mode-card-desc">
+              Elige un congresista, entra al bracket de 32 y decide si ver o skipear las peleas ajenas.
+            </span>
           </button>
         </div>
       </div>
     </div>
   )
 }
-

@@ -1,17 +1,15 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useGame } from '../context/GameContext'
 import { useBattle } from '../hooks/useBattle'
-import { useTournament } from '../context/TournamentContext'
 import { STAKE_OPTIONS } from '../utils/battleEngine'
 import { calculateWinOdds } from '../utils/odds'
-import { getRoundName } from '../utils/tournamentEngine'
 
 const BET_TIMER = 15
 
 export default function BettingModal() {
   const { phase, fighter1, fighter2, stake, coins, bet, placeBet, setStake, isOnline, countdown, connectionStatus } = useGame()
   const { runBattle } = useBattle()
-  const { mode, bracket, currentGlobalMatchIdx } = useTournament()
   const [timer, setTimer] = useState(BET_TIMER)
   const displayedTimer = isOnline ? countdown ?? BET_TIMER : timer
   const intervalRef = useRef(null)
@@ -77,11 +75,7 @@ export default function BettingModal() {
   return (
     <div className="modal-overlay">
       <div className="betting-modal">
-        <h2>
-          {mode === 'torneo' && currentGlobalMatchIdx != null
-            ? getRoundName(bracket, bracket[currentGlobalMatchIdx]?.round)
-            : 'Ronda de Apuestas'}
-        </h2>
+        <h2>Ronda de Apuestas</h2>
 
         <div className="timer-circle">
           <svg viewBox="0 0 100 100">

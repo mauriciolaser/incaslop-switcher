@@ -1,7 +1,7 @@
 import crypto from 'node:crypto'
 import { ataques } from './gameData.js'
 
-export const INITIAL_COINS = 500
+export const INITIAL_COINS = 10
 export const DEFAULT_STAKE = 10
 export const STAKE_OPTIONS = [5, 10, 20, 100]
 export const INTRO_DURATION_MS = 5000
@@ -99,7 +99,7 @@ export function refreshIntroDialog(fighter, side = fighter.side) {
   }
 }
 
-export function pickAtaque(attacker) {
+export function pickAtaque() {
   for (const especial of ataques.especiales) {
     if (Math.random() < especial.probabilidad) {
       return { ...especial, esEspecial: true }

@@ -17,6 +17,7 @@ function normalizeCandidate(raw = {}) {
   const id = String(raw.id ?? '').trim()
   const name = String(raw.name ?? '').trim()
   const portraitUrl = raw.portraitUrl || raw.imageUrl || null
+  const typeKey = String(raw.typeKey ?? raw.type ?? '').trim().toLowerCase()
 
   if (!id || !name) return null
 
@@ -24,11 +25,24 @@ function normalizeCandidate(raw = {}) {
     id,
     name,
     portraitUrl,
-    imageUrl: raw.imageUrl || null,
+    imageUrl: raw.imageUrl || portraitUrl,
     party: raw.party || '',
     region: raw.region || '',
     type: raw.type || '',
+    typeKey,
+    partyId: raw.partyId ?? null,
   }
+}
+
+function dedupeCandidates(candidates) {
+  const seen = new Set()
+  return candidates.filter((candidate) => {
+    if (!candidate?.id || seen.has(candidate.id)) {
+      return false
+    }
+    seen.add(candidate.id)
+    return true
+  })
 }
 
 async function fetchCandidatesPage(page) {
@@ -51,27 +65,24 @@ async function fetchCandidatesPage(page) {
 async function fetchCandidatePoolOnce() {
   const firstPage = await fetchCandidatesPage(1)
   const totalPages = Math.max(1, Number(firstPage?.pagination?.totalPages || 1))
-  const targetPage = totalPages > 1
-    ? Math.floor(Math.random() * totalPages) + 1
-    : 1
+  const additionalPages = totalPages > 1
+    ? await Promise.all(
+        Array.from({ length: totalPages - 1 }, (_, index) => fetchCandidatesPage(index + 2)),
+      )
+    : []
 
-  const payload = targetPage === 1
-    ? firstPage
-    : await fetchCandidatesPage(targetPage)
-
-  const candidates = payload.candidates
-    .map(normalizeCandidate)
-    .filter(Boolean)
+  const candidates = dedupeCandidates(
+    [firstPage, ...additionalPages]
+      .flatMap((payload) => payload.candidates)
+      .map(normalizeCandidate)
+      .filter(Boolean),
+  )
 
   if (candidates.length < MIN_POOL_SIZE) {
     throw new Error(`Pool insuficiente de candidatos (${candidates.length}).`)
   }
 
-  return {
-    candidates,
-    targetPage,
-    totalPages,
-  }
+  return candidates
 }
 
 export async function loadCandidatePoolWithRetry() {
@@ -81,8 +92,8 @@ export async function loadCandidatePoolWithRetry() {
     attempt += 1
 
     try {
-      const { candidates, targetPage, totalPages } = await fetchCandidatePoolOnce()
-      console.info(`[candidate-catalog] cargados ${candidates.length} candidatos desde pagina ${targetPage}/${totalPages}`)
+      const candidates = await fetchCandidatePoolOnce()
+      console.info(`[candidate-catalog] cargados ${candidates.length} candidatos desde API`)
       return candidates
     } catch (error) {
       const delay = getRetryDelay(attempt)
