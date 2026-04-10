@@ -7,19 +7,50 @@ export const GameContext = createContext(null)
 
 const INITIAL_COINS = 500
 
-const initialState = {
-  phase: 'intro',
-  fighter1: prepareFighterForMatch(generateFighter('left'), 'left'),
-  fighter2: prepareFighterForMatch(generateFighter('right'), 'right'),
-  round: 1,
-  coins: INITIAL_COINS,
-  stake: DEFAULT_STAKE,
-  bet: null,
-  battleLog: [],
-  currentTurn: null,
-  lastResult: null,
-  winner: null,
+function createPlaceholderFighter(side) {
+  return {
+    id: `${side}-placeholder`,
+    personajeId: null,
+    candidateId: null,
+    side,
+    name: side === 'left' ? 'Esperando peleador...' : 'Esperando rival...',
+    portraitUrl: null,
+    party: '',
+    region: '',
+    type: '',
+    typeKey: '',
+    partyId: null,
+    maxHp: 100,
+    hp: 100,
+    attack: 0,
+    defense: 0,
+    speed: 0,
+    alive: true,
+    efectos: [],
+    bio: '',
+    dialogos: [],
+    introDialog: 'La arena se esta preparando.',
+    isPlayer: false,
+  }
 }
+
+function createInitialState() {
+  return {
+    phase: 'intro',
+    fighter1: createPlaceholderFighter('left'),
+    fighter2: createPlaceholderFighter('right'),
+    round: 1,
+    coins: INITIAL_COINS,
+    stake: DEFAULT_STAKE,
+    bet: null,
+    battleLog: [],
+    currentTurn: null,
+    lastResult: null,
+    winner: null,
+  }
+}
+
+const initialState = createInitialState()
 
 function gameReducer(state, action) {
   switch (action.type) {
@@ -98,7 +129,7 @@ function gameReducer(state, action) {
 
     case 'RESET_GAME':
       return {
-        ...initialState,
+        ...createInitialState(),
         fighter1: prepareFighterForMatch(generateFighter('left'), 'left'),
         fighter2: prepareFighterForMatch(generateFighter('right'), 'right'),
       }

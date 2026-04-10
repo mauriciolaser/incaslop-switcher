@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Mechas IncaSlop">
+  <defs>
+    <linearGradient id="bg" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffcc00" />
+      <stop offset="100%" stop-color="#ff7a18" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#0b1020" />
+  <path d="M16 47 26 17h6l-10 30zm16 0 10-30h6L38 47z" fill="url(#bg)" />
+  <rect x="28" y="27" width="8" height="10" rx="2" fill="#7dd3fc" />
+</svg>
