@@ -1,32 +1,19 @@
+import rawCandidatesJson from '../../server/src/data/candidates.json?raw'
+import partyCatalog from '../data/parties.json'
 import { resolvePortraitUrl } from './portraitResolver'
 import { resolvePartyImageUrl } from './partyResolver'
-import partyCatalog from '../data/parties.json'
 
-const DEFAULT_CANDIDATE_API_BASE = 'https://api.candidatos.incaslop.online'
-const PAGE_SIZE = 500
 const MIN_POOL_SIZE = 2
 const LEGISLATIVE_TYPE_KEYS = new Set(['diputado', 'senador'])
 
-const RETRY_DELAYS_MS = [1000, 2000, 5000, 10000]
-
-const API_BASE = import.meta.env.VITE_CANDIDATE_API_BASE?.replace(/\/$/, '') ?? DEFAULT_CANDIDATE_API_BASE
-
-let candidatePool = []
-let loadingPromise = null
 const partyCatalogMap = new Map(
   partyCatalog
     .filter((party) => party?.name)
     .map((party) => [String(party.name).trim(), party]),
 )
 
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-function getRetryDelay(attempt) {
-  const index = Math.min(Math.max(attempt - 1, 0), RETRY_DELAYS_MS.length - 1)
-  return RETRY_DELAYS_MS[index]
-}
+let candidatePool = []
+const rawCandidates = JSON.parse(rawCandidatesJson)
 
 function normalizeCandidate(raw = {}) {
   const id = String(raw.id ?? '').trim()
@@ -65,65 +52,6 @@ function dedupeCandidates(candidates) {
   })
 }
 
-async function fetchCandidatePage(page) {
-  const url = `${API_BASE}/v1/candidates?page=${page}&pageSize=${PAGE_SIZE}`
-  const response = await fetch(url)
-  const data = await response.json().catch(() => ({}))
-
-  if (!response.ok) {
-    throw new Error(data?.error || `HTTP ${response.status}`)
-  }
-
-  if (!Array.isArray(data?.candidates)) {
-    throw new Error('Candidate API payload invalido: candidates ausente.')
-  }
-
-  return data
-}
-
-async function fetchAllCandidatePagesOnce() {
-  const firstPage = await fetchCandidatePage(1)
-  const totalPages = Math.max(1, Number(firstPage?.pagination?.totalPages || 1))
-  const additionalPages = totalPages > 1
-    ? await Promise.all(
-        Array.from({ length: totalPages - 1 }, (_, index) => fetchCandidatePage(index + 2)),
-      )
-    : []
-
-  const merged = [firstPage, ...additionalPages]
-    .flatMap((payload) => payload.candidates)
-    .map(normalizeCandidate)
-    .filter(Boolean)
-
-  const unique = dedupeCandidates(merged)
-
-  if (unique.length < MIN_POOL_SIZE) {
-    throw new Error(`Pool insuficiente de candidatos (${unique.length}).`)
-  }
-
-  return unique
-}
-
-async function loadCandidatePoolWithRetry() {
-  let attempt = 0
-
-  while (candidatePool.length < MIN_POOL_SIZE) {
-    attempt += 1
-
-    try {
-      candidatePool = await fetchAllCandidatePagesOnce()
-      console.info(`[candidate-catalog] cargados ${candidatePool.length} candidatos desde API`)
-      return candidatePool
-    } catch (error) {
-      const delay = getRetryDelay(attempt)
-      console.error(`[candidate-catalog] intento ${attempt} fallido: ${error.message}. Reintentando en ${delay}ms.`)
-      await wait(delay)
-    }
-  }
-
-  return candidatePool
-}
-
 function sortAlphabetically(values) {
   return [...values].sort((left, right) => left.localeCompare(right, 'es', { sensitivity: 'base' }))
 }
@@ -147,36 +75,43 @@ function filterCandidates(candidates, { party, region, types } = {}) {
   })
 }
 
-export function getCandidateApiBase() {
-  return API_BASE
+function loadLocalCandidatePool() {
+  const unique = dedupeCandidates(
+    rawCandidates
+      .map(normalizeCandidate)
+      .filter(Boolean),
+  )
+
+  if (unique.length < MIN_POOL_SIZE) {
+    throw new Error(`Pool insuficiente de candidatos (${unique.length}).`)
+  }
+
+  return unique
 }
 
-export function hasCandidatePool() {
-  return candidatePool.length >= MIN_POOL_SIZE
-}
-
-export async function ensureCandidatePool() {
-  if (hasCandidatePool()) {
+function ensureLocalPoolLoaded() {
+  if (candidatePool.length >= MIN_POOL_SIZE) {
     return candidatePool
   }
 
-  if (!loadingPromise) {
-    loadingPromise = loadCandidatePoolWithRetry().finally(() => {
-      if (!hasCandidatePool()) {
-        loadingPromise = null
-      }
-    })
-  }
+  candidatePool = loadLocalCandidatePool()
+  return candidatePool
+}
 
-  return loadingPromise
+export function getCandidateApiBase() {
+  return 'local-catalog'
+}
+
+export function hasCandidatePool() {
+  return ensureLocalPoolLoaded().length >= MIN_POOL_SIZE
+}
+
+export async function ensureCandidatePool() {
+  return ensureLocalPoolLoaded()
 }
 
 export function getCandidatePoolOrThrow() {
-  if (!hasCandidatePool()) {
-    throw new Error('Candidate pool no disponible. Llama a ensureCandidatePool() antes de generar peleadores.')
-  }
-
-  return candidatePool
+  return ensureLocalPoolLoaded()
 }
 
 export function getLegislativeCandidatePool() {

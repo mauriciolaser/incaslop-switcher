@@ -110,11 +110,11 @@ function TournamentSessionGate({ onExit }) {
       <div className="game-container">
         <div className="candidate-loading-shell">
           <div className="candidate-loading-panel">
-            <div className="candidate-loading-title">Cargando congresistas desde API...</div>
+            <div className="candidate-loading-title">Cargando catalogo local de congresistas...</div>
             <div className="candidate-loading-subtitle">
               Preparando el roster completo para el selector y el bracket de 32.
             </div>
-            <div className="candidate-loading-base">{getCandidateApiBase()}/v1/candidates</div>
+            <div className="candidate-loading-base">{getCandidateApiBase()}</div>
             <button className="session-exit-btn candidate-loading-back" onClick={onExit}>
               Volver
             </button>
