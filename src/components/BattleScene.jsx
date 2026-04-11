@@ -97,7 +97,7 @@ function CameraController() {
 
 export default function BattleScene() {
   const { fighter1, fighter2, currentTurn, phase } = useGame()
-  const isCombatMode = phase === 'fighting'
+  const showFighters = phase === 'fighting'
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}>
@@ -111,35 +111,39 @@ export default function BattleScene() {
         <RingBase />
         <CameraController />
 
-        {/* Player 1: cerca de cámara, GRANDE, de ESPALDAS */}
-        <FighterSprite
-          key="fighter-left"
-          position={POS_LEFT}
-          opponentPosition={POS_RIGHT}
-          side="left"
-          portraitUrl={isCombatMode ? fighter1.portraitUrl : null}
-          hp={fighter1.hp}
-          maxHp={fighter1.maxHp}
-          isAttacking={currentTurn}
-          alive={fighter1.alive}
-          scale={1.7}
-          facingCamera={true}
-        />
+        {showFighters && (
+          <>
+            {/* Player 1: cerca de cámara, GRANDE, de ESPALDAS */}
+            <FighterSprite
+              key="fighter-left"
+              position={POS_LEFT}
+              opponentPosition={POS_RIGHT}
+              side="left"
+              portraitUrl={fighter1.portraitUrl}
+              hp={fighter1.hp}
+              maxHp={fighter1.maxHp}
+              isAttacking={currentTurn}
+              alive={fighter1.alive}
+              scale={1.7}
+              facingCamera={true}
+            />
 
-        {/* Rival: lejos de cámara, PEQUEÑO, de FRENTE */}
-        <FighterSprite
-          key="fighter-right"
-          position={POS_RIGHT}
-          opponentPosition={POS_LEFT}
-          side="right"
-          portraitUrl={isCombatMode ? fighter2.portraitUrl : null}
-          hp={fighter2.hp}
-          maxHp={fighter2.maxHp}
-          isAttacking={currentTurn}
-          alive={fighter2.alive}
-          scale={1.0}
-          facingCamera={false}
-        />
+            {/* Rival: lejos de cámara, PEQUEÑO, de FRENTE */}
+            <FighterSprite
+              key="fighter-right"
+              position={POS_RIGHT}
+              opponentPosition={POS_LEFT}
+              side="right"
+              portraitUrl={fighter2.portraitUrl}
+              hp={fighter2.hp}
+              maxHp={fighter2.maxHp}
+              isAttacking={currentTurn}
+              alive={fighter2.alive}
+              scale={1.0}
+              facingCamera={false}
+            />
+          </>
+        )}
 
         <ContactShadows position={[0, -0.19, 0]} opacity={0.6} scale={14} blur={2} far={6} />
         <Environment preset="night" />
