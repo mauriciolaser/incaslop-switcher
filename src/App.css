@@ -1547,9 +1547,14 @@
   margin-bottom: 12px;
 }
 
+.winner-portrait-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
 .winner-portrait {
-  width: 72px;
-  height: 72px;
+  width: 96px;
+  height: 96px;
   object-fit: cover;
   border-radius: 16px;
   border: 2px solid rgba(255, 255, 255, 0.14);
@@ -2260,6 +2265,18 @@
   right: 8px;
   bottom: 8px;
   z-index: 2;
+  width: 48px;
+  height: 48px;
+}
+
+.portrait-corner-badge .party-logo-badge-image,
+.portrait-corner-badge .party-logo-badge-fallback {
+  width: 36px;
+  height: 36px;
+}
+
+.portrait-corner-badge .party-logo-badge-fallback {
+  font-size: 16px;
 }
 
 .name-logo-badge {
