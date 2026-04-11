@@ -8,9 +8,7 @@ import debugPortraitUrl from '../assets/images/candidates/cand_1257_00052615_dip
 
 const DEBUG_POSITION = [0, -0.2, 0]
 const DEBUG_OPPONENT_POSITION = [0, -0.2, 3]
-const INITIAL_FACE_POSITION = { x: 0.0006, y: 1.1246, z: 0.1632 }
-const INITIAL_IMAGE_SCALE = { x: 0.19, y: 0.235 }
-const INITIAL_FACE_ROTATION = { x: -Math.PI / 2, y: 0, z: 0 }
+const INITIAL_DECAL_SIZE = { x: 0.22, y: 0.27, z: 0.15 }
 
 function DebugLights() {
   return (
@@ -83,9 +81,7 @@ function formatVector(vector) {
 }
 
 export default function FaceDebugLab({ onExit }) {
-  const [facePosition, setFacePosition] = useState(INITIAL_FACE_POSITION)
-  const [imageScale, setImageScale] = useState(INITIAL_IMAGE_SCALE)
-  const [faceRotation, setFaceRotation] = useState(INITIAL_FACE_ROTATION)
+  const [decalSize, setDecalSize] = useState(INITIAL_DECAL_SIZE)
   const [selectedBone, setSelectedBone] = useState('')
   const [showSprite, setShowSprite] = useState(true)
   const [showHelpers, setShowHelpers] = useState(true)
@@ -99,23 +95,13 @@ export default function FaceDebugLab({ onExit }) {
     anchorWorldPosition: null,
   })
 
-  const faceLocalPosition = useMemo(
-    () => [facePosition.x, facePosition.y, facePosition.z],
-    [facePosition.x, facePosition.y, facePosition.z],
-  )
-  const faceImageScale = useMemo(
-    () => [imageScale.x, imageScale.y],
-    [imageScale.x, imageScale.y],
-  )
-  const faceRotationOffset = useMemo(
-    () => [faceRotation.x, faceRotation.y, faceRotation.z],
-    [faceRotation.x, faceRotation.y, faceRotation.z],
+  const decalSizeProp = useMemo(
+    () => [decalSize.x, decalSize.y, decalSize.z],
+    [decalSize.x, decalSize.y, decalSize.z],
   )
 
   function resetControls() {
-    setFacePosition(INITIAL_FACE_POSITION)
-    setImageScale(INITIAL_IMAGE_SCALE)
-    setFaceRotation(INITIAL_FACE_ROTATION)
+    setDecalSize(INITIAL_DECAL_SIZE)
     setSelectedBone('')
     setShowSprite(true)
     setShowHelpers(true)
@@ -143,9 +129,7 @@ export default function FaceDebugLab({ onExit }) {
             isAttacking={null}
             alive
             showPortraitSprite={showSprite}
-            faceLocalPosition={faceLocalPosition}
-            faceImageScale={faceImageScale}
-            faceRotationOffset={faceRotationOffset}
+            decalSize={decalSizeProp}
             debugFaceBoneName={selectedBone || null}
             showDebugHelpers={showHelpers}
             onFaceDebugData={setDebugData}
@@ -160,9 +144,9 @@ export default function FaceDebugLab({ onExit }) {
         <div className="debug-lab-header">
           <div>
             <div className="setup-kicker">Dev Only</div>
-            <h1 className="debug-lab-title">Face Sprite Debug</h1>
+            <h1 className="debug-lab-title">Face Decal Debug</h1>
             <p className="debug-lab-subtitle">
-              model1.glb con la primera imagen fija para ajustar el sprite del rostro sin nada online.
+              model1.glb con imagen fija para ajustar el decal del rostro proyectado sobre el hueso HEAD.
             </p>
           </div>
           <button className="session-exit-btn" onClick={onExit}>
@@ -176,7 +160,7 @@ export default function FaceDebugLab({ onExit }) {
           </button>
           <label className="debug-toggle">
             <input type="checkbox" checked={showSprite} onChange={(event) => setShowSprite(event.target.checked)} />
-            <span>Mostrar sprite</span>
+            <span>Mostrar decal</span>
           </label>
           <label className="debug-toggle">
             <input type="checkbox" checked={showHelpers} onChange={(event) => setShowHelpers(event.target.checked)} />
@@ -201,30 +185,17 @@ export default function FaceDebugLab({ onExit }) {
         </div>
 
         <div className="debug-section">
-          <div className="debug-section-title">Posicion local de la cara</div>
-          <ControlRow label="Pos X" value={facePosition.x} min={-0.3} max={0.3} step={0.0001} onChange={(value) => setFacePosition((current) => ({ ...current, x: value }))} />
-          <ControlRow label="Pos Y" value={facePosition.y} min={0.7} max={1.4} step={0.0001} onChange={(value) => setFacePosition((current) => ({ ...current, y: value }))} />
-          <ControlRow label="Pos Z" value={facePosition.z} min={-0.1} max={0.4} step={0.0001} onChange={(value) => setFacePosition((current) => ({ ...current, z: value }))} />
-        </div>
-
-        <div className="debug-section">
-          <div className="debug-section-title">Escala</div>
-          <ControlRow label="Imagen X" value={imageScale.x} min={0.05} max={0.6} step={0.005} onChange={(value) => setImageScale((current) => ({ ...current, x: value }))} />
-          <ControlRow label="Imagen Y" value={imageScale.y} min={0.05} max={0.6} step={0.005} onChange={(value) => setImageScale((current) => ({ ...current, y: value }))} />
-        </div>
-
-        <div className="debug-section">
-          <div className="debug-section-title">Rotacion local</div>
-          <ControlRow label="Rot X" value={faceRotation.x} min={-3.1416} max={3.1416} step={0.001} onChange={(value) => setFaceRotation((current) => ({ ...current, x: value }))} />
-          <ControlRow label="Rot Y" value={faceRotation.y} min={-3.1416} max={3.1416} step={0.001} onChange={(value) => setFaceRotation((current) => ({ ...current, y: value }))} />
-          <ControlRow label="Rot Z" value={faceRotation.z} min={-3.1416} max={3.1416} step={0.001} onChange={(value) => setFaceRotation((current) => ({ ...current, z: value }))} />
+          <div className="debug-section-title">Tamaño del Decal</div>
+          <ControlRow label="Ancho (X)" value={decalSize.x} min={0.05} max={0.6} step={0.005} onChange={(value) => setDecalSize((s) => ({ ...s, x: value }))} />
+          <ControlRow label="Alto (Y)" value={decalSize.y} min={0.05} max={0.6} step={0.005} onChange={(value) => setDecalSize((s) => ({ ...s, y: value }))} />
+          <ControlRow label="Prof. (Z)" value={decalSize.z} min={0.01} max={0.4} step={0.005} onChange={(value) => setDecalSize((s) => ({ ...s, z: value }))} />
         </div>
 
         <div className="debug-section">
           <div className="debug-section-title">Lecturas</div>
           <div className="debug-readout-grid">
             <div className="debug-readout-card">
-              <span className="debug-readout-label">Sprite visible</span>
+              <span className="debug-readout-label">Decal visible</span>
               <span className="debug-readout-value">{debugData.spriteVisible ? 'si' : 'no'}</span>
             </div>
             <div className="debug-readout-card">
@@ -236,12 +207,8 @@ export default function FaceDebugLab({ onExit }) {
               <span className="debug-readout-value">{debugData.selectedOrientationBoneName ?? 'n/a'}</span>
             </div>
             <div className="debug-readout-card">
-              <span className="debug-readout-label">Anchor local</span>
+              <span className="debug-readout-label">Decal local pos</span>
               <span className="debug-readout-value">{formatVector(debugData.anchorLocalPosition)}</span>
-            </div>
-            <div className="debug-readout-card">
-              <span className="debug-readout-label">Anchor world</span>
-              <span className="debug-readout-value">{formatVector(debugData.anchorWorldPosition)}</span>
             </div>
             <div className="debug-readout-card">
               <span className="debug-readout-label">Bone world</span>
