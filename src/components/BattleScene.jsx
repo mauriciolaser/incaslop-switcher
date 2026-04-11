@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
-import { OrbitControls, Environment, ContactShadows } from '@react-three/drei'
+import { Environment, ContactShadows } from '@react-three/drei'
 import * as THREE from 'three'
 import Fighter from './Fighter'
 import { useGame } from '../context/GameContext'
@@ -119,28 +119,14 @@ function CameraController({ mode, orbitRef }) {
 
   // When switching TO a fighter cam, snapshot current camera state for smooth transition
   useEffect(() => {
-    if (mode !== 'libre') {
-      lerpPos.current.copy(camera.position)
-      const dir = new THREE.Vector3()
-      camera.getWorldDirection(dir)
-      lerpLookAt.current.copy(camera.position).add(dir.multiplyScalar(5))
-      needsInit.current = false
-    } else {
-      // Switching back to libre — re-enable orbit
-      needsInit.current = true
-      if (orbitRef.current) {
-        orbitRef.current.target.set(0, 0.5, 0)
-        orbitRef.current.enabled = true
-        orbitRef.current.update()
-      }
-    }
+    lerpPos.current.copy(camera.position)
+    const dir = new THREE.Vector3()
+    camera.getWorldDirection(dir)
+    lerpLookAt.current.copy(camera.position).add(dir.multiplyScalar(5))
+    needsInit.current = false
   }, [camera, mode, orbitRef])
 
   useFrame((_, delta) => {
-    if (mode === 'libre') return
-
-    // Disable orbit while in fixed cam
-    if (orbitRef.current) orbitRef.current.enabled = false
 
     const fighterPos = mode === 'peleador1' ? POS_LEFT : POS_RIGHT
     const opponentPos = mode === 'peleador1' ? POS_RIGHT : POS_LEFT
@@ -198,7 +184,6 @@ const camBtnActive = {
 
 function CameraSelector({ mode, setMode }) {
   const options = [
-    { key: 'libre', label: 'Libre' },
     { key: 'peleador1', label: 'Peleador 1' },
     { key: 'peleador2', label: 'Peleador 2' },
   ]
@@ -225,7 +210,7 @@ function CameraSelector({ mode, setMode }) {
 export default function BattleScene() {
   const { fighter1, fighter2, currentTurn, phase } = useGame()
   const [cachedUrls, setCachedUrls] = useState(null)
-  const [camMode, setCamMode] = useState('libre')
+  const [camMode, setCamMode] = useState('peleador1')
   const orbitRef = useRef()
   const isCombatMode = phase === 'fighting'
 
@@ -291,16 +276,6 @@ export default function BattleScene() {
           far={6}
         />
 
-        <OrbitControls
-          ref={orbitRef}
-          enablePan={false}
-          enableZoom={true}
-          minDistance={6}
-          maxDistance={18}
-          maxPolarAngle={Math.PI / 2.2}
-          minPolarAngle={Math.PI / 8}
-          target={[0, 0.5, 0]}
-        />
         <Environment preset="night" />
         <fog attach="fog" args={['#050508', 16, 32]} />
       </Canvas>

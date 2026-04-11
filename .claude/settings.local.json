@@ -12,7 +12,14 @@
       "Bash(git push:*)",
       "Bash(node -e \"console.log\\(require\\(''three/package.json''\\).version\\)\")",
       "Bash(node -e \"console.log\\(require\\(''@react-three/fiber/package.json''\\).version\\)\")",
-      "Bash(node -e \"console.log\\(require\\(''@react-three/drei/package.json''\\).version\\)\")"
+      "Bash(node -e \"console.log\\(require\\(''@react-three/drei/package.json''\\).version\\)\")",
+      "Bash(node -e \"require\\('canvas'\\)\")",
+      "Bash(node -e \"require\\('sharp'\\)\")",
+      "Bash(node -e \"require\\('jimp'\\)\")",
+      "Bash(npm list:*)",
+      "Bash(node -e \"require\\('sharp'\\); console.log\\('ok'\\)\")",
+      "Bash(node scripts/gen-spritesheet.mjs src/assets/images/candidates/cand_1257_00052615_diputado.webp)",
+      "Bash(node scripts/gen-spritesheet.mjs)"
     ]
   }
 }
