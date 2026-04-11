@@ -10,11 +10,11 @@
     },
     {
       "id": "patada",
-      "nombre": "Patada Giratoria",
+      "nombre": "Patada de Llama",
       "tipo": "fisico",
       "poder": 1.1,
       "precision": 0.9,
-      "descripcion": "Una patada con giro completo"
+      "descripcion": "Una patada auquénida con giro completo"
     },
     {
       "id": "cabezazo",
@@ -93,8 +93,8 @@
       "descripcion": "La tierra tiembla bajo los pies del enemigo"
     },
     {
-      "id": "hielo_nevado",
-      "nombre": "Hielo del Nevado",
+      "id": "hielo_puna",
+      "nombre": "Hielo de la Puna",
       "tipo": "hielo",
       "poder": 1.7,
       "precision": 0.8,
