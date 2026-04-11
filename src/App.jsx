@@ -32,13 +32,14 @@ function SessionToolbar({ label, onExit }) {
         <div className="session-connection connected">{viewer.label}</div>
       )}
 
-      {isOnline && (
+      {isOnline && connectionStatus !== 'connected' && (
         <div className={`session-connection ${connectionStatus}`}>
-          {connectionStatus === 'connected' && 'Conectado'}
           {connectionStatus === 'connecting' && 'Conectando...'}
           {connectionStatus === 'error' && (onlineError || 'Reconectando...')}
         </div>
       )}
+
+      {isOnline && <OnlinePlayersPanel />}
 
       <button className="session-exit-btn" onClick={onExit}>
         Volver al Home
@@ -50,8 +51,8 @@ function SessionToolbar({ label, onExit }) {
 function SharedArena({ sessionType, onExit }) {
   const { phase } = useGame()
   const { stage } = useTournament()
-  const showTournamentCombatUI = sessionType === 'tournament' && stage === 'fighting' && phase !== 'intro'
-  const showEndlessCombatUI = sessionType === 'endless' && phase !== 'intro'
+  const showTournamentCombatUI = sessionType === 'tournament' && stage === 'fighting' && phase !== 'intro' && phase !== 'result'
+  const showEndlessCombatUI = sessionType === 'endless' && phase !== 'intro' && phase !== 'result'
   const showCombatUI = showTournamentCombatUI || showEndlessCombatUI
   const showHud = sessionType === 'endless' || stage !== 'setup'
 
@@ -64,7 +65,6 @@ function SharedArena({ sessionType, onExit }) {
       {showCombatUI && <HealthBars />}
       {showCombatUI && <BattleLog />}
 
-      {sessionType === 'endless' && <OnlinePlayersPanel />}
       {sessionType === 'endless' && <FightIntroModal />}
       {sessionType === 'endless' && <BettingModal />}
       {sessionType === 'endless' && <GameOver onExitHome={onExit} />}

@@ -187,11 +187,11 @@ export default function BettingModal() {
         )}
 
         {isOnline ? (
-          <div className="online-bet-note">
-            {bet
-              ? `Apuesta registrada. La pelea comenzara en ${countdown ?? '--'}s.`
-              : 'La pelea online comenzara automaticamente cuando cierre la ventana de apuestas.'}
-          </div>
+          bet && (
+            <div className="online-bet-note">
+              Apuesta registrada. Comienza en {countdown ?? '--'}s.
+            </div>
+          )
         ) : (
           <button className="start-early-btn" onClick={handleStartEarly}>
             {bet ? 'Comenzar Pelea!' : 'Saltar (sin apuesta)'}
