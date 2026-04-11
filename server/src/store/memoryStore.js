@@ -1,3 +1,4 @@
+import { config } from '../config.js'
 import { DEFAULT_STAKE, INITIAL_COINS } from '../battleEngine.js'
 
 function nowIso() {
@@ -81,8 +82,9 @@ export class MemoryStore {
   }
 
   async listActivePlayers() {
+    const recentThreshold = new Date(Date.now() - config.playerTtlMs).toISOString()
     return [...this.players.values()]
-      .filter((player) => player.status === 'active')
+      .filter((player) => player.status === 'active' && player.last_seen_at >= recentThreshold)
       .sort((left, right) => left.guest_number - right.guest_number)
       .map((player) => ({
         userKey: player.user_key,

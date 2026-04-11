@@ -19,7 +19,14 @@
       "Bash(npm list:*)",
       "Bash(node -e \"require\\('sharp'\\); console.log\\('ok'\\)\")",
       "Bash(node scripts/gen-spritesheet.mjs src/assets/images/candidates/cand_1257_00052615_diputado.webp)",
-      "Bash(node scripts/gen-spritesheet.mjs)"
+      "Bash(node scripts/gen-spritesheet.mjs)",
+      "Bash(ssh -i ssh.txt -o StrictHostKeyChecking=accept-new mauri@172.234.228.138 \"systemctl --user status incaslop-mechas-backend.service --no-pager --lines=6; curl -fsS http://127.0.0.1:3003/health\")",
+      "Bash(tar --exclude='node_modules' --exclude='dist' -czf backend_deploy.tar.gz -C server .)",
+      "Bash(scp -i ssh.txt -o StrictHostKeyChecking=accept-new backend_deploy.tar.gz mauri@172.234.228.138:/home/mauri/backend_deploy.tar.gz)",
+      "Bash(ssh -i ssh.txt -o StrictHostKeyChecking=accept-new mauri@172.234.228.138 \"set -e; cd /home/mauri/incaslop-mechas; if [ -f backend/.env ]; then cp backend/.env /home/mauri/backend.env.backup; fi; rm -rf backend; mkdir -p backend; tar -xzf /home/mauri/backend_deploy.tar.gz -C backend; if [ -f /home/mauri/backend.env.backup ]; then cp /home/mauri/backend.env.backup backend/.env; fi; cd backend; npm install; systemctl --user restart incaslop-mechas-backend.service; sleep 2; systemctl --user status incaslop-mechas-backend.service --no-pager --lines=8\")",
+      "Bash(ssh -i ssh.txt -o StrictHostKeyChecking=accept-new mauri@172.234.228.138 \"journalctl --user -u incaslop-mechas-backend.service -n 30 --no-pager\")",
+      "Bash(ssh -i ssh.txt -o StrictHostKeyChecking=accept-new mauri@172.234.228.138 \"fuser -k 3003/tcp 2>/dev/null || true; sleep 1; systemctl --user restart incaslop-mechas-backend.service; sleep 3; systemctl --user status incaslop-mechas-backend.service --no-pager --lines=6; curl -fsS http://127.0.0.1:3003/health\")",
+      "Bash(ssh -i ssh.txt -o StrictHostKeyChecking=accept-new mauri@172.234.228.138 \"echo '=== systemd unit file ===' && cat /home/mauri/.config/systemd/user/incaslop-mechas-backend.service; echo '=== .env ===' && cat /home/mauri/incaslop-mechas/backend/.env; echo '=== node version ===' && node --version; echo '=== backend dir ===' && ls /home/mauri/incaslop-mechas/backend/; echo '=== data dir ===' && ls /home/mauri/incaslop-mechas/backend/data/ 2>/dev/null || echo 'no data dir'\")"
     ]
   }
 }

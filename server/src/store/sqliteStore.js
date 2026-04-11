@@ -163,11 +163,13 @@ export class SQLiteStore {
   }
 
   async listActivePlayers() {
+    const recentThreshold = new Date(Date.now() - config.playerTtlMs).toISOString()
     const rows = await this.db.all(
       `SELECT user_key, guest_number, coins, status
        FROM arena_players
-       WHERE status = 'active'
+       WHERE status = 'active' AND last_seen_at >= ?
        ORDER BY guest_number ASC`,
+      [recentThreshold],
     )
 
     return rows.map((row) => ({
