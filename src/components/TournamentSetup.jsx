@@ -8,6 +8,7 @@ import {
   getCandidatesByFilters,
 } from '../utils/candidateCatalog'
 import { resolvePartyImageUrl } from '../utils/partyResolver'
+import PartyLogoBadge from './PartyLogoBadge'
 
 function ImageThumb({ src, alt, className, fallback }) {
   if (src) {
@@ -252,25 +253,20 @@ export default function TournamentSetup() {
                 ) : (
                   <div className="setup-preview-placeholder">Sin Foto</div>
                 )}
-                {(selectedCandidate.partyImage || selectedCandidate.party) && (
-                  <div className="candidate-party-badge">
-                    {selectedCandidate.partyImage && (
-                      <img
-                        className="candidate-party-badge-image"
-                        src={selectedCandidate.partyImage}
-                        alt={selectedCandidate.party}
-                      />
-                    )}
-                    {selectedCandidate.party && (
-                      <span className="candidate-party-badge-label">{selectedCandidate.party}</span>
-                    )}
-                  </div>
-                )}
+                <PartyLogoBadge
+                  partyImage={selectedCandidate.partyImage}
+                  party={selectedCandidate.party}
+                  className="portrait-corner-badge"
+                />
               </div>
               <div className="setup-preview-body">
                 <h2>{selectedCandidate.name}</h2>
                 <p>{selectedCandidate.type} · {selectedCandidate.region}</p>
-                <p>{selectedCandidate.party}</p>
+                <PartyLogoBadge
+                  partyImage={selectedCandidate.partyImage}
+                  party={selectedCandidate.party}
+                  className="name-logo-badge"
+                />
               </div>
             </>
           ) : (

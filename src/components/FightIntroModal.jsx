@@ -4,6 +4,7 @@ import { useTournament } from '../context/TournamentContext'
 import { useBattle } from '../hooks/useBattle'
 import { calculateWinOdds } from '../utils/odds'
 import { getMatchesInRound, getRoundName } from '../utils/tournamentEngine'
+import PartyLogoBadge from './PartyLogoBadge'
 
 function IntroCard({ fighter, side, oddsPct }) {
   return (
@@ -14,23 +15,16 @@ function IntroCard({ fighter, side, oddsPct }) {
         ) : (
           <div className="intro-fighter-portrait-placeholder">Sin Foto</div>
         )}
-        {(fighter.partyImage || fighter.party) && (
-          <div className="candidate-party-badge">
-            {fighter.partyImage && (
-              <img className="candidate-party-badge-image" src={fighter.partyImage} alt={fighter.party} />
-            )}
-            {fighter.party && <span className="candidate-party-badge-label">{fighter.party}</span>}
-          </div>
-        )}
+        <PartyLogoBadge partyImage={fighter.partyImage} party={fighter.party} className="portrait-corner-badge" />
       </div>
       <div className="intro-fighter-name">{fighter.name}</div>
-      {fighter.party && <div className="intro-fighter-party">{fighter.party}</div>}
+      <PartyLogoBadge partyImage={fighter.partyImage} party={fighter.party} className="name-logo-badge" />
       <div className="intro-fighter-odds">{oddsPct}% de probabilidad</div>
       <div className="intro-dialog-bubble">"{fighter.introDialog}"</div>
       <div className="intro-fighter-stats">
-        <span>ATK {fighter.attack}</span>
-        <span>DEF {fighter.defense}</span>
-        <span>SPD {fighter.speed}</span>
+        <span>ATAQUE: {fighter.attack}</span>
+        <span>DEFENSA: {fighter.defense}</span>
+        <span>ACHORAMIENTO: {fighter.speed}</span>
       </div>
     </div>
   )

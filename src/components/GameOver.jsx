@@ -1,4 +1,5 @@
 import { useGame } from '../context/GameContext'
+import WinnerSummary from './WinnerSummary'
 
 export default function GameOver({ onExitHome }) {
   const { phase, lastResult, fighter1, fighter2, nextRound, isOnline, countdown, gameOver } = useGame()
@@ -13,10 +14,7 @@ export default function GameOver({ onExitHome }) {
       <div className="result-modal">
         <h2 className="result-title">Pelea Terminada!</h2>
 
-        <div className="winner-announce">
-          <span className="winner-name">{winner.name}</span>
-          <span className="winner-label">GANA!</span>
-        </div>
+        <WinnerSummary winner={winner} label="GANA!" />
 
         <div className="winner-hp">
           HP restante: {winner.hp} / {winner.maxHp}

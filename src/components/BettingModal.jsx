@@ -4,6 +4,7 @@ import { useGame } from '../context/GameContext'
 import { useBattle } from '../hooks/useBattle'
 import { STAKE_OPTIONS } from '../utils/battleEngine'
 import { calculateWinOdds } from '../utils/odds'
+import PartyLogoBadge from './PartyLogoBadge'
 
 const BET_TIMER = 15
 
@@ -138,22 +139,15 @@ export default function BettingModal() {
               ) : (
                 <div className="fighter-card-portrait-placeholder">Sin Foto</div>
               )}
-              {(fighter1.partyImage || fighter1.party) && (
-                <div className="candidate-party-badge">
-                  {fighter1.partyImage && (
-                    <img className="candidate-party-badge-image" src={fighter1.partyImage} alt={fighter1.party} />
-                  )}
-                  {fighter1.party && <span className="candidate-party-badge-label">{fighter1.party}</span>}
-                </div>
-              )}
+              <PartyLogoBadge partyImage={fighter1.partyImage} party={fighter1.party} className="portrait-corner-badge" />
             </div>
             <div className="fighter-card-name">{fighter1.name}</div>
-            {fighter1.party && <div className="fighter-card-party">{fighter1.party}</div>}
+            <PartyLogoBadge partyImage={fighter1.partyImage} party={fighter1.party} className="name-logo-badge" />
             <div className="fighter-odds">{odds.pct1}% prob.</div>
             <div className="fighter-card-stats">
-              <div>ATK: {fighter1.attack}</div>
-              <div>DEF: {fighter1.defense}</div>
-              <div>SPD: {fighter1.speed}</div>
+              <div>ATAQUE: {fighter1.attack}</div>
+              <div>DEFENSA: {fighter1.defense}</div>
+              <div>ACHORAMIENTO: {fighter1.speed}</div>
             </div>
             <button
               className="bet-button bet-left"
@@ -173,22 +167,15 @@ export default function BettingModal() {
               ) : (
                 <div className="fighter-card-portrait-placeholder">Sin Foto</div>
               )}
-              {(fighter2.partyImage || fighter2.party) && (
-                <div className="candidate-party-badge">
-                  {fighter2.partyImage && (
-                    <img className="candidate-party-badge-image" src={fighter2.partyImage} alt={fighter2.party} />
-                  )}
-                  {fighter2.party && <span className="candidate-party-badge-label">{fighter2.party}</span>}
-                </div>
-              )}
+              <PartyLogoBadge partyImage={fighter2.partyImage} party={fighter2.party} className="portrait-corner-badge" />
             </div>
             <div className="fighter-card-name">{fighter2.name}</div>
-            {fighter2.party && <div className="fighter-card-party">{fighter2.party}</div>}
+            <PartyLogoBadge partyImage={fighter2.partyImage} party={fighter2.party} className="name-logo-badge" />
             <div className="fighter-odds">{odds.pct2}% prob.</div>
             <div className="fighter-card-stats">
-              <div>ATK: {fighter2.attack}</div>
-              <div>DEF: {fighter2.defense}</div>
-              <div>SPD: {fighter2.speed}</div>
+              <div>ATAQUE: {fighter2.attack}</div>
+              <div>DEFENSA: {fighter2.defense}</div>
+              <div>ACHORAMIENTO: {fighter2.speed}</div>
             </div>
             <button
               className="bet-button bet-right"

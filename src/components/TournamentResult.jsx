@@ -1,12 +1,14 @@
 import { useGame } from '../context/GameContext'
 import { useTournament } from '../context/TournamentContext'
 import { getRoundName } from '../utils/tournamentEngine'
+import WinnerSummary from './WinnerSummary'
 
 function ChampionScreen({ champion, onNewTournament, onMenu }) {
   return (
     <div className="modal-overlay">
       <div className="result-modal champion-modal">
         <h2 className="champion-title">Campeon del Tournament</h2>
+        <WinnerSummary winner={champion} label="CAMPEON" />
         <div className="champion-name">{champion.name}</div>
         <div className="champion-stats">
           {champion.party || champion.region || champion.type}
@@ -68,10 +70,7 @@ export default function TournamentResult({ onExitHome }) {
       <div className="result-modal">
         <h2 className="result-title">{roundName}</h2>
 
-        <div className="winner-announce">
-          <span className="winner-name">{winner.name}</span>
-          <span className="winner-label">GANA</span>
-        </div>
+        <WinnerSummary winner={winner} label="GANA" />
 
         <div className="winner-hp">
           HP restante: {winner.hp} / {winner.maxHp}

@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useGame } from '../context/GameContext'
 import { calculateWinOdds } from '../utils/odds'
+import PartyLogoBadge from './PartyLogoBadge'
 
 function Bar({ fighter, side, oddsPct }) {
   const pct = Math.max(0, (fighter.hp / fighter.maxHp) * 100)
@@ -12,14 +13,7 @@ function Bar({ fighter, side, oddsPct }) {
         {fighter.name}
         <span className="live-odds">{oddsPct}%</span>
       </div>
-      {(fighter.partyImage || fighter.party) && (
-        <div className={`health-party-strip ${side}`}>
-          {fighter.partyImage && (
-            <img className="health-party-logo" src={fighter.partyImage} alt={fighter.party} />
-          )}
-          {fighter.party && <span className="health-party-name">{fighter.party}</span>}
-        </div>
-      )}
+      <PartyLogoBadge partyImage={fighter.partyImage} party={fighter.party} className="health-party-badge" />
       <div className="health-bar-bg">
         <div
           className="health-bar-fill"
@@ -30,7 +24,7 @@ function Bar({ fighter, side, oddsPct }) {
         {fighter.hp} / {fighter.maxHp} HP
       </div>
       <div className="fighter-stats">
-        ATK: {fighter.attack} | DEF: {fighter.defense} | SPD: {fighter.speed}
+        ATAQUE: {fighter.attack} | DEFENSA: {fighter.defense} | ACHORAMIENTO: {fighter.speed}
       </div>
       {fighter.efectos && fighter.efectos.length > 0 && (
         <div className="fighter-efectos">
