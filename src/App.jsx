@@ -11,11 +11,11 @@ import FightIntroModal from './components/FightIntroModal'
 import GameOver from './components/GameOver'
 import MainMenu from './components/MainMenu'
 import OnlinePlayersPanel from './components/OnlinePlayersPanel'
-import FaceDebugLab from './components/FaceDebugLab'
 import TournamentBracket from './components/TournamentBracket'
 import TournamentResult from './components/TournamentResult'
 import TournamentRoundSummary from './components/TournamentRoundSummary'
 import TournamentSetup from './components/TournamentSetup'
+import SpriteDebugLab from './components/SpriteDebugLab'
 import { ensureCandidatePool, getCandidateApiBase } from './utils/candidateCatalog'
 import './App.css'
 
@@ -151,8 +151,8 @@ export default function App() {
     return <TournamentSessionGate onExit={() => setRoute('home')} />
   }
 
-  if (isDev && route === 'debug-face') {
-    return <FaceDebugLab onExit={() => setRoute('home')} />
+  if (isDev && route === 'debug-sprite') {
+    return <SpriteDebugLab onExit={() => setRoute('home')} />
   }
 
   return <MainMenu onSelect={setRoute} isDev={isDev} />

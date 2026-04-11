@@ -24,10 +24,10 @@ export default function MainMenu({ onSelect, isDev = false }) {
           </button>
 
           {isDev && (
-            <button className="mode-card debug" onClick={() => onSelect('debug-face')}>
-              <span className="mode-card-title">FACE DEBUG</span>
+            <button className="mode-card debug" onClick={() => onSelect('debug-sprite')}>
+              <span className="mode-card-title">SPRITE DEBUG</span>
               <span className="mode-card-desc">
-                Laboratorio local para model1.glb: mueve el sprite del rostro, cambia el hueso y revisa posiciones en tiempo real.
+                Laboratorio local para el spritesheet: cambia el candidato, el frame y el tamaño en tiempo real.
               </span>
             </button>
           )}
