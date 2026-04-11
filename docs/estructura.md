@@ -30,6 +30,13 @@ La fuente de verdad esta en:
 - `src/utils/`: helpers de API, retratos y generacion de peleadores.
 - `src/assets/`: assets fuente versionados.
 
+En la arena de combate:
+
+- `BattleScene` renderiza la escena 3D y overlays de KO/flash.
+- `HealthBar` renderiza los paneles superiores de cada peleador.
+- `BattleLog` ocupa el panel inferior izquierdo.
+- `FutureChatPanel` reserva el panel inferior derecho para el chat futuro.
+
 ## Retratos de candidatos
 
 Los retratos fuente viven en:

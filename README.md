@@ -31,6 +31,16 @@ Regla importante:
 - No se versionan cambios manuales en `dist/`.
 - Si algo debe aparecer en `dist/`, la logica debe vivir en el codigo fuente o en el pipeline de build.
 
+## Arena de combate
+
+La vista de pelea ahora se compone de tres bloques visuales principales:
+
+- HUD superior de combatientes con nombre, partido, stats y estados activos.
+- Panel inferior izquierdo para el registro de batalla.
+- Panel inferior derecho reservado para el futuro chat por websocket.
+
+Los flashes de efectos especiales tambien viven completamente en frontend y se disparan desde el estado de combate ya disponible, sin cambiar contratos del backend online.
+
 ## Retratos de candidatos
 
 Los retratos viven en `src/assets/images/candidates/`, pero la URL publica estable del proyecto es:

@@ -1,10 +1,11 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Environment, ContactShadows } from '@react-three/drei'
 import * as THREE from 'three'
 import FighterSprite from './FighterSprite'
 import { useGame } from '../context/GameContext'
 import { getKoProgress } from '../utils/koTimeline'
+import { getEffectVisual, getLogEntryVisual } from '../utils/battleVisuals'
 
 const POS_LEFT = [-1.2, -0.2, 1.5]
 const POS_RIGHT = [1.8, -0.2, -2.5]
@@ -130,10 +131,81 @@ function CameraController({ koState }) {
 }
 
 export default function BattleScene() {
-  const { fighter1, fighter2, currentTurn, phase, koState } = useGame()
+  const { fighter1, fighter2, currentTurn, phase, koState, battleLog } = useGame()
   const showFighters = phase === 'fighting' || phase === 'ko' || phase === 'result'
   const leftAnimationState = koState?.loserSide === 'left' ? 'ko' : 'idle'
   const rightAnimationState = koState?.loserSide === 'right' ? 'ko' : 'idle'
+  const previousLogLengthRef = useRef(battleLog.length)
+  const previousEffectsRef = useRef({
+    left: new Set((fighter1.efectos ?? []).map((efecto) => efecto.id)),
+    right: new Set((fighter2.efectos ?? []).map((efecto) => efecto.id)),
+  })
+  const flashSequenceRef = useRef(0)
+  const [flashEvent, setFlashEvent] = useState(null)
+
+  useEffect(() => {
+    if (battleLog.length < previousLogLengthRef.current) {
+      previousLogLengthRef.current = battleLog.length
+      return
+    }
+
+    if (battleLog.length === previousLogLengthRef.current) {
+      return
+    }
+
+    const newEntries = battleLog.slice(previousLogLengthRef.current)
+    previousLogLengthRef.current = battleLog.length
+
+    const flashFromLog = [...newEntries]
+      .reverse()
+      .map((entry) => getLogEntryVisual(entry))
+      .find(Boolean)
+
+    if (flashFromLog) {
+      flashSequenceRef.current += 1
+      setFlashEvent({
+        ...flashFromLog,
+        id: `flash-${flashSequenceRef.current}`,
+      })
+    }
+  }, [battleLog])
+
+  useEffect(() => {
+    const nextEffects = {
+      left: new Set((fighter1.efectos ?? []).map((efecto) => efecto.id)),
+      right: new Set((fighter2.efectos ?? []).map((efecto) => efecto.id)),
+    }
+    const previousEffects = previousEffectsRef.current
+
+    const addedLeft = [...nextEffects.left].find((effectId) => !previousEffects.left.has(effectId))
+    const addedRight = [...nextEffects.right].find((effectId) => !previousEffects.right.has(effectId))
+    const addedEffect = addedLeft || addedRight
+
+    previousEffectsRef.current = nextEffects
+
+    if (!addedEffect) return
+
+    const effectVisual = getEffectVisual(addedEffect)
+    if (effectVisual) {
+      flashSequenceRef.current += 1
+      setFlashEvent({
+        ...effectVisual,
+        id: `flash-${flashSequenceRef.current}`,
+      })
+    }
+  }, [fighter1.efectos, fighter2.efectos])
+
+  useEffect(() => {
+    if (!flashEvent) return undefined
+
+    const timeoutId = window.setTimeout(() => {
+      setFlashEvent((current) => (current?.id === flashEvent.id ? null : current))
+    }, 760)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [flashEvent])
 
   return (
     <div className="battle-scene-shell">
@@ -189,6 +261,15 @@ export default function BattleScene() {
       <div
         className={`battle-ko-overlay ${phase === 'ko' ? 'active' : ''}`}
       />
+      {flashEvent && (
+        <div
+          key={flashEvent.id}
+          className="battle-status-flash active"
+          style={{ '--flash-color': flashEvent.color }}
+        >
+          <div className="battle-status-flash-tag">{flashEvent.label}</div>
+        </div>
+      )}
     </div>
   )
 }

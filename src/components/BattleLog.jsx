@@ -12,7 +12,7 @@ export default function BattleLog() {
   }, [battleLog])
 
   return (
-    <div className="battle-log" ref={scrollRef}>
+    <div className="battle-log battle-panel-shell" ref={scrollRef}>
       <div className="battle-log-title">Registro de Batalla</div>
       {battleLog.map((entry, i) => (
         <div key={i} className={`log-entry log-${entry.type}`}>
