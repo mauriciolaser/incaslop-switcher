@@ -142,7 +142,6 @@ export default function BettingModal() {
               <PartyLogoBadge partyImage={fighter1.partyImage} party={fighter1.party} className="portrait-corner-badge" />
             </div>
             <div className="fighter-card-name">{fighter1.name}</div>
-            <PartyLogoBadge partyImage={fighter1.partyImage} party={fighter1.party} className="name-logo-badge" />
             <div className="fighter-odds">{odds.pct1}% prob.</div>
             <div className="fighter-card-stats">
               <div>ATAQUE: {fighter1.attack}</div>
@@ -170,7 +169,6 @@ export default function BettingModal() {
               <PartyLogoBadge partyImage={fighter2.partyImage} party={fighter2.party} className="portrait-corner-badge" />
             </div>
             <div className="fighter-card-name">{fighter2.name}</div>
-            <PartyLogoBadge partyImage={fighter2.partyImage} party={fighter2.party} className="name-logo-badge" />
             <div className="fighter-odds">{odds.pct2}% prob.</div>
             <div className="fighter-card-stats">
               <div>ATAQUE: {fighter2.attack}</div>

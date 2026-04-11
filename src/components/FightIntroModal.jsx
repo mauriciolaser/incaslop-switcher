@@ -18,7 +18,6 @@ function IntroCard({ fighter, side, oddsPct }) {
         <PartyLogoBadge partyImage={fighter.partyImage} party={fighter.party} className="portrait-corner-badge" />
       </div>
       <div className="intro-fighter-name">{fighter.name}</div>
-      <PartyLogoBadge partyImage={fighter.partyImage} party={fighter.party} className="name-logo-badge" />
       <div className="intro-fighter-odds">{oddsPct}% de probabilidad</div>
       <div className="intro-dialog-bubble">"{fighter.introDialog}"</div>
       <div className="intro-fighter-stats">
