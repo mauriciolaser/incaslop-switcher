@@ -137,6 +137,8 @@ export class MemoryStore {
   async getUserView(userKey, currentRound, currentPhase) {
     const player = this.players.get(userKey) ?? null
     const currentBet = this.bets.find((bet) => bet.user_key === userKey && bet.round_number === currentRound) ?? null
+    const resolvedBets = this.bets.filter((bet) => bet.user_key === userKey && bet.status !== 'pending')
+    const winCount = resolvedBets.filter((bet) => bet.status === 'win').length
 
     return {
       userKey,
@@ -145,6 +147,11 @@ export class MemoryStore {
       coins: player?.coins ?? INITIAL_COINS,
       status: player?.status ?? 'active',
       gameOver: player?.status === 'eliminated',
+      eliminationReason: player?.status === 'eliminated' && Number(player?.coins ?? 0) <= 0 ? 'no_coins' : null,
+      stats: {
+        roundsPlayed: resolvedBets.length,
+        fightsWon: winCount,
+      },
       currentBet: currentBet ? { side: currentBet.side, stake: currentBet.stake, roundNumber: currentBet.round_number } : null,
       lastResult: currentPhase === 'result' && currentBet && currentBet.status !== 'pending'
         ? {

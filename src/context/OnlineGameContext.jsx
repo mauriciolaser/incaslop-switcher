@@ -66,6 +66,11 @@ function createInitialState() {
     viewer: null,
     players: [],
     gameOver: false,
+    eliminationReason: null,
+    playerStats: {
+      roundsPlayed: 0,
+      fightsWon: 0,
+    },
   }
 }
 
@@ -73,6 +78,9 @@ function mapStateResponse(payload, previousState) {
   const remoteState = payload.state ?? {}
   const viewer = payload.viewer ?? {}
   const players = Array.isArray(payload.players) ? payload.players : previousState.players
+
+  const eliminationReason = viewer.eliminationReason
+    ?? (viewer.gameOver && Number(viewer.coins ?? 0) <= 0 ? 'no_coins' : null)
 
   return {
     phase: remoteState.phase ?? previousState.phase,
@@ -92,6 +100,11 @@ function mapStateResponse(payload, previousState) {
     viewer,
     players,
     gameOver: Boolean(viewer.gameOver),
+    eliminationReason,
+    playerStats: {
+      roundsPlayed: Number(viewer.stats?.roundsPlayed ?? previousState.playerStats?.roundsPlayed ?? 0),
+      fightsWon: Number(viewer.stats?.fightsWon ?? previousState.playerStats?.fightsWon ?? 0),
+    },
   }
 }
 

@@ -6,10 +6,11 @@ import BattleScene from './components/BattleScene'
 import HealthBars from './components/HealthBar'
 import BattleHUD from './components/BattleHUD'
 import BattleLog from './components/BattleLog'
-import FutureChatPanel from './components/FutureChatPanel'
+import BattleChatPanel from './components/BattleChatPanel'
 import BettingModal from './components/BettingModal'
 import FightIntroModal from './components/FightIntroModal'
 import GameOver from './components/GameOver'
+import MoneyHUD from './components/MoneyHUD'
 import MainMenu from './components/MainMenu'
 import OnlinePlayersPanel from './components/OnlinePlayersPanel'
 import TournamentBracket from './components/TournamentBracket'
@@ -61,13 +62,14 @@ function SharedArena({ sessionType, onExit }) {
     <>
       <BattleScene />
       <SessionToolbar label={sessionType === 'endless' ? 'ENDLESS' : 'TOURNAMENT'} onExit={onExit} />
+      {sessionType === 'endless' && <MoneyHUD />}
       {showHud && <BattleHUD sessionType={sessionType} />}
 
       {showCombatUI && <HealthBars />}
       {showCombatUI && (
         <div className="battle-bottom-panels">
           <BattleLog />
-          <FutureChatPanel />
+          <BattleChatPanel sessionType={sessionType} />
         </div>
       )}
 

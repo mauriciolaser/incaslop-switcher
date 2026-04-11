@@ -231,6 +231,14 @@ export class SQLiteStore {
        WHERE user_key = ? AND round_number = ?`,
       [userKey, currentRound],
     )
+    const betStats = await this.db.get(
+      `SELECT
+         COALESCE(SUM(CASE WHEN status != 'pending' THEN 1 ELSE 0 END), 0) AS rounds_played,
+         COALESCE(SUM(CASE WHEN status = 'win' THEN 1 ELSE 0 END), 0) AS fights_won
+       FROM arena_bets
+       WHERE user_key = ?`,
+      [userKey],
+    )
 
     return {
       userKey,
@@ -239,6 +247,11 @@ export class SQLiteStore {
       coins: player?.coins ?? INITIAL_COINS,
       status: player?.status ?? 'active',
       gameOver: player?.status === 'eliminated',
+      eliminationReason: player?.status === 'eliminated' && Number(player?.coins ?? 0) <= 0 ? 'no_coins' : null,
+      stats: {
+        roundsPlayed: Number(betStats?.rounds_played ?? 0),
+        fightsWon: Number(betStats?.fights_won ?? 0),
+      },
       currentBet: currentBet ? { side: currentBet.side, stake: currentBet.stake, roundNumber: currentBet.round_number } : null,
       lastResult: currentPhase === 'result' && currentBet && currentBet.status !== 'pending'
         ? {

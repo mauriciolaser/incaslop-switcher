@@ -3,7 +3,7 @@ import { useTournament } from '../context/TournamentContext'
 import { getRoundName, getMatchesInRound } from '../utils/tournamentEngine'
 
 export default function BattleHUD({ sessionType }) {
-  const { round, coins, phase, isOnline, connectionStatus, players = [] } = useGame()
+  const { round, phase, isOnline, connectionStatus, players = [] } = useGame()
   const { bracket, currentMatch, playerStatus } = useTournament()
 
   const isTournament = sessionType === 'tournament'
@@ -30,12 +30,6 @@ export default function BattleHUD({ sessionType }) {
         <div className="hud-item">
           <span className="hud-label">Ronda</span>
           <span className="hud-value">{round}</span>
-        </div>
-      )}
-      {!isTournament && (
-        <div className="hud-item">
-          <span className="hud-label">Creditos</span>
-          <span className="hud-value coins">{coins}</span>
         </div>
       )}
       <div className="hud-item">

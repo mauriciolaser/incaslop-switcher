@@ -2,12 +2,49 @@ import { useGame } from '../context/GameContext'
 import WinnerSummary from './WinnerSummary'
 
 export default function GameOver({ onExitHome }) {
-  const { phase, lastResult, fighter1, fighter2, nextRound, isOnline, countdown, gameOver } = useGame()
+  const {
+    phase,
+    lastResult,
+    fighter1,
+    fighter2,
+    nextRound,
+    isOnline,
+    countdown,
+    gameOver,
+    eliminationReason,
+    totalRoundsPlayed,
+    totalWins,
+    playerStats,
+  } = useGame()
 
   if (!lastResult) return null
   if (phase !== 'result') return null
 
   const winner = lastResult.winnerSide === 'left' ? fighter1 : fighter2
+  const roundsPlayed = isOnline ? playerStats?.roundsPlayed ?? 0 : totalRoundsPlayed
+  const fightsWon = isOnline ? playerStats?.fightsWon ?? 0 : totalWins
+  const lostByNoCoins = gameOver && (eliminationReason === 'no_coins' || !isOnline)
+
+  if (lostByNoCoins) {
+    return (
+      <div className="modal-overlay">
+        <div className="result-modal">
+          <h2 className="result-title">Te quedaste sin dinero</h2>
+          <div className="winner-name">Perdiste la run</div>
+          <div className="winner-hp">No tienes monedas para continuar apostando.</div>
+          <div className="bet-result lose">
+            Rondas jugadas: {roundsPlayed}
+          </div>
+          <div className="bet-result win">
+            Peleas ganadas: {fightsWon}
+          </div>
+          <button className="next-round-btn" onClick={onExitHome}>
+            Volver al Home
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="modal-overlay">

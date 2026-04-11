@@ -9,6 +9,7 @@
     "deploy": "powershell -ExecutionPolicy Bypass -File scripts/deploy.ps1",
     "online:install": "npm --prefix server install",
     "online:start": "npm --prefix server start",
+    "sprite:money": "node scripts/gen-money-icon.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },

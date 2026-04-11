@@ -50,6 +50,10 @@ function createInitialState() {
     lastResult: null,
     winner: null,
     koState: null,
+    gameOver: false,
+    eliminationReason: null,
+    totalRoundsPlayed: 0,
+    totalWins: 0,
   }
 }
 
@@ -111,12 +115,18 @@ function gameReducer(state, action) {
       let coinDelta = 0
       if (betResult === 'win') coinDelta = state.stake
       if (betResult === 'lose') coinDelta = -state.stake
+      const nextCoins = Math.max(0, state.coins + coinDelta)
+      const gameOver = nextCoins <= 0
 
       return {
         ...state,
         phase: 'result',
         winner: winnerSide,
-        coins: Math.max(0, state.coins + coinDelta),
+        coins: nextCoins,
+        gameOver,
+        eliminationReason: gameOver ? 'no_coins' : null,
+        totalRoundsPlayed: state.totalRoundsPlayed + 1,
+        totalWins: state.totalWins + (betResult === 'win' ? 1 : 0),
         lastResult: {
           winnerSide,
           loserSide,
@@ -142,6 +152,8 @@ function gameReducer(state, action) {
         winner: null,
         lastResult: null,
         koState: null,
+        gameOver: false,
+        eliminationReason: null,
         stake: normalizeStake(state.stake, state.coins),
       }
     }
@@ -155,6 +167,7 @@ function gameReducer(state, action) {
       }
 
     case 'NEXT_ROUND': {
+      if (state.gameOver) return state
       const survivorKey = state.winner === 'left' ? 'fighter1' : 'fighter2'
       const healedSurvivor = healSurvivor(state[survivorKey])
       const newOpponent = generateFighter(state.winner === 'left' ? 'right' : 'left')

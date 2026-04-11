@@ -461,6 +461,54 @@
   transform: translateY(-1px);
 }
 
+/* === Money HUD === */
+.money-hud {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  z-index: 180;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 148px;
+  padding: 8px 12px 8px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 223, 95, 0.42);
+  background:
+    linear-gradient(180deg, rgba(7, 11, 20, 0.94), rgba(18, 24, 39, 0.88)),
+    radial-gradient(circle at top, rgba(255, 221, 77, 0.1), transparent 55%);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+.money-hud-icon {
+  width: 34px;
+  height: 34px;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+}
+
+.money-hud-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.money-hud-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: #c6b06a;
+}
+
+.money-hud-value {
+  font-size: 21px;
+  font-weight: 900;
+  color: #ffda54;
+  line-height: 1;
+}
+
 /* === HUD === */
 .battle-hud {
   position: absolute;
@@ -790,74 +838,172 @@
 .battle-chat-panel {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  gap: 10px;
+  min-height: 220px;
 }
 
-.battle-panel-header {
+/* ── header ── */
+.battle-chat-header {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 16px;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
 }
 
-.battle-panel-kicker {
-  font-size: 11px;
+.battle-chat-title {
+  font-size: 13px;
+  font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 2px;
-  color: #7f92bc;
+  color: #8fa4cf;
 }
 
-.battle-panel-title {
-  font-size: 18px;
-  font-weight: 900;
-  color: #eef3ff;
+.battle-chat-playerid {
+  margin-left: auto;
+  font-size: 11px;
+  color: #5a7aae;
+  letter-spacing: 1px;
 }
 
-.battle-chat-placeholder {
-  min-height: 150px;
+.battle-chat-status {
+  font-size: 11px;
+  letter-spacing: 1px;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.battle-chat-status--connecting {
+  background: rgba(255, 200, 60, 0.12);
+  color: #f5c842;
+  border: 1px solid rgba(245, 200, 66, 0.3);
+}
+
+.battle-chat-status--error,
+.battle-chat-status--closed {
+  background: rgba(255, 80, 80, 0.12);
+  color: #ff7070;
+  border: 1px solid rgba(255, 80, 80, 0.3);
+}
+
+/* ── message list ── */
+.battle-chat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 12px;
-  padding: 18px;
-  border-radius: 16px;
-  border: 1px dashed rgba(122, 151, 216, 0.34);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.02)),
-    repeating-linear-gradient(
-      -45deg,
-      rgba(122, 151, 216, 0.08) 0 10px,
-      rgba(122, 151, 216, 0.02) 10px 20px
-    );
+  gap: 6px;
+  min-height: 0;
+  max-height: 140px;
 }
 
-.battle-chat-placeholder-badge {
-  display: inline-flex;
+.battle-chat-list::-webkit-scrollbar { width: 4px; }
+.battle-chat-list::-webkit-scrollbar-track { background: transparent; }
+.battle-chat-list::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+  border-radius: 2px;
+}
+
+.battle-chat-msg {
+  display: flex;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.battle-chat-msg-author {
+  color: #6a90d0;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.battle-chat-msg--own .battle-chat-msg-author {
+  color: #70c8a0;
+}
+
+.battle-chat-msg-text {
+  color: #cdd8f0;
+}
+
+/* ── server error feedback ── */
+.battle-chat-error {
+  font-size: 11px;
+  color: #ff9070;
+  background: rgba(255, 80, 50, 0.1);
+  border: 1px solid rgba(255, 80, 50, 0.2);
+  border-radius: 8px;
+  padding: 6px 10px;
+  flex-shrink: 0;
+}
+
+/* ── compose row ── */
+.battle-chat-compose {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.battle-chat-input {
+  flex: 1;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  padding: 7px 10px;
+  font-size: 12px;
+  color: #e8efff;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.battle-chat-input::placeholder { color: #4a5a7a; }
+.battle-chat-input:focus { border-color: rgba(120, 170, 255, 0.4); }
+.battle-chat-input:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.battle-chat-send {
+  padding: 7px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(100, 160, 255, 0.35);
+  background: rgba(80, 140, 255, 0.18);
+  color: #a8d0ff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.battle-chat-send:hover:not(:disabled) {
+  background: rgba(80, 140, 255, 0.3);
+}
+
+.battle-chat-send:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ── tournament variant ── */
+.battle-chat-tournament {
+  justify-content: center;
   align-items: center;
-  justify-content: center;
-  min-width: 42px;
-  height: 42px;
-  padding: 0 14px;
-  border-radius: 999px;
-  background: rgba(102, 180, 255, 0.16);
-  border: 1px solid rgba(102, 180, 255, 0.3);
-  color: #89d0ff;
-  font-weight: 900;
-  letter-spacing: 1.5px;
 }
 
-.battle-chat-placeholder-copy {
-  margin: 0;
-  max-width: 280px;
-  color: #e7edff;
-  line-height: 1.6;
-}
-
-.battle-chat-placeholder-note {
-  margin: 0;
-  color: #90a1c3;
+.battle-chat-unavailable {
   font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #4a5a7a;
+  text-align: center;
+  padding: 24px 16px;
+  border: 1px dashed rgba(100, 120, 180, 0.2);
+  border-radius: 12px;
+  width: 100%;
 }
 
 .battle-status-flash {
@@ -1425,6 +1571,12 @@
   font-weight: 900;
   color: #ffcc00;
   text-shadow: 0 0 20px rgba(255, 204, 0, 0.3);
+}
+
+.winner-name-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .winner-label {
@@ -2350,6 +2502,11 @@
     padding: 0 14px;
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .money-hud {
+    top: 64px;
+    left: 12px;
   }
 
   .health-bar-container {
