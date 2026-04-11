@@ -1,4 +1,4 @@
-export default function MainMenu({ onSelect }) {
+export default function MainMenu({ onSelect, isDev = false }) {
   return (
     <div className="home-shell">
       <div className="home-panel">
@@ -22,6 +22,15 @@ export default function MainMenu({ onSelect }) {
               Elige un congresista, entra al bracket de 32 y decide si ver o skipear las peleas ajenas.
             </span>
           </button>
+
+          {isDev && (
+            <button className="mode-card debug" onClick={() => onSelect('debug-face')}>
+              <span className="mode-card-title">FACE DEBUG</span>
+              <span className="mode-card-desc">
+                Laboratorio local para model1.glb: mueve el sprite del rostro, cambia el hueso y revisa posiciones en tiempo real.
+              </span>
+            </button>
+          )}
         </div>
       </div>
     </div>

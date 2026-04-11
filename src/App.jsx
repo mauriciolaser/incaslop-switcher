@@ -11,6 +11,7 @@ import FightIntroModal from './components/FightIntroModal'
 import GameOver from './components/GameOver'
 import MainMenu from './components/MainMenu'
 import OnlinePlayersPanel from './components/OnlinePlayersPanel'
+import FaceDebugLab from './components/FaceDebugLab'
 import TournamentBracket from './components/TournamentBracket'
 import TournamentResult from './components/TournamentResult'
 import TournamentRoundSummary from './components/TournamentRoundSummary'
@@ -140,6 +141,7 @@ function EndlessSession({ onExit }) {
 
 export default function App() {
   const [route, setRoute] = useState('home')
+  const isDev = import.meta.env.DEV
 
   if (route === 'endless') {
     return <EndlessSession onExit={() => setRoute('home')} />
@@ -149,5 +151,9 @@ export default function App() {
     return <TournamentSessionGate onExit={() => setRoute('home')} />
   }
 
-  return <MainMenu onSelect={setRoute} />
+  if (isDev && route === 'debug-face') {
+    return <FaceDebugLab onExit={() => setRoute('home')} />
+  }
+
+  return <MainMenu onSelect={setRoute} isDev={isDev} />
 }

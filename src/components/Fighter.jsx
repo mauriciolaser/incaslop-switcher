@@ -5,7 +5,11 @@ import * as THREE from 'three'
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
 const FACE_BONE_PRIORITY = ['headfront', 'head', 'head_end', 'neck']
-const FACE_SPRITE_OFFSET = new THREE.Vector3(0, 0.008, 0.05)
+const FACE_ORIENTATION_BONE_PRIORITY = ['head', 'headfront', 'neck']
+const DEFAULT_FACE_SPRITE_OFFSET = [0, 0.008, 0.05]
+const DEFAULT_FACE_IMAGE_SCALE = [0.19, 0.235]
+const DEFAULT_FACE_ROTATION_OFFSET = [-Math.PI / 2, 0, 0]
+const FACE_SURFACE_NUDGE = 0.003
 
 function configurePixelTexture(texture) {
   if (!texture) return
@@ -50,6 +54,13 @@ export default function Fighter({
   isAttacking,
   alive,
   showPortraitSprite = true,
+  faceSpriteOffset = DEFAULT_FACE_SPRITE_OFFSET,
+  faceLocalPosition = null,
+  faceImageScale = DEFAULT_FACE_IMAGE_SCALE,
+  faceRotationOffset = DEFAULT_FACE_ROTATION_OFFSET,
+  debugFaceBoneName = null,
+  showDebugHelpers = false,
+  onFaceDebugData,
 }) {
   // Inner group ref — only used for animation OFFSETS (relative to [0,0,0])
   const animRef = useRef()
@@ -61,10 +72,20 @@ export default function Fighter({
   const prevHpRef = useRef(hp)
   const faceAnchorRef = useRef()
   const faceBoneRef = useRef(null)
+  const faceOrientationBoneRef = useRef(null)
+  const faceBoneNamesRef = useRef([])
   const boneWorldPosRef = useRef(new THREE.Vector3())
   const boneWorldQuatRef = useRef(new THREE.Quaternion())
+  const parentWorldQuatRef = useRef(new THREE.Quaternion())
+  const localFaceQuatRef = useRef(new THREE.Quaternion())
   const faceOffsetWorldRef = useRef(new THREE.Vector3())
   const faceLocalPosRef = useRef(new THREE.Vector3())
+  const boneLocalPosRef = useRef(new THREE.Vector3())
+  const faceOffsetRef = useRef(new THREE.Vector3(...faceSpriteOffset))
+  const faceLocalPositionRef = useRef(faceLocalPosition ? new THREE.Vector3(...faceLocalPosition) : null)
+  const faceBoneMarkerRef = useRef()
+  const faceAnchorWorldPosRef = useRef(new THREE.Vector3())
+  const debugEmitElapsedRef = useRef(0)
 
   const fallbackTexture = useMemo(() => createFallbackFaceTexture(), [])
   const [portraitTexture, setPortraitTexture] = useState(fallbackTexture)
@@ -86,12 +107,26 @@ export default function Fighter({
   }, [scene])
 
   useEffect(() => {
+    faceOffsetRef.current.set(...faceSpriteOffset)
+  }, [faceSpriteOffset])
+
+  useEffect(() => {
+    faceLocalPositionRef.current = faceLocalPosition
+      ? new THREE.Vector3(...faceLocalPosition)
+      : null
+  }, [faceLocalPosition])
+
+  useEffect(() => {
     let bestFaceBone = null
     let bestPriority = FACE_BONE_PRIORITY.length
+    let bestOrientationBone = null
+    let bestOrientationPriority = FACE_ORIENTATION_BONE_PRIORITY.length
+    const availableBones = []
 
     clonedScene.traverse((node) => {
       if (!node.isBone) return
       const lowered = node.name.toLowerCase()
+      availableBones.push(node.name)
       const priority = FACE_BONE_PRIORITY.findIndex(
         (boneName) => lowered === boneName || lowered.includes(boneName),
       )
@@ -100,10 +135,41 @@ export default function Fighter({
         bestPriority = priority
         bestFaceBone = node
       }
+
+      const orientationPriority = FACE_ORIENTATION_BONE_PRIORITY.findIndex(
+        (boneName) => lowered === boneName || lowered.includes(boneName),
+      )
+
+      if (orientationPriority !== -1 && orientationPriority < bestOrientationPriority) {
+        bestOrientationPriority = orientationPriority
+        bestOrientationBone = node
+      }
     })
 
-    faceBoneRef.current = bestFaceBone
-  }, [clonedScene])
+    faceBoneNamesRef.current = availableBones.sort((a, b) => a.localeCompare(b))
+
+    if (debugFaceBoneName) {
+      let selectedBone = null
+      clonedScene.traverse((node) => {
+        if (selectedBone || !node.isBone) return
+        if (node.name === debugFaceBoneName) {
+          selectedBone = node
+        }
+      })
+      faceBoneRef.current = selectedBone ?? bestFaceBone
+    } else {
+      faceBoneRef.current = bestFaceBone
+    }
+    faceOrientationBoneRef.current = bestOrientationBone ?? faceBoneRef.current
+
+    if (onFaceDebugData) {
+      onFaceDebugData({
+        availableBones: faceBoneNamesRef.current,
+        selectedBoneName: faceBoneRef.current?.name ?? null,
+        selectedOrientationBoneName: faceOrientationBoneRef.current?.name ?? null,
+      })
+    }
+  }, [clonedScene, debugFaceBoneName, onFaceDebugData])
 
   useEffect(() => {
     let cancelled = false
@@ -188,26 +254,49 @@ export default function Fighter({
 
     const faceAnchor = faceAnchorRef.current
     const bone = faceBoneRef.current
+    const orientationBone = faceOrientationBoneRef.current ?? bone
     const bonePos = boneWorldPosRef.current
     const boneQuat = boneWorldQuatRef.current
+    const parentQuat = parentWorldQuatRef.current
+    const localFaceQuat = localFaceQuatRef.current
 
-    if (!bone || !showPortraitSprite) {
+    if (!bone || !orientationBone || !showPortraitSprite) {
       faceAnchor.visible = false
+      if (faceBoneMarkerRef.current) {
+        faceBoneMarkerRef.current.visible = false
+      }
       return
     }
 
     bone.getWorldPosition(bonePos)
-    bone.getWorldQuaternion(boneQuat)
+    orientationBone.getWorldQuaternion(boneQuat)
 
-    const faceOffset = faceOffsetWorldRef.current
-      .copy(FACE_SPRITE_OFFSET)
-      .applyQuaternion(boneQuat)
+    const localFacePos = faceLocalPosRef.current
 
-    const localFacePos = faceLocalPosRef.current.copy(bonePos).add(faceOffset)
-    animRef.current.worldToLocal(localFacePos)
+    if (faceLocalPositionRef.current) {
+      localFacePos.copy(faceLocalPositionRef.current)
+    } else {
+      const faceOffset = faceOffsetWorldRef.current
+        .copy(faceOffsetRef.current)
+        .applyQuaternion(boneQuat)
+
+      localFacePos.copy(bonePos).add(faceOffset)
+      animRef.current.worldToLocal(localFacePos)
+    }
 
     faceAnchor.visible = true
     faceAnchor.position.copy(localFacePos)
+    animRef.current.getWorldQuaternion(parentQuat)
+    localFaceQuat.copy(parentQuat).invert().multiply(boneQuat)
+    faceAnchor.quaternion.copy(localFaceQuat)
+    faceAnchor.translateZ(FACE_SURFACE_NUDGE)
+
+    if (faceBoneMarkerRef.current) {
+      const boneLocalPos = boneLocalPosRef.current.copy(bonePos)
+      animRef.current.worldToLocal(boneLocalPos)
+      faceBoneMarkerRef.current.visible = showDebugHelpers
+      faceBoneMarkerRef.current.position.copy(boneLocalPos)
+    }
   }
 
   // Animation loop — only sets OFFSETS on the inner group (relative to 0,0,0)
@@ -257,6 +346,44 @@ export default function Fighter({
 
     animRef.current.position.set(ox, bobY, oz)
     updateFaceSprite()
+
+    if (faceAnchorRef.current && showPortraitSprite) {
+      faceAnchorRef.current.getWorldPosition(faceAnchorWorldPosRef.current)
+    }
+
+    if (onFaceDebugData) {
+      debugEmitElapsedRef.current += delta
+      if (debugEmitElapsedRef.current >= 0.1) {
+        debugEmitElapsedRef.current = 0
+        onFaceDebugData({
+          availableBones: faceBoneNamesRef.current,
+          selectedBoneName: faceBoneRef.current?.name ?? null,
+          selectedOrientationBoneName: faceOrientationBoneRef.current?.name ?? null,
+          spriteVisible: Boolean(showPortraitSprite && faceBoneRef.current),
+          boneWorldPosition: faceBoneRef.current
+            ? {
+                x: Number(boneWorldPosRef.current.x.toFixed(4)),
+                y: Number(boneWorldPosRef.current.y.toFixed(4)),
+                z: Number(boneWorldPosRef.current.z.toFixed(4)),
+              }
+            : null,
+          anchorLocalPosition: showPortraitSprite
+            ? {
+                x: Number(faceAnchorRef.current.position.x.toFixed(4)),
+                y: Number(faceAnchorRef.current.position.y.toFixed(4)),
+                z: Number(faceAnchorRef.current.position.z.toFixed(4)),
+              }
+            : null,
+          anchorWorldPosition: showPortraitSprite
+            ? {
+                x: Number(faceAnchorWorldPosRef.current.x.toFixed(4)),
+                y: Number(faceAnchorWorldPosRef.current.y.toFixed(4)),
+                z: Number(faceAnchorWorldPosRef.current.z.toFixed(4)),
+              }
+            : null,
+        })
+      }
+    }
   })
 
   const fighterScale = side === 'left' ? 1.0 : 0.95
@@ -273,24 +400,33 @@ export default function Fighter({
         />
         {showPortraitSprite && (
           <group ref={faceAnchorRef}>
-            <sprite scale={[0.22, 0.27, 1]} renderOrder={10}>
-              <spriteMaterial
-                color="#0c111c"
-                opacity={0.92}
-                transparent
-                depthWrite={false}
-                toneMapped={false}
-              />
-            </sprite>
-            <sprite scale={[0.19, 0.235, 1]} renderOrder={11}>
-              <spriteMaterial
+            <mesh rotation={faceRotationOffset} renderOrder={11}>
+              <planeGeometry args={[faceImageScale[0], faceImageScale[1]]} />
+              <meshBasicMaterial
                 map={portraitTexture}
                 transparent
+                opacity={0.92}
+                alphaTest={0.05}
+                side={THREE.DoubleSide}
+                polygonOffset
+                polygonOffsetFactor={-2}
                 depthWrite={false}
                 toneMapped={false}
               />
-            </sprite>
+            </mesh>
+            {showDebugHelpers && (
+              <mesh renderOrder={12}>
+                <sphereGeometry args={[0.012, 16, 16]} />
+                <meshBasicMaterial color="#22d3ee" toneMapped={false} />
+              </mesh>
+            )}
           </group>
+        )}
+        {showDebugHelpers && (
+          <mesh ref={faceBoneMarkerRef} renderOrder={12}>
+            <sphereGeometry args={[0.015, 16, 16]} />
+            <meshBasicMaterial color="#facc15" toneMapped={false} />
+          </mesh>
         )}
       </group>
     </group>

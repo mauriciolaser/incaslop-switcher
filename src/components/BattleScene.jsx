@@ -14,6 +14,7 @@ const CORNER = 3
 // Diagonal opposite corners — fighter1 front-left, fighter2 back-right
 const POS_LEFT = [-CORNER, -0.2, CORNER]
 const POS_RIGHT = [CORNER, -0.2, -CORNER]
+const FACE_IMAGE_POSITION = [0.0006, 1.1246, 0.1632]
 
 function RingBase() {
   return (
@@ -266,6 +267,7 @@ export default function BattleScene() {
               isAttacking={currentTurn}
               alive={fighter1.alive}
               showPortraitSprite={isCombatMode}
+              faceLocalPosition={FACE_IMAGE_POSITION}
             />
             <Fighter
               key="fighter-right"
@@ -279,6 +281,7 @@ export default function BattleScene() {
               isAttacking={currentTurn}
               alive={fighter2.alive}
               showPortraitSprite={isCombatMode}
+              faceLocalPosition={FACE_IMAGE_POSITION}
             />
           </>
         )}

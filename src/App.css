@@ -84,6 +84,11 @@
   border-color: rgba(76, 144, 255, 0.24);
 }
 
+.mode-card.debug {
+  background: linear-gradient(180deg, rgba(94, 234, 212, 0.18), rgba(94, 234, 212, 0.06));
+  border-color: rgba(94, 234, 212, 0.24);
+}
+
 .mode-card.local:hover {
   border-color: rgba(255, 116, 76, 0.5);
   box-shadow: 0 18px 40px rgba(255, 116, 76, 0.12);
@@ -92,6 +97,11 @@
 .mode-card.online:hover {
   border-color: rgba(76, 144, 255, 0.5);
   box-shadow: 0 18px 40px rgba(76, 144, 255, 0.12);
+}
+
+.mode-card.debug:hover {
+  border-color: rgba(94, 234, 212, 0.5);
+  box-shadow: 0 18px 40px rgba(94, 234, 212, 0.12);
 }
 
 .mode-card-title {
@@ -108,10 +118,163 @@
   color: #84b2ff;
 }
 
+.mode-card.debug .mode-card-title {
+  color: #8ef5e1;
+}
+
 .mode-card-desc {
   color: #d9dfef;
   line-height: 1.6;
   font-size: 15px;
+}
+
+.debug-lab-shell {
+  width: 100vw;
+  height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  color-scheme: dark;
+  background:
+    radial-gradient(circle at top left, rgba(94, 234, 212, 0.1), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(80, 120, 255, 0.14), transparent 30%),
+    linear-gradient(180deg, #05070d, #0a1020 58%, #06080f);
+}
+
+.debug-lab-stage {
+  position: relative;
+}
+
+.debug-lab-panel {
+  overflow-y: auto;
+  padding: 24px 20px 28px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(5, 8, 16, 0.96), rgba(8, 12, 22, 0.94));
+  backdrop-filter: blur(18px);
+}
+
+.debug-lab-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.debug-lab-title {
+  margin: 6px 0 8px;
+  font-size: 28px;
+  color: #ecfff9;
+}
+
+.debug-lab-subtitle {
+  margin: 0;
+  color: #9db0d2;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.debug-lab-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.debug-secondary-btn {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.debug-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #d9e2f7;
+  font-size: 13px;
+}
+
+.debug-section {
+  margin-bottom: 18px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.debug-section-title {
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #83eedb;
+}
+
+.debug-select,
+.debug-number {
+  width: 100%;
+  min-height: 40px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(6, 8, 16, 0.88);
+  color: #edf4ff;
+}
+
+.debug-select {
+  appearance: none;
+}
+
+.debug-control {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr) 86px;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.debug-control:last-child {
+  margin-bottom: 0;
+}
+
+.debug-control-label {
+  color: #c4d1ea;
+  font-size: 13px;
+}
+
+.debug-range {
+  width: 100%;
+}
+
+.debug-readout-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.debug-readout-card {
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(6, 8, 16, 0.76);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.debug-readout-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: #7f8ca7;
+}
+
+.debug-readout-value {
+  display: block;
+  color: #edf4ff;
+  font-size: 13px;
+  word-break: break-word;
 }
 
 .candidate-loading-shell {
@@ -1548,6 +1711,20 @@
 }
 
 @media (max-width: 900px) {
+  .debug-lab-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(46vh, 56vh) auto;
+  }
+
+  .debug-lab-panel {
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .debug-control {
+    grid-template-columns: 1fr;
+  }
+
   .home-grid,
   .setup-form,
   .setup-preview {
