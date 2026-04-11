@@ -138,8 +138,17 @@ export default function BettingModal() {
               ) : (
                 <div className="fighter-card-portrait-placeholder">Sin Foto</div>
               )}
+              {(fighter1.partyImage || fighter1.party) && (
+                <div className="candidate-party-badge">
+                  {fighter1.partyImage && (
+                    <img className="candidate-party-badge-image" src={fighter1.partyImage} alt={fighter1.party} />
+                  )}
+                  {fighter1.party && <span className="candidate-party-badge-label">{fighter1.party}</span>}
+                </div>
+              )}
             </div>
             <div className="fighter-card-name">{fighter1.name}</div>
+            {fighter1.party && <div className="fighter-card-party">{fighter1.party}</div>}
             <div className="fighter-odds">{odds.pct1}% prob.</div>
             <div className="fighter-card-stats">
               <div>ATK: {fighter1.attack}</div>
@@ -164,8 +173,17 @@ export default function BettingModal() {
               ) : (
                 <div className="fighter-card-portrait-placeholder">Sin Foto</div>
               )}
+              {(fighter2.partyImage || fighter2.party) && (
+                <div className="candidate-party-badge">
+                  {fighter2.partyImage && (
+                    <img className="candidate-party-badge-image" src={fighter2.partyImage} alt={fighter2.party} />
+                  )}
+                  {fighter2.party && <span className="candidate-party-badge-label">{fighter2.party}</span>}
+                </div>
+              )}
             </div>
             <div className="fighter-card-name">{fighter2.name}</div>
+            {fighter2.party && <div className="fighter-card-party">{fighter2.party}</div>}
             <div className="fighter-odds">{odds.pct2}% prob.</div>
             <div className="fighter-card-stats">
               <div>ATK: {fighter2.attack}</div>

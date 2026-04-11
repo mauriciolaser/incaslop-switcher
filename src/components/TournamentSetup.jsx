@@ -111,6 +111,20 @@ export default function TournamentSetup() {
                 ) : (
                   <div className="setup-preview-placeholder">Sin Foto</div>
                 )}
+                {(selectedCandidate.partyImage || selectedCandidate.party) && (
+                  <div className="candidate-party-badge">
+                    {selectedCandidate.partyImage && (
+                      <img
+                        className="candidate-party-badge-image"
+                        src={selectedCandidate.partyImage}
+                        alt={selectedCandidate.party}
+                      />
+                    )}
+                    {selectedCandidate.party && (
+                      <span className="candidate-party-badge-label">{selectedCandidate.party}</span>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="setup-preview-body">
                 <h2>{selectedCandidate.name}</h2>

@@ -1,4 +1,6 @@
 import { resolvePortraitUrl } from './portraitResolver'
+import { resolvePartyImageUrl } from './partyResolver'
+import partyCatalog from '../data/parties.json'
 
 const DEFAULT_CANDIDATE_API_BASE = 'https://api.candidatos.incaslop.online'
 const PAGE_SIZE = 500
@@ -11,6 +13,11 @@ const API_BASE = import.meta.env.VITE_CANDIDATE_API_BASE?.replace(/\/$/, '') ?? 
 
 let candidatePool = []
 let loadingPromise = null
+const partyCatalogMap = new Map(
+  partyCatalog
+    .filter((party) => party?.name)
+    .map((party) => [String(party.name).trim(), party]),
+)
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -24,8 +31,12 @@ function getRetryDelay(attempt) {
 function normalizeCandidate(raw = {}) {
   const id = String(raw.id ?? '').trim()
   const name = String(raw.name ?? '').trim()
+  const party = String(raw.party ?? '').trim()
   const rawPortrait = raw.portraitImage || raw.portraitUrl || raw.imageUrl || null
+  const partyData = partyCatalogMap.get(party) ?? null
+  const rawPartyImage = raw.partyImage || partyData?.partyImage || null
   const portraitUrl = resolvePortraitUrl(rawPortrait) ?? rawPortrait
+  const partyImage = resolvePartyImageUrl(rawPartyImage) ?? rawPartyImage
   const typeKey = String(raw.typeKey ?? raw.type ?? '').trim().toLowerCase()
 
   if (!id || !name) return null
@@ -33,7 +44,8 @@ function normalizeCandidate(raw = {}) {
   return {
     id,
     name,
-    party: String(raw.party ?? '').trim(),
+    party,
+    partyImage,
     region: String(raw.region ?? '').trim(),
     type: String(raw.type ?? '').trim(),
     typeKey,

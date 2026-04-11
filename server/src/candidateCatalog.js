@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { config } from './config.js'
+import { getPartyByName } from './partyCatalog.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -23,8 +24,11 @@ function getRetryDelay(attempt) {
 function normalizeCandidate(raw = {}) {
   const id = String(raw.id ?? '').trim()
   const name = String(raw.name ?? '').trim()
+  const party = String(raw.party ?? '').trim()
   // portraitImage es el campo autoritativo en candidates.json; portraitUrl/imageUrl como fallback
   const portraitUrl = raw.portraitImage || raw.portraitUrl || raw.imageUrl || null
+  const partyData = getPartyByName(party)
+  const partyImage = raw.partyImage || partyData?.partyImage || null
   const typeKey = String(raw.typeKey ?? raw.type ?? '').trim().toLowerCase()
 
   if (!id || !name) return null
@@ -33,7 +37,8 @@ function normalizeCandidate(raw = {}) {
     id,
     name,
     portraitUrl,
-    party: raw.party || '',
+    party,
+    partyImage,
     region: raw.region || '',
     type: raw.type || '',
     typeKey,

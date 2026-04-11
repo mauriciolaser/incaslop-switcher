@@ -16,6 +16,7 @@ function createPlaceholderFighter(side) {
     name: side === 'left' ? 'Esperando peleador...' : 'Esperando rival...',
     portraitUrl: null,
     party: '',
+    partyImage: null,
     region: '',
     type: '',
     typeKey: '',

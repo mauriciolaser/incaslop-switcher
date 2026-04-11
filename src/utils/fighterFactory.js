@@ -4,6 +4,7 @@ import {
   pickUniqueCandidates,
 } from './candidateCatalog'
 import { resolvePortraitUrl } from './portraitResolver'
+import { resolvePartyImageUrl } from './partyResolver'
 
 const BALANCED_ATTACK_RANGE = [8, 14]
 const BALANCED_DEFENSE_RANGE = [3, 7]
@@ -36,13 +37,16 @@ function buildCandidateDialogs(candidate) {
 
 export function buildCandidateProfile(candidate) {
   const rawPortrait = candidate.portraitUrl ?? candidate.imageUrl ?? null
+  const rawPartyImage = candidate.partyImage ?? null
   const portraitUrl = resolvePortraitUrl(rawPortrait) ?? rawPortrait
+  const partyImage = resolvePartyImageUrl(rawPartyImage) ?? rawPartyImage
   return {
     id: String(candidate.id),
     candidateId: String(candidate.id),
     name: candidate.name,
     portraitUrl,
     party: candidate.party ?? '',
+    partyImage,
     region: candidate.region ?? '',
     type: candidate.type ?? '',
     typeKey: candidate.typeKey ?? '',
@@ -66,6 +70,7 @@ export function instantiateRosterFighter(personaje, overrides = {}) {
     name: personaje.name,
     portraitUrl: personaje.portraitUrl ?? null,
     party: personaje.party ?? '',
+    partyImage: personaje.partyImage ?? null,
     region: personaje.region ?? '',
     type: personaje.type ?? '',
     typeKey: personaje.typeKey ?? '',

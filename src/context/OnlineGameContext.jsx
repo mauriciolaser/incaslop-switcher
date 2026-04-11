@@ -9,11 +9,18 @@ import {
   submitOnlineBet,
 } from '../utils/onlineApi'
 import { resolvePortraitUrl } from '../utils/portraitResolver'
+import { resolvePartyImageUrl } from '../utils/partyResolver'
 
 function resolveFighterPortrait(fighter) {
   if (!fighter) return fighter
   const resolved = resolvePortraitUrl(fighter.portraitUrl)
-  return resolved ? { ...fighter, portraitUrl: resolved } : fighter
+  const resolvedPartyImage = resolvePartyImageUrl(fighter.partyImage)
+  if (!resolved && !resolvedPartyImage) return fighter
+  return {
+    ...fighter,
+    portraitUrl: resolved ?? fighter.portraitUrl,
+    partyImage: resolvedPartyImage ?? fighter.partyImage,
+  }
 }
 
 const POLL_INTERVAL = 1500
@@ -25,6 +32,7 @@ function createPlaceholderFighter(side) {
     side,
     name: side === 'left' ? 'Conectando...' : 'Esperando rival...',
     portraitUrl: null,
+    partyImage: null,
     maxHp: 100,
     hp: 100,
     attack: 0,

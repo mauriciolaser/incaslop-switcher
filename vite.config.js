@@ -4,8 +4,18 @@ import path from 'node:path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-const candidateImagesSourceDir = path.resolve(process.cwd(), 'src/assets/images/candidates')
-const candidateImagesPublicDir = 'images/candidates'
+const staticImageDirs = [
+  {
+    route: '/images/candidates',
+    sourceDir: path.resolve(process.cwd(), 'src/assets/images/candidates'),
+    publicDir: 'images/candidates',
+  },
+  {
+    route: '/images/partidos',
+    sourceDir: path.resolve(process.cwd(), 'src/assets/images/partidos'),
+    publicDir: 'images/partidos',
+  },
+]
 
 function getImageContentType(filePath) {
   switch (path.extname(filePath).toLowerCase()) {
@@ -25,54 +35,58 @@ function getImageContentType(filePath) {
   }
 }
 
-function candidateImagesPlugin() {
+function staticImagesPlugin() {
   let outDir = path.resolve(process.cwd(), 'dist')
 
   return {
-    name: 'candidate-images-static',
+    name: 'static-images-public',
     configResolved(config) {
       outDir = path.resolve(config.root, config.build.outDir)
     },
     configureServer(server) {
-      server.middlewares.use('/images/candidates', async (req, res, next) => {
-        const requestPath = req.url?.split('?')[0] ?? ''
-        const relativePath = decodeURIComponent(requestPath).replace(/^\/+/, '')
+      for (const { route, sourceDir } of staticImageDirs) {
+        server.middlewares.use(route, async (req, res, next) => {
+          const requestPath = req.url?.split('?')[0] ?? ''
+          const relativePath = decodeURIComponent(requestPath).replace(/^\/+/, '')
 
-        if (!relativePath) {
-          next()
-          return
-        }
-
-        const filePath = path.resolve(candidateImagesSourceDir, relativePath)
-        if (!filePath.startsWith(candidateImagesSourceDir)) {
-          next()
-          return
-        }
-
-        try {
-          const stats = await fsp.stat(filePath)
-          if (!stats.isFile()) {
+          if (!relativePath) {
             next()
             return
           }
 
-          res.setHeader('Content-Type', getImageContentType(filePath))
-          fs.createReadStream(filePath).pipe(res)
-        } catch {
-          next()
-        }
-      })
+          const filePath = path.resolve(sourceDir, relativePath)
+          if (!filePath.startsWith(sourceDir)) {
+            next()
+            return
+          }
+
+          try {
+            const stats = await fsp.stat(filePath)
+            if (!stats.isFile()) {
+              next()
+              return
+            }
+
+            res.setHeader('Content-Type', getImageContentType(filePath))
+            fs.createReadStream(filePath).pipe(res)
+          } catch {
+            next()
+          }
+        })
+      }
     },
     async writeBundle() {
-      const targetDir = path.join(outDir, candidateImagesPublicDir)
-      await fsp.mkdir(path.dirname(targetDir), { recursive: true })
-      await fsp.cp(candidateImagesSourceDir, targetDir, { recursive: true, force: true })
+      for (const { sourceDir, publicDir } of staticImageDirs) {
+        const targetDir = path.join(outDir, publicDir)
+        await fsp.mkdir(path.dirname(targetDir), { recursive: true })
+        await fsp.cp(sourceDir, targetDir, { recursive: true, force: true })
+      }
     },
   }
 }
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), candidateImagesPlugin()],
+  plugins: [react(), staticImagesPlugin()],
   assetsInclude: ['**/*.glb'],
 })

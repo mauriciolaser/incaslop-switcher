@@ -14,8 +14,17 @@ function IntroCard({ fighter, side, oddsPct }) {
         ) : (
           <div className="intro-fighter-portrait-placeholder">Sin Foto</div>
         )}
+        {(fighter.partyImage || fighter.party) && (
+          <div className="candidate-party-badge">
+            {fighter.partyImage && (
+              <img className="candidate-party-badge-image" src={fighter.partyImage} alt={fighter.party} />
+            )}
+            {fighter.party && <span className="candidate-party-badge-label">{fighter.party}</span>}
+          </div>
+        )}
       </div>
       <div className="intro-fighter-name">{fighter.name}</div>
+      {fighter.party && <div className="intro-fighter-party">{fighter.party}</div>}
       <div className="intro-fighter-odds">{oddsPct}% de probabilidad</div>
       <div className="intro-dialog-bubble">"{fighter.introDialog}"</div>
       <div className="intro-fighter-stats">
