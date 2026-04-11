@@ -12,6 +12,14 @@ function Bar({ fighter, side, oddsPct }) {
         {fighter.name}
         <span className="live-odds">{oddsPct}%</span>
       </div>
+      {(fighter.partyImage || fighter.party) && (
+        <div className={`health-party-strip ${side}`}>
+          {fighter.partyImage && (
+            <img className="health-party-logo" src={fighter.partyImage} alt={fighter.party} />
+          )}
+          {fighter.party && <span className="health-party-name">{fighter.party}</span>}
+        </div>
+      )}
       <div className="health-bar-bg">
         <div
           className="health-bar-fill"
