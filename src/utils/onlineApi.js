@@ -1,4 +1,5 @@
-const API_BASE = import.meta.env.VITE_ONLINE_API_BASE?.replace(/\/$/, '') ?? '/api/online'
+const rawApiBase = import.meta.env.VITE_ONLINE_API_BASE?.trim()
+const API_BASE = (rawApiBase || '/api/online').replace(/\/$/, '')
 
 async function parseJsonResponse(response) {
   const data = await response.json().catch(() => ({}))

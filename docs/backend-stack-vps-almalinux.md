@@ -1,6 +1,6 @@
 # Backend (MVP) Summary y Deploy en VPS AlmaLinux
 
-Fecha: 2026-03-23
+Fecha: 2026-04-11
 
 Este documento resume el stack backend actual (modo `ONLINE`) y cómo montarlo en un VPS AlmaLinux para correr la lógica de la pelea y persistir en base de datos en versión MVP.
 
@@ -11,9 +11,10 @@ Ubicación del backend: `server/`
 Stack:
 
 - Runtime: Node.js (ESM: `"type": "module"`).
-- Framework HTTP: Express (`express`).
-- Sesión “ligera” por cookie: `cookie-parser` + cookie HTTP-only con una `userKey` aleatoria.
-- Persistencia: MySQL/MariaDB vía `mysql2/promise`, con fallback a archivos JSON para dev (`FileStore`).
+- Framework HTTP: Express (`express`) con `cors` y `cookie-parser`.
+- Sesión “ligera” por cookie: cookie HTTP-only con una `userKey` aleatoria.
+- Persistencia actual del backend desplegado: SQLite (`ONLINE_STORE=sqlite`).
+- Fuente de candidatos en producción: archivo local `server/src/data/candidates.json`, con fallback a `CANDIDATE_API_BASE_URL` si hace falta regenerar catálogo.
 
 Entrada:
 
@@ -74,29 +75,31 @@ Endpoints (ver `server/src/app.js`):
 
 El frontend (ver `src/utils/onlineApi.js`) hace polling por HTTP con `credentials: 'include'` para enviar/recibir la cookie.
 
-## 2) Persistencia (MySQL/MariaDB)
+## 2) Persistencia actual (SQLite)
 
 Selector de store: `server/src/store/index.js`
 
-- Si existen `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`: usa MySQL (`MySQLStore`).
-- Si no hay DB y `ALLOW_FILE_FALLBACK=true`: usa archivos JSON (`FileStore`).
+- El modo que usa la instalación real es `ONLINE_STORE=sqlite`.
+- El archivo SQLite se controla con `SQLITE_FILENAME`.
+- Si `RESET_SQLITE_ON_BOOT=true`, el backend recrea la base al arrancar.
+- `FileStore` sigue existiendo como opción de desarrollo/manual, pero no es la instalación real del VPS.
 
-### 2.1 Tablas (se crean automáticamente)
+### 2.1 Tablas SQLite (se crean automáticamente)
 
-`server/src/store/mysqlStore.js` crea estas tablas al iniciar:
+`server/src/store/sqliteStore.js` crea estas tablas al iniciar:
 
-- `online_state`
+- `arena_state`
   - guarda el snapshot completo del estado de la arena como JSON (fila fija `id = 1`).
-- `online_events`
+- `arena_events`
   - eventos append-only (para “events?since=”).
-- `online_users`
-  - saldo de monedas por `user_key`.
-- `online_bets`
-  - apuesta por `user_key` y `round_number` (con `UNIQUE (user_key, round_number)`).
+- `arena_players`
+  - jugador, monedas, estado y `guest_number`.
+- `arena_bets`
+  - apuesta por `user_key` y `round_number` (con `UNIQUE(user_key, round_number)`).
 
 No hay migraciones externas: el `init()` del store crea tablas si no existen.
 
-### 2.2 Fallback a archivos (solo dev)
+### 2.2 Opcion de archivos (solo dev)
 
 `server/src/store/fileStore.js` usa:
 
@@ -105,32 +108,41 @@ No hay migraciones externas: el `init()` del store crea tablas si no existen.
 - `server/data/arena-bets.json`
 - `server/data/arena-events.json`
 
-Para un VPS, lo recomendado es DB real; el fallback queda como modo de desarrollo.
+En el VPS actual no se usa este modo. Queda como opción de desarrollo.
 
 ## 3) Variables de entorno (MVP)
 
 Ejemplo: `server/.env.example`
 
-- `PORT=3001`
-- `SESSION_COOKIE_NAME=mechas_incaslop_online`
-- `ALLOW_FILE_FALLBACK=true|false`
-- `DB_HOST=...`
-- `DB_PORT=3306`
-- `DB_NAME=...`
-- `DB_USER=...`
-- `DB_PASSWORD=...`
+- `PORT`
+- `SESSION_COOKIE_NAME`
+- `TRUST_PROXY=true|false`
+- `COOKIE_SECURE=true|false`
+- `CORS_ALLOWED_ORIGINS=https://frontend.example.com`
+- `ONLINE_STORE=sqlite|file|memory`
+- `SQLITE_FILENAME=/ruta/al.sqlite`
+- `RESET_SQLITE_ON_BOOT=true|false`
+- `CANDIDATE_API_BASE_URL=...`
 
 Recomendación producción:
 
-- `ALLOW_FILE_FALLBACK=false` (para no “degradar” silenciosamente a archivos si la DB está mal configurada).
+- `PORT=3003`
+- `NODE_ENV=production`
+- `TRUST_PROXY=true`
+- `COOKIE_SECURE=true`
+- `CORS_ALLOWED_ORIGINS=https://mechas.incaslop.online`
+- `ONLINE_STORE=sqlite`
+- `RESET_SQLITE_ON_BOOT=false` si se quiere preservar el estado entre reinicios
 
-## 4) Deploy en VPS AlmaLinux (Nginx + systemd + MariaDB)
+## 4) Deploy en VPS AlmaLinux (Nginx + systemd + SQLite)
 
-Asumimos AlmaLinux 9, un dominio apuntando al VPS, y que queremos:
+Asumimos AlmaLinux 9, el backend de este repo y la instalación real validada:
 
-- Nginx sirviendo el frontend (`dist/`) como SPA.
-- Nginx proxy a backend en `127.0.0.1:3001` para `/api/online/*`.
-- 1 instancia del backend (MVP).
+- frontend público: `https://mechas.incaslop.online`
+- backend público: `https://api-mechas.incaslop.online/server`
+- backend interno Node: `http://127.0.0.1:3003`
+- 1 instancia del backend (MVP)
+- Nginx en el VPS solo como reverse proxy del backend
 
 ### 4.1 Paquetes base
 
@@ -147,32 +159,7 @@ sudo dnf -y install nginx git
 sudo systemctl enable --now nginx
 ```
 
-3. Instala MariaDB (compatible con el cliente MySQL del backend):
-
-```bash
-sudo dnf -y install mariadb-server
-sudo systemctl enable --now mariadb
-sudo mysql_secure_installation
-```
-
-### 4.2 Base de datos y usuario
-
-Entra a MariaDB:
-
-```bash
-sudo mariadb
-```
-
-Crea DB y usuario (ajusta nombres/clave):
-
-```sql
-CREATE DATABASE mechas_incaslop CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'ppm'@'localhost' IDENTIFIED BY 'una_clave_larga';
-GRANT ALL PRIVILEGES ON mechas_incaslop.* TO 'ppm'@'localhost';
-FLUSH PRIVILEGES;
-```
-
-### 4.3 Instalar Node.js y dependencias
+### 4.2 Instalar Node.js y dependencias
 
 Necesitamos Node para correr el servidor. Usa una versión LTS (20 o 22). En AlmaLinux suele ser más simple usar módulos de DNF.
 
@@ -189,69 +176,81 @@ npm -v
 Luego (una vez que Node y npm estén disponibles):
 
 ```bash
-sudo mkdir -p /opt/mechas-incaslop
-sudo chown -R $USER:$USER /opt/mechas-incaslop
-cd /opt/mechas-incaslop
+sudo mkdir -p /opt/incaslop-mechas
+sudo chown -R $USER:$USER /opt/incaslop-mechas
+cd /opt/incaslop-mechas
 
-git clone <tu-repo> .
-
-npm ci
+git clone <tu-repo> repo
+cd repo
 npm --prefix server ci
-
-npm run build
 ```
 
 Resultado:
 
-- frontend compilado en `dist/`
-- backend listo en `server/`
+- backend listo en `repo/server/`
+- datos del juego disponibles para sincronizar desde `repo/src/data`
 
-Nota: si el frontend y el backend van en dominios distintos, define `VITE_ONLINE_API_BASE` al build del frontend para que apunte al backend (por ejemplo `https://api.tu-dominio.com/api/online`). Si comparten el mismo dominio con Nginx haciendo proxy en `/api/online`, no hace falta setear nada (default: `/api/online`).
+Nota: como frontend y backend van en dominios distintos, el frontend debe usar `VITE_ONLINE_API_BASE=https://api-mechas.incaslop.online/server`.
 
-### 4.4 Configurar `.env` del backend
+### 4.3 Desplegar backend en `/opt`
 
-Crea `server/.env` (no lo comitees):
+La instalación real del VPS no ejecuta el backend desde `/home/mauri/...`, sino desde `/opt/incaslop-mechas/backend`. El flujo seguro es:
 
 ```bash
-cat > /opt/mechas-incaslop/server/.env <<'EOF'
-PORT=3001
-SESSION_COOKIE_NAME=mechas_incaslop_online
-ALLOW_FILE_FALLBACK=false
+sudo rm -rf /opt/incaslop-mechas/backend
+sudo mkdir -p /opt/incaslop-mechas/backend
+sudo cp -a /ruta/del/repo/server/. /opt/incaslop-mechas/backend/
 
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_NAME=mechas_incaslop
-DB_USER=ppm
-DB_PASSWORD=una_clave_larga
+sudo rm -rf /opt/incaslop-mechas/src/data
+sudo mkdir -p /opt/incaslop-mechas/src
+sudo cp -a /ruta/del/repo/src/data /opt/incaslop-mechas/src/
+
+sudo chown -R mauri:mauri /opt/incaslop-mechas
+```
+
+### 4.4 Configurar `backend.env`
+
+Crea `/etc/incaslop-mechas/backend.env`:
+
+```bash
+sudo mkdir -p /etc/incaslop-mechas
+sudo tee /etc/incaslop-mechas/backend.env >/dev/null <<'EOF'
+PORT=3003
+NODE_ENV=production
+SESSION_COOKIE_NAME=mechas_incaslop_online
+TRUST_PROXY=true
+COOKIE_SECURE=true
+CORS_ALLOWED_ORIGINS=https://mechas.incaslop.online
+ONLINE_STORE=sqlite
+SQLITE_FILENAME=/opt/incaslop-mechas/backend/data/arena-temp.sqlite
+RESET_SQLITE_ON_BOOT=false
+
+CANDIDATE_API_BASE_URL=https://api.candidatos.incaslop.online
 EOF
+
+sudo chown root:mauri /etc/incaslop-mechas/backend.env
+sudo chmod 640 /etc/incaslop-mechas/backend.env
 ```
 
 ### 4.5 systemd unit para el backend
 
-Crea un usuario de sistema para correr Node:
-
-```bash
-sudo useradd --system --create-home --shell /sbin/nologin mechas-incaslop
-sudo chown -R mechas-incaslop:mechas-incaslop /opt/mechas-incaslop
-```
-
-Crea el servicio `/etc/systemd/system/mechas-incaslop-online.service`:
+Crea el servicio `/etc/systemd/system/incaslop-mechas-backend.service`:
 
 ```ini
 [Unit]
-Description=Mechas IncaSlop Online Arena (Node/Express)
-After=network.target mariadb.service
+Description=IncaSlop Mechas backend
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
-User=mechas-incaslop
-WorkingDirectory=/opt/mechas-incaslop/server
-EnvironmentFile=/opt/mechas-incaslop/server/.env
-ExecStart=/usr/bin/node /opt/mechas-incaslop/server/src/app.js
+User=mauri
+Group=mauri
+WorkingDirectory=/opt/incaslop-mechas/backend
+EnvironmentFile=/etc/incaslop-mechas/backend.env
+ExecStart=/usr/bin/node /opt/incaslop-mechas/backend/src/app.js
 Restart=always
-RestartSec=2
-
-# Logs a journald
+RestartSec=5
 StandardOutput=journal
 StandardError=journal
 
@@ -263,31 +262,36 @@ Activa y levanta:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now mechas-incaslop-online.service
-sudo journalctl -u mechas-incaslop-online.service -f
+sudo systemctl enable --now incaslop-mechas-backend.service
+sudo journalctl -u incaslop-mechas-backend.service -f
 ```
 
 Healthcheck local:
 
 ```bash
-curl -s http://127.0.0.1:3001/health
+curl -s http://127.0.0.1:3003/health
 ```
 
-### 4.6 Nginx: SPA + reverse proxy del API
+Nota operativa importante:
 
-Config recomendado (ejemplo `/etc/nginx/conf.d/mechas-incaslop.conf`):
+- No montes la unidad global leyendo `.env` desde `/home/mauri/...`. Con SELinux eso puede fallar con `Failed to load environment files: Permission denied`.
+
+### 4.6 Nginx: reverse proxy del API real
+
+Config base validada (`/etc/nginx/conf.d/api-mechas.conf`):
 
 ```nginx
 server {
   listen 80;
-  server_name tu-dominio.com;
+  listen [::]:80;
+  server_name api-mechas.incaslop.online;
 
-  root /opt/mechas-incaslop/dist;
-  index index.html;
+  location = /server {
+    return 301 /server/;
+  }
 
-  # API -> Node
-  location /api/online/ {
-    proxy_pass http://127.0.0.1:3001/api/online/;
+  location = /server/health {
+    proxy_pass http://127.0.0.1:3003/health;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
@@ -295,13 +299,18 @@ server {
     proxy_set_header X-Forwarded-Proto $scheme;
   }
 
-  location = /health {
-    proxy_pass http://127.0.0.1:3001/health;
+  location /server/ {
+    rewrite ^/server/(.*)$ /api/online/$1 break;
+    proxy_pass http://127.0.0.1:3003;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
   }
 
-  # SPA fallback
   location / {
-    try_files $uri $uri/ /index.html;
+    return 404;
   }
 }
 ```
@@ -331,9 +340,36 @@ sudo setsebool -P httpd_can_network_connect 1
 
 ### 4.8 HTTPS (recomendado)
 
-Una vez que tengas TLS (por ejemplo con certbot), el frontend y el backend quedan bajo HTTPS.
+En este servidor, `certbot` está instalado en `/usr/local/bin/certbot`. Para este host, el comando validado fue:
 
-Nota: actualmente la cookie del backend se crea con `secure: false` en `server/src/app.js`. En HTTPS funciona, pero no fuerza seguridad; para producción conviene cambiar a `secure: true` y configurar `trust proxy` si Nginx está delante.
+```bash
+sudo /usr/local/bin/certbot --nginx --non-interactive --agree-tos \
+  --register-unsafely-without-email \
+  -d api-mechas.incaslop.online
+```
+
+Puntos a verificar tras emitir el certificado:
+
+- que exista el bloque `443` para `api-mechas.incaslop.online`
+- que `http://api-mechas.incaslop.online/server/health` redirija a HTTPS
+- que `https://api-mechas.incaslop.online/server/health` responda `200`
+
+Problema real encontrado y solucion:
+
+- Sintoma: `http://api-mechas.incaslop.online/server/health` respondia `200`, pero `https://api-mechas.incaslop.online/server/health` devolvia `404 Cannot GET /server/health`.
+- Causa: existia bloque Nginx para `80`, pero no uno propio para `443`; el trafico TLS caia en otra vhost y Express recibia `/server/health` sin la reescritura a `/api/online/...`.
+- Solucion: emitir el certificado del subdominio con Certbot y dejar desplegada la configuracion TLS del mismo host.
+
+Verificaciones finales recomendadas:
+
+```bash
+systemctl status incaslop-mechas-backend.service --no-pager --lines=12
+curl -fsS http://127.0.0.1:3003/health
+curl -I http://api-mechas.incaslop.online/server/health
+curl -I https://api-mechas.incaslop.online/server/health
+curl -H 'Origin: https://mechas.incaslop.online' \
+  -I https://api-mechas.incaslop.online/server/state
+```
 
 ## 5) MVP: límites y checklist
 
@@ -345,10 +381,11 @@ Límites actuales del diseño (aceptables para MVP):
 
 Checklist mínimo producción:
 
-- DB configurada y `ALLOW_FILE_FALLBACK=false`.
-- Nginx proxy para `/api/online/*`.
+- `ONLINE_STORE=sqlite` configurado.
+- `backend.env` en `/etc/incaslop-mechas/backend.env`.
+- código backend desplegado en `/opt/incaslop-mechas/backend`.
+- Nginx proxy para `/server/*`.
 - systemd con restart automático.
-- Backups de MariaDB.
 - TLS habilitado.
 
 

@@ -54,16 +54,16 @@ jobs:
           echo "Workspace: ${{ github.workspace }}"
 
       - name: 🔍 Verificar secretos requeridos
-        if: ${{ inputs.debug }}
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           FTP_DESTINATION: ${{ secrets.FTP_DESTINATION }}
           VITE_GA_ID: ${{ secrets.VITE_GA_ID }}
+          VITE_ONLINE_API_BASE: ${{ secrets.VITE_ONLINE_API_BASE }}
         run: |
           missing=0
-          for key in FTP_HOST FTP_USERNAME FTP_PASSWORD FTP_DESTINATION VITE_GA_ID; do
+          for key in FTP_HOST FTP_USERNAME FTP_PASSWORD FTP_DESTINATION VITE_GA_ID VITE_ONLINE_API_BASE; do
             value="${!key}"
             if [ -z "$value" ]; then
               echo "::error::$key no esta definido en GitHub Secrets"
