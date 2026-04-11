@@ -4,24 +4,42 @@ import {
   calculateDamage, applyDamage, applyEfecto, tickEfectos,
   isStunned, pickAtaque, determineTurnOrder,
 } from '../utils/battleEngine'
+import { KO_TOTAL_DURATION_MS } from '../utils/koTimeline'
 
 const TURN_DELAY = 2200
 
 export function useBattle() {
   const {
     fighter1, fighter2,
-    addLog, updateFighter, setCurrentTurn, fightEnded, startBattle,
+    addLog, startKo, updateFighter, setCurrentTurn, fightEnded, startBattle,
   } = useGame()
 
   const fightingRef = useRef(false)
   const f1Ref = useRef(fighter1)
   const f2Ref = useRef(fighter2)
+  const timeoutsRef = useRef([])
 
   f1Ref.current = fighter1
   f2Ref.current = fighter2
 
+  const clearTimers = useCallback(() => {
+    for (const timeoutId of timeoutsRef.current) {
+      clearTimeout(timeoutId)
+    }
+    timeoutsRef.current = []
+  }, [])
+
+  const schedule = useCallback((callback, delay) => {
+    const timeoutId = window.setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter((entry) => entry !== timeoutId)
+      callback()
+    }, delay)
+    timeoutsRef.current.push(timeoutId)
+  }, [])
+
   const runBattle = useCallback(() => {
     if (fightingRef.current) return
+    clearTimers()
     fightingRef.current = true
     startBattle()
 
@@ -36,18 +54,22 @@ export function useBattle() {
     function checkDeath() {
       if (!localF1.alive) {
         fightingRef.current = false
-        setTimeout(() => {
-          addLog({ type: 'death', text: `${localF1.name} ha caido!`, side: 'left' })
+        const startedAt = Date.now()
+        addLog({ type: 'death', text: `${localF1.name} ha caido!`, side: 'left' })
+        startKo('right', 'left', startedAt)
+        schedule(() => {
           fightEnded('right', 'left')
-        }, 500)
+        }, KO_TOTAL_DURATION_MS)
         return true
       }
       if (!localF2.alive) {
         fightingRef.current = false
-        setTimeout(() => {
-          addLog({ type: 'death', text: `${localF2.name} ha caido!`, side: 'right' })
+        const startedAt = Date.now()
+        addLog({ type: 'death', text: `${localF2.name} ha caido!`, side: 'right' })
+        startKo('left', 'right', startedAt)
+        schedule(() => {
           fightEnded('left', 'right')
-        }, 500)
+        }, KO_TOTAL_DURATION_MS)
         return true
       }
       return false
@@ -87,7 +109,7 @@ export function useBattle() {
           attackerSide: attacker.side,
         })
         turnIndex++
-        setTimeout(executeTurn, TURN_DELAY)
+        schedule(executeTurn, TURN_DELAY)
         return
       }
 
@@ -148,15 +170,16 @@ export function useBattle() {
       }
 
       turnIndex++
-      setTimeout(executeTurn, TURN_DELAY)
+      schedule(executeTurn, TURN_DELAY)
     }
 
-    setTimeout(executeTurn, 1000)
-  }, [startBattle, addLog, updateFighter, setCurrentTurn, fightEnded])
+    schedule(executeTurn, 1000)
+  }, [addLog, clearTimers, fightEnded, schedule, setCurrentTurn, startBattle, startKo, updateFighter])
 
   const stopBattle = useCallback(() => {
     fightingRef.current = false
-  }, [])
+    clearTimers()
+  }, [clearTimers])
 
   return { runBattle, stopBattle }
 }

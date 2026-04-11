@@ -7,6 +7,15 @@ export default function BattleHUD({ sessionType }) {
   const { bracket, currentMatch, playerStatus } = useTournament()
 
   const isTournament = sessionType === 'tournament'
+  const phaseLabel = phase === 'intro'
+    ? 'Presentacion'
+    : phase === 'betting'
+      ? 'Apuestas'
+      : phase === 'fighting'
+        ? 'Luchando'
+        : phase === 'ko'
+          ? 'KO Dramatico'
+          : 'Resultado'
 
   return (
     <div className="battle-hud">
@@ -35,9 +44,7 @@ export default function BattleHUD({ sessionType }) {
       </div>
       <div className="hud-item">
         <span className="hud-label">Estado</span>
-        <span className="hud-value phase">
-          {phase === 'intro' ? 'Presentacion' : phase === 'betting' ? 'Apuestas' : phase === 'fighting' ? 'Luchando' : 'Resultado'}
-        </span>
+        <span className="hud-value phase">{phaseLabel}</span>
       </div>
       {isTournament && (
         <div className="hud-item">

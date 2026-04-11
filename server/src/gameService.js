@@ -2,6 +2,7 @@ import {
   BETTING_DURATION_MS,
   DEFAULT_STAKE,
   INTRO_DURATION_MS,
+  KO_DURATION_MS,
   RESULT_DURATION_MS,
   TURN_DELAY_MS,
   applyDamage,
@@ -64,6 +65,7 @@ export class OnlineArenaService {
       currentTurn: null,
       winner: null,
       lastResult: null,
+      koState: null,
       latestEventId: 0,
       turnOrder: determineTurnOrder(fighter1, fighter2),
       turnIndex: 0,
@@ -97,6 +99,7 @@ export class OnlineArenaService {
       battleLog: this.state.battleLog,
       currentTurn: this.state.currentTurn,
       winner: this.state.winner,
+      koState: this.state.koState,
       lastResult: this.state.lastResult,
       countdown: secondsUntil(this.state.nextActionAt),
       updatedAt: this.state.updatedAt,
@@ -127,6 +130,7 @@ export class OnlineArenaService {
     const effectiveLastResult = viewer.lastResult ?? (this.state.phase === 'result' && this.state.lastResult
       ? {
           winnerSide: this.state.lastResult.winnerSide,
+          loserSide: this.state.lastResult.loserSide,
           betResult: 'none',
           coinDelta: 0,
           stake: 0,
@@ -241,6 +245,15 @@ export class OnlineArenaService {
       return
     }
 
+    if (this.state.phase === 'ko') {
+      this.state.phase = 'result'
+      this.state.nextActionAt = nowIso(RESULT_DURATION_MS)
+      await this.appendEvent('result_ready', {
+        winnerSide: this.state.lastResult?.winnerSide,
+      })
+      return
+    }
+
     if (this.state.phase === 'result') {
       this.prepareNextRound()
       await this.appendEvent('round_started', {
@@ -352,14 +365,20 @@ export class OnlineArenaService {
       logEntry: createLogEntry('death', `${loser.name} ha caido!`),
     })
 
-    this.state.phase = 'result'
     this.state.winner = winnerSide
     this.state.currentTurn = null
+    this.state.koState = {
+      winnerSide,
+      loserSide,
+      startedAt: nowIso(),
+      totalDurationMs: KO_DURATION_MS,
+    }
+    this.state.phase = 'ko'
     this.state.lastResult = {
       winnerSide,
       loserSide,
     }
-    this.state.nextActionAt = nowIso(RESULT_DURATION_MS)
+    this.state.nextActionAt = nowIso(KO_DURATION_MS)
 
     await this.store.settleRound(this.state.round, winnerSide)
     await this.appendEvent('round_finished', {
@@ -388,6 +407,7 @@ export class OnlineArenaService {
       currentTurn: null,
       winner: null,
       lastResult: null,
+      koState: null,
       latestEventId: this.state.latestEventId,
       turnOrder: [],
       turnIndex: 0,

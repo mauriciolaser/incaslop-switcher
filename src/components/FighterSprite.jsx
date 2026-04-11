@@ -3,166 +3,173 @@ import { useFrame, useLoader } from '@react-three/fiber'
 import * as THREE from 'three'
 import spriteMeta from '../assets/sprites/fighter_base.json'
 import spriteSheetUrl from '../assets/sprites/fighter_base.png?url'
+import { getKoProgress } from '../utils/koTimeline'
 
-// ── Constantes del spritesheet ────────────────────────────────────────────────
-const { frameWidth: FW, frameHeight: FH, sheetWidth: SW, sheetHeight: SH, faceRegion: FACE } = spriteMeta
+const { frameWidth: FW, frameHeight: FH, faceRegion: FACE } = spriteMeta
 
-// Escala base world-units por pixel. 192px de alto ≈ 2 unidades de altura.
 const PX_SCALE_BASE = 2.0 / FH
 const W_UNITS_BASE = FW * PX_SCALE_BASE
 const H_UNITS_BASE = FH * PX_SCALE_BASE
 
-// Índices de frame por estado
-const FRAME = { idle_a: 0, idle_b: 1, attack_a: 2, attack_b: 3, hit: 4, death: 5 }
+const FRAME_INDEX = spriteMeta.frames.reduce((acc, frame) => {
+  acc[frame.name] = frame.index
+  return acc
+}, {})
 
-// ── UV de cada frame ──────────────────────────────────────────────────────────
-function frameUV(index) {
-  const u0 = (index * FW) / SW
-  const u1 = u0 + FW / SW
-  const v0 = 0
-  const v1 = 1
-  return { u0, u1, v0, v1 }
+function makePixelTexture(texture) {
+  texture.magFilter = THREE.NearestFilter
+  texture.minFilter = THREE.NearestFilter
+  texture.generateMipmaps = false
+  texture.colorSpace = THREE.SRGBColorSpace
+  return texture
 }
 
-// ── Helpers de textura ────────────────────────────────────────────────────────
-function makePixelTexture(src) {
-  src.magFilter = THREE.NearestFilter
-  src.minFilter = THREE.NearestFilter
-  src.generateMipmaps = false
-  src.colorSpace = THREE.SRGBColorSpace
-  return src
+function clamp01(value) {
+  return Math.max(0, Math.min(1, value))
 }
 
-// ── Componente principal ──────────────────────────────────────────────────────
 export default function FighterSprite({
   position,
   opponentPosition,
   side,
   portraitUrl,
   hp,
-  maxHp = 100,
   isAttacking,
   alive,
-  scale = 1.0,          // multiplicador de tamaño (player 1 = 1.7, rival = 1.0)
-  facingCamera = false, // true = de espaldas a la cámara (player 1), false = de frente (rival)
+  scale = 1.0,
+  facingCamera = false,
+  animationState = 'idle',
+  koState = null,
   _forceFrame = undefined,
 }) {
-  const meshRef = useRef()
+  const meshRef = useRef(null)
   const timeRef = useRef(0)
   const shakeRef = useRef(0)
   const hitFlashRef = useRef(0)
   const prevHpRef = useRef(hp)
-  const deathRef = useRef(0)
+  const portraitImgRef = useRef(null)
+  const currentFrameRef = useRef(-1)
+  const drawResourcesRef = useRef(null)
 
-  // Dimensiones del quad según escala
   const W_UNITS = W_UNITS_BASE * scale
   const H_UNITS = H_UNITS_BASE * scale
-
-  // Cargar el spritesheet base
   const baseSheet = useLoader(THREE.TextureLoader, spriteSheetUrl)
-  useMemo(() => makePixelTexture(baseSheet), [baseSheet])
 
-  // Canvas de un solo frame para la textura composite (base + cara)
-  const { frameCtx, frameTex } = useMemo(() => {
-    const canvas = document.createElement('canvas')
-    canvas.width = FW
-    canvas.height = FH
-    const ctx = canvas.getContext('2d')
-    const tex = new THREE.CanvasTexture(canvas)
-    makePixelTexture(tex)
-    return { frameCanvas: canvas, frameCtx: ctx, frameTex: tex }
-  }, [])
+  if (drawResourcesRef.current == null) {
+    const frameCanvas = document.createElement('canvas')
+    frameCanvas.width = FW
+    frameCanvas.height = FH
+    const frameCtx = frameCanvas.getContext('2d')
 
-  // Canvas auxiliar con el spritesheet base completo
-  const { baseCtx } = useMemo(() => {
-    const canvas = document.createElement('canvas')
-    canvas.width = SW
-    canvas.height = SH
-    const ctx = canvas.getContext('2d')
-    return { baseCanvas: canvas, baseCtx: ctx }
-  }, [])
+    const frameTex = new THREE.CanvasTexture(frameCanvas)
+    makePixelTexture(frameTex)
 
-  const portraitImgRef = useRef(null)
-  const portraitReadyRef = useRef(false)
-  const currentFrameRef = useRef(-1)
+    const baseCanvas = document.createElement('canvas')
+    baseCanvas.width = spriteMeta.sheetWidth
+    baseCanvas.height = spriteMeta.sheetHeight
+    const baseCtx = baseCanvas.getContext('2d')
+
+    drawResourcesRef.current = { frameCtx, frameTex, baseCtx }
+  }
+
+  const drawResources = drawResourcesRef.current
+  const { frameCtx, frameTex, baseCtx } = drawResources
+
+  const material = useMemo(() => (
+    new THREE.MeshBasicMaterial({
+      map: drawResources.frameTex,
+      transparent: true,
+      opacity: 1,
+      alphaTest: 0.01,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      toneMapped: false,
+    })
+  ), [drawResources.frameTex])
+
+  useEffect(() => {
+    makePixelTexture(baseSheet)
+  }, [baseSheet])
+
+  useEffect(() => {
+    return () => {
+      material.dispose()
+      drawResourcesRef.current?.frameTex.dispose()
+    }
+  }, [material])
 
   useEffect(() => {
     if (!portraitUrl) {
       portraitImgRef.current = null
-      portraitReadyRef.current = false
       currentFrameRef.current = -1
       return
     }
+
     const img = new Image()
     img.crossOrigin = 'anonymous'
     img.onload = () => {
       portraitImgRef.current = img
-      portraitReadyRef.current = true
       currentFrameRef.current = -1
     }
     img.onerror = () => {
       portraitImgRef.current = null
-      portraitReadyRef.current = false
     }
     img.src = portraitUrl
   }, [portraitUrl])
 
   useEffect(() => {
     if (!baseSheet.image) return
+    baseCtx.clearRect(0, 0, spriteMeta.sheetWidth, spriteMeta.sheetHeight)
     baseCtx.drawImage(baseSheet.image, 0, 0)
-  }, [baseSheet, baseCtx])
-
-  // Orientación horizontal del sprite:
-  // - facingCamera (player 1, de espaldas): miramos el sprite tal cual está en el sheet
-  //   pero flipeado para que parezca de espaldas mirando al rival a la derecha.
-  // - !facingCamera (rival, de frente): flipX para que mire hacia la cámara (izquierda).
-  const flipX = !facingCamera  // rival flipea, player 1 no
-
-  const material = useMemo(() => new THREE.MeshBasicMaterial({
-    map: frameTex,
-    transparent: true,
-    alphaTest: 0.01,
-    side: THREE.DoubleSide,
-    depthWrite: false,
-    toneMapped: false,
-  }), [frameTex])
-
-  useEffect(() => () => material.dispose(), [material])
-  useEffect(() => () => frameTex.dispose(), [frameTex])
+    currentFrameRef.current = -1
+    // `baseCtx` is created once per sprite instance and intentionally stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseSheet])
 
   useEffect(() => {
-    if (hp < prevHpRef.current) hitFlashRef.current = 1
+    if (animationState !== 'ko' && hp < prevHpRef.current) {
+      hitFlashRef.current = 1
+    }
     prevHpRef.current = hp
-  }, [hp])
+  }, [animationState, hp])
 
   useFrame(({ camera }, delta) => {
     if (!meshRef.current) return
+
     timeRef.current += delta
+    const flipX = !facingCamera
+    const koProgress = animationState === 'ko' ? getKoProgress(koState) : 0
 
-    // ── Determinar frame del spritesheet ─────────────────────────────────────
-    let frameIndex = FRAME.idle_a
-
-    if (_forceFrame !== undefined && FRAME[_forceFrame] !== undefined) {
-      frameIndex = FRAME[_forceFrame]
+    let frameName = 'idle_a'
+    if (_forceFrame !== undefined && FRAME_INDEX[_forceFrame] !== undefined) {
+      frameName = _forceFrame
+    } else if (animationState === 'ko') {
+      if (koProgress < 0.18) {
+        frameName = 'hit'
+      } else if (koProgress < 0.45) {
+        frameName = 'ko_start'
+      } else if (koProgress < 0.82) {
+        frameName = 'ko_spin'
+      } else {
+        frameName = 'death'
+      }
     } else if (!alive) {
-      frameIndex = FRAME.death
+      frameName = 'death'
     } else if (isAttacking === side) {
-      frameIndex = Math.floor(timeRef.current * 8) % 2 === 0 ? FRAME.attack_a : FRAME.attack_b
+      frameName = Math.floor(timeRef.current * 8) % 2 === 0 ? 'attack_a' : 'attack_b'
     } else if (hitFlashRef.current > 0) {
-      frameIndex = FRAME.hit
+      frameName = 'hit'
     } else {
-      frameIndex = Math.floor(timeRef.current * 4) % 2 === 0 ? FRAME.idle_a : FRAME.idle_b
+      frameName = Math.floor(timeRef.current * 4) % 2 === 0 ? 'idle_a' : 'idle_b'
     }
 
-    // ── Redibujar canvas solo si cambió el frame ──────────────────────────────
+    const frameIndex = FRAME_INDEX[frameName] ?? 0
     if (frameIndex !== currentFrameRef.current) {
       currentFrameRef.current = frameIndex
-
       frameCtx.clearRect(0, 0, FW, FH)
 
       if (baseSheet.image) {
         if (flipX) {
-          // Espejear el frame base completo horizontalmente
           frameCtx.save()
           frameCtx.translate(FW, 0)
           frameCtx.scale(-1, 1)
@@ -173,16 +180,11 @@ export default function FighterSprite({
         }
       }
 
-      // Compositar cara del candidato encima
-      if (portraitImgRef.current) {
+      if (portraitImgRef.current && frameName !== 'death') {
         const img = portraitImgRef.current
-        const srcW = img.naturalWidth
-        const srcH = img.naturalHeight
-        const cropW = srcW * 0.80
-        const cropH = srcH * 0.65
-        const cropX = (srcW - cropW) / 2
-
-        // Calcular la zona de la cara en el canvas ya flipeado
+        const cropW = img.naturalWidth * 0.8
+        const cropH = img.naturalHeight * 0.65
+        const cropX = (img.naturalWidth - cropW) / 2
         const faceX = flipX ? (FW - FACE.x - FACE.w) : FACE.x
 
         frameCtx.save()
@@ -200,56 +202,57 @@ export default function FighterSprite({
       frameTex.needsUpdate = true
     }
 
-    // ── Billboard: el quad siempre mira a la cámara (eje Y) ──────────────────
     const mesh = meshRef.current
     mesh.quaternion.copy(camera.quaternion)
 
-    // ── Animaciones de posición ───────────────────────────────────────────────
     let ox = 0
-    let oy = 0
+    let oy = Math.sin(timeRef.current * 3) * 0.04 * scale
+    let rotationZ = 0
+    let liveScale = scale
+    let opacity = 1
 
-    if (!alive) {
-      deathRef.current = Math.min(deathRef.current + delta * 1.5, 1)
-      oy = -deathRef.current * H_UNITS * 0.5
+    if (animationState === 'ko') {
+      const holdProgress = clamp01(koProgress / 0.18)
+      const spinProgress = clamp01((koProgress - 0.18) / 0.82)
+      const dirX = Math.sign(position[0] - opponentPosition[0]) || (side === 'left' ? -1 : 1)
+      oy = (-H_UNITS * 0.8 * spinProgress) - (Math.sin(holdProgress * Math.PI) * 0.08 * scale)
+      ox = dirX * (0.3 * spinProgress)
+      rotationZ = spinProgress * Math.PI * 4.25 * (side === 'left' ? -1 : 1)
+      liveScale = scale * (1 - 0.35 * spinProgress)
+      opacity = koProgress < 0.55 ? 1 : 1 - clamp01((koProgress - 0.55) / 0.45)
+      hitFlashRef.current = 0
+      shakeRef.current = 0
     } else {
-      deathRef.current = 0
-
-      // Idle bounce — player 1 rebota un poco más por ser más grande
-      oy = Math.sin(timeRef.current * 3) * 0.04 * scale
-
-      // Ataque: lunge hacia el oponente
       if (isAttacking === side) {
         shakeRef.current += delta * 4
         if (shakeRef.current < 1) {
           const dx = opponentPosition[0] - position[0]
           const dz = opponentPosition[2] - position[2]
-          const len = Math.sqrt(dx * dx + dz * dz)
+          const len = Math.max(0.001, Math.sqrt(dx * dx + dz * dz))
           const lunge = Math.sin(shakeRef.current * Math.PI) * 0.5
           ox = (dx / len) * lunge
         }
       } else {
-        if (isAttacking !== side) shakeRef.current = 0
+        shakeRef.current = 0
       }
 
-      // Hit: retroceso
       if (hitFlashRef.current > 0) {
         hitFlashRef.current = Math.max(0, hitFlashRef.current - delta * 4)
         const dx = opponentPosition[0] - position[0]
         const dz = opponentPosition[2] - position[2]
-        const len = Math.sqrt(dx * dx + dz * dz)
+        const len = Math.max(0.001, Math.sqrt(dx * dx + dz * dz))
         const recoil = Math.sin(hitFlashRef.current * 20) * 0.08 * hitFlashRef.current
         ox -= (dx / len) * recoil
       }
     }
 
-    mesh.position.set(
-      position[0] + ox,
-      position[1] + H_UNITS / 2 + oy,
-      position[2],
-    )
+    mesh.position.set(position[0] + ox, position[1] + H_UNITS / 2 + oy, position[2])
+    mesh.scale.set(liveScale, liveScale, liveScale)
+    mesh.rotateZ(rotationZ)
 
-    // Escalar el quad según la prop scale
-    mesh.scale.setScalar(scale)
+    if (mesh.material) {
+      mesh.material.opacity = opacity
+    }
   })
 
   return (

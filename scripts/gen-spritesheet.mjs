@@ -24,7 +24,7 @@ const ROOT = resolve(__dir, '..')
 
 const FRAME_W = 128
 const FRAME_H = 192
-const FRAMES = 6
+const FRAMES = 8
 const SHEET_W = FRAME_W * FRAMES
 const SHEET_H = FRAME_H
 
@@ -121,6 +121,33 @@ function hit(oy = 0) { return `
   <text x="68" y="${FACE.y + 6 + oy}"  font-size="14" fill="#FF6600">✦</text>
 ` }
 
+function ko_start() { return `
+  ${torso(-2)}
+  <rect x="10" y="${neckTop + 8}" width="30" height="12" rx="4" fill="${C.suitLight}" transform="rotate(-24 25 ${neckTop + 14})"/>
+  <rect x="84" y="${neckTop + 6}" width="34" height="13" rx="4" fill="${C.suitLight}" transform="rotate(28 101 ${neckTop + 12})"/>
+  <ellipse cx="18" cy="${neckTop + 34}" rx="11" ry="11" fill="${C.skin}"/>
+  <ellipse cx="112" cy="${neckTop + 28}" rx="11" ry="11" fill="${C.skin}"/>
+  <text x="90" y="${FACE.y + 12}" font-size="20" fill="#FFD700">✹</text>
+  <text x="48" y="${FACE.y - 2}" font-size="18" fill="#ff8844">!</text>
+` }
+
+function ko_spin() { return `
+  <ellipse cx="64" cy="178" rx="44" ry="8" fill="${C.shadow}"/>
+  <g transform="translate(64 116) rotate(78)">
+    <rect x="-38" y="-24" width="76" height="48" rx="5" fill="${C.suit}"/>
+    <rect x="-38" y="10" width="76" height="7" rx="2" fill="${C.belt}"/>
+    <rect x="-12" y="-32" width="24" height="18" rx="2" fill="${C.skin}"/>
+    <rect x="-54" y="-10" width="24" height="12" rx="4" fill="${C.suitLight}"/>
+    <rect x="30" y="-2" width="28" height="12" rx="4" fill="${C.suitLight}"/>
+    <ellipse cx="-56" cy="-4" rx="10" ry="10" fill="${C.skin}"/>
+    <ellipse cx="60" cy="4" rx="10" ry="10" fill="${C.skin}"/>
+    <rect x="-28" y="24" width="18" height="26" rx="3" fill="${C.boots}"/>
+    <rect x="10" y="24" width="18" height="26" rx="3" fill="${C.boots}"/>
+  </g>
+  <text x="10" y="48" font-size="18" fill="#FFD700">✦</text>
+  <text x="98" y="38" font-size="18" fill="#FF6600">✦</text>
+` }
+
 // death: tumbado, sin cabeza visible (cara se oculta fuera del frame)
 function death() { return `
   <ellipse cx="64" cy="178" rx="54" ry="10" fill="${C.shadow}"/>
@@ -142,6 +169,8 @@ const framesDef = [
   { name: 'attack_a', body: attack_a() },
   { name: 'attack_b', body: attack_b() },
   { name: 'hit',      body: hit()      },
+  { name: 'ko_start', body: ko_start() },
+  { name: 'ko_spin',  body: ko_spin()  },
   { name: 'death',    body: death()    },
 ]
 

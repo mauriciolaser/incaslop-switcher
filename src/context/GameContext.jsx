@@ -2,6 +2,7 @@
 import { createContext, useContext, useReducer, useCallback } from 'react'
 import { DEFAULT_STAKE, generateFighter, healSurvivor, normalizeStake } from '../utils/battleEngine'
 import { prepareFighterForMatch } from '../utils/fighterFactory'
+import { createKoState } from '../utils/koTimeline'
 
 export const GameContext = createContext(null)
 
@@ -48,6 +49,7 @@ function createInitialState() {
     currentTurn: null,
     lastResult: null,
     winner: null,
+    koState: null,
   }
 }
 
@@ -72,6 +74,20 @@ function gameReducer(state, action) {
         battleLog: [],
         lastResult: null,
         winner: null,
+        koState: null,
+      }
+
+    case 'START_KO':
+      return {
+        ...state,
+        phase: 'ko',
+        currentTurn: null,
+        winner: action.winnerSide,
+        koState: createKoState({
+          winnerSide: action.winnerSide,
+          loserSide: action.loserSide,
+          startedAt: action.startedAt,
+        }),
       }
 
     case 'ADD_LOG': {
@@ -103,6 +119,7 @@ function gameReducer(state, action) {
         coins: Math.max(0, state.coins + coinDelta),
         lastResult: {
           winnerSide,
+          loserSide,
           betResult,
           coinDelta,
           stake: state.stake,
@@ -124,6 +141,7 @@ function gameReducer(state, action) {
         currentTurn: null,
         winner: null,
         lastResult: null,
+        koState: null,
         stake: normalizeStake(state.stake, state.coins),
       }
     }
@@ -133,6 +151,7 @@ function gameReducer(state, action) {
         ...createInitialState(),
         fighter1: prepareFighterForMatch(generateFighter('left'), 'left'),
         fighter2: prepareFighterForMatch(generateFighter('right'), 'right'),
+        koState: null,
       }
 
     case 'NEXT_ROUND': {
@@ -152,6 +171,7 @@ function gameReducer(state, action) {
         currentTurn: null,
         winner: null,
         lastResult: null,
+        koState: null,
       }
     }
 
@@ -177,6 +197,10 @@ export function LocalGameProvider({ children }) {
 
   const addLog = useCallback((entry) => {
     dispatch({ type: 'ADD_LOG', entry })
+  }, [])
+
+  const startKo = useCallback((winnerSide, loserSide, startedAt = Date.now()) => {
+    dispatch({ type: 'START_KO', winnerSide, loserSide, startedAt })
   }, [])
 
   const updateFighter = useCallback((side, fighter) => {
@@ -218,6 +242,7 @@ export function LocalGameProvider({ children }) {
       startBetting,
       startBattle,
       addLog,
+      startKo,
       updateFighter,
       setCurrentTurn,
       fightEnded,

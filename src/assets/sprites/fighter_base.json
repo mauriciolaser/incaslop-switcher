@@ -1,8 +1,8 @@
 {
   "frameWidth": 128,
   "frameHeight": 192,
-  "frameCount": 6,
-  "sheetWidth": 768,
+  "frameCount": 8,
+  "sheetWidth": 1024,
   "sheetHeight": 192,
   "faceRegion": {
     "x": 28,
@@ -52,9 +52,25 @@
       "h": 192
     },
     {
-      "name": "death",
+      "name": "ko_start",
       "index": 5,
       "x": 640,
+      "y": 0,
+      "w": 128,
+      "h": 192
+    },
+    {
+      "name": "ko_spin",
+      "index": 6,
+      "x": 768,
+      "y": 0,
+      "w": 128,
+      "h": 192
+    },
+    {
+      "name": "death",
+      "index": 7,
+      "x": 896,
       "y": 0,
       "w": 128,
       "h": 192

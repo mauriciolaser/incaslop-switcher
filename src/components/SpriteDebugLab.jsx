@@ -65,7 +65,6 @@ export default function SpriteDebugLab({ onExit }) {
   const isAttacking = frameOverride === 'attack_a' || frameOverride === 'attack_b' ? side : null
   const alive       = frameOverride !== 'death'
   const hp          = frameOverride === 'hit' ? 50 : 100
-  const prevHp      = frameOverride === 'hit' ? 100 : 100
 
   // Cuando frameOverride es 'auto', dejamos que FighterSprite decida
   const debugPortraitUrl = showFace ? portrait.url : null
@@ -89,7 +88,6 @@ export default function SpriteDebugLab({ onExit }) {
             side={side}
             portraitUrl={debugPortraitUrl}
             hp={hp}
-            maxHp={100}
             isAttacking={isAttacking}
             alive={alive}
             _forceFrame={frameOverride !== 'auto' ? frameOverride : undefined}

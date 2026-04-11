@@ -5,7 +5,7 @@ export default function GameOver({ onExitHome }) {
   const { phase, lastResult, fighter1, fighter2, nextRound, isOnline, countdown, gameOver } = useGame()
 
   if (!lastResult) return null
-  if (!isOnline && phase !== 'result') return null
+  if (phase !== 'result') return null
 
   const winner = lastResult.winnerSide === 'left' ? fighter1 : fighter2
 
