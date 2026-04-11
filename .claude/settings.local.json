@@ -27,7 +27,10 @@
       "Bash(ssh -i ssh.txt -o StrictHostKeyChecking=accept-new mauri@172.234.228.138 \"journalctl --user -u incaslop-mechas-backend.service -n 30 --no-pager\")",
       "Bash(ssh -i ssh.txt -o StrictHostKeyChecking=accept-new mauri@172.234.228.138 \"fuser -k 3003/tcp 2>/dev/null || true; sleep 1; systemctl --user restart incaslop-mechas-backend.service; sleep 3; systemctl --user status incaslop-mechas-backend.service --no-pager --lines=6; curl -fsS http://127.0.0.1:3003/health\")",
       "Bash(ssh -i ssh.txt -o StrictHostKeyChecking=accept-new mauri@172.234.228.138 \"echo '=== systemd unit file ===' && cat /home/mauri/.config/systemd/user/incaslop-mechas-backend.service; echo '=== .env ===' && cat /home/mauri/incaslop-mechas/backend/.env; echo '=== node version ===' && node --version; echo '=== backend dir ===' && ls /home/mauri/incaslop-mechas/backend/; echo '=== data dir ===' && ls /home/mauri/incaslop-mechas/backend/data/ 2>/dev/null || echo 'no data dir'\")",
-      "Bash(find c:\\\\\\\\IncaSlop\\\\\\\\incaslop-mechas -type f -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.js\" -o -name \"*.jsx\" -o -name \"*.json\")"
+      "Bash(find c:\\\\\\\\IncaSlop\\\\\\\\incaslop-mechas -type f -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.js\" -o -name \"*.jsx\" -o -name \"*.json\")",
+      "Bash(ssh -i c:/IncaSlop/incaslop-mechas/ssh.txt -o StrictHostKeyChecking=accept-new mauri@172.234.228.138 \"cat /home/mauri/incaslop-chat/.env\")",
+      "Bash(ssh -i c:/IncaSlop/incaslop-mechas/ssh.txt -o StrictHostKeyChecking=accept-new mauri@172.234.228.138 \"sed -i 's|CHAT_ALLOWED_ORIGINS=.*|CHAT_ALLOWED_ORIGINS=https://chat.incaslop.online,https://congreso.incaslop.online,https://mechas.incaslop.online|' /home/mauri/incaslop-chat/.env && systemctl --user restart incaslop-chat.service && sleep 1 && systemctl --user is-active incaslop-chat.service\")",
+      "Bash(ssh -i c:/IncaSlop/incaslop-mechas/ssh.txt -o StrictHostKeyChecking=accept-new mauri@172.234.228.138 \"curl -fsS https://chat.incaslop.online/health && echo && grep CHAT_ALLOWED_ORIGINS /home/mauri/incaslop-chat/.env\")"
     ]
   }
 }
