@@ -223,10 +223,11 @@ function CameraSelector({ mode, setMode }) {
 }
 
 export default function BattleScene() {
-  const { fighter1, fighter2, currentTurn } = useGame()
+  const { fighter1, fighter2, currentTurn, phase } = useGame()
   const [cachedUrls, setCachedUrls] = useState(null)
   const [camMode, setCamMode] = useState('libre')
   const orbitRef = useRef()
+  const isCombatMode = phase === 'fighting'
 
   useEffect(() => {
     let revoke = []
@@ -264,6 +265,7 @@ export default function BattleScene() {
               maxHp={fighter1.maxHp}
               isAttacking={currentTurn}
               alive={fighter1.alive}
+              showPortraitSprite={isCombatMode}
             />
             <Fighter
               key="fighter-right"
@@ -276,6 +278,7 @@ export default function BattleScene() {
               maxHp={fighter2.maxHp}
               isAttacking={currentTurn}
               alive={fighter2.alive}
+              showPortraitSprite={isCombatMode}
             />
           </>
         )}

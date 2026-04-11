@@ -4,6 +4,9 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
+const FACE_BONE_PRIORITY = ['headfront', 'head', 'head_end', 'neck']
+const FACE_SPRITE_OFFSET = new THREE.Vector3(0, 0.008, 0.05)
+
 function configurePixelTexture(texture) {
   if (!texture) return
   texture.colorSpace = THREE.SRGBColorSpace
@@ -37,7 +40,17 @@ function createFallbackFaceTexture() {
   return texture
 }
 
-export default function Fighter({ modelPath, position, opponentPosition, side, portraitUrl, hp, isAttacking, alive }) {
+export default function Fighter({
+  modelPath,
+  position,
+  opponentPosition,
+  side,
+  portraitUrl,
+  hp,
+  isAttacking,
+  alive,
+  showPortraitSprite = true,
+}) {
   // Inner group ref — only used for animation OFFSETS (relative to [0,0,0])
   const animRef = useRef()
   const { scene } = useGLTF(modelPath)
@@ -46,12 +59,12 @@ export default function Fighter({ modelPath, position, opponentPosition, side, p
   const deathRef = useRef(0)
   const hitFlashRef = useRef(0)
   const prevHpRef = useRef(hp)
-  const facePlateRef = useRef()
+  const faceAnchorRef = useRef()
   const faceBoneRef = useRef(null)
   const boneWorldPosRef = useRef(new THREE.Vector3())
   const boneWorldQuatRef = useRef(new THREE.Quaternion())
-  const parentWorldQuatRef = useRef(new THREE.Quaternion())
-  const localFaceQuatRef = useRef(new THREE.Quaternion())
+  const faceOffsetWorldRef = useRef(new THREE.Vector3())
+  const faceLocalPosRef = useRef(new THREE.Vector3())
 
   const fallbackTexture = useMemo(() => createFallbackFaceTexture(), [])
   const [portraitTexture, setPortraitTexture] = useState(fallbackTexture)
@@ -73,20 +86,23 @@ export default function Fighter({ modelPath, position, opponentPosition, side, p
   }, [scene])
 
   useEffect(() => {
-    let headFront = null
-    let head = null
+    let bestFaceBone = null
+    let bestPriority = FACE_BONE_PRIORITY.length
 
     clonedScene.traverse((node) => {
       if (!node.isBone) return
       const lowered = node.name.toLowerCase()
-      if (lowered === 'headfront') {
-        headFront = node
-      } else if (lowered === 'head') {
-        head = node
+      const priority = FACE_BONE_PRIORITY.findIndex(
+        (boneName) => lowered === boneName || lowered.includes(boneName),
+      )
+
+      if (priority !== -1 && priority < bestPriority) {
+        bestPriority = priority
+        bestFaceBone = node
       }
     })
 
-    faceBoneRef.current = headFront ?? head ?? null
+    faceBoneRef.current = bestFaceBone
   }, [clonedScene])
 
   useEffect(() => {
@@ -167,25 +183,31 @@ export default function Fighter({ modelPath, position, opponentPosition, side, p
     }
   }, [isAttacking, side])
 
-  function updateFacePlate() {
-    if (!animRef.current || !facePlateRef.current || !faceBoneRef.current) return
+  function updateFaceSprite() {
+    if (!animRef.current || !faceAnchorRef.current) return
 
-    const facePlate = facePlateRef.current
+    const faceAnchor = faceAnchorRef.current
     const bone = faceBoneRef.current
     const bonePos = boneWorldPosRef.current
     const boneQuat = boneWorldQuatRef.current
-    const parentQuat = parentWorldQuatRef.current
-    const localFaceQuat = localFaceQuatRef.current
+
+    if (!bone || !showPortraitSprite) {
+      faceAnchor.visible = false
+      return
+    }
 
     bone.getWorldPosition(bonePos)
-    animRef.current.worldToLocal(bonePos)
-    facePlate.position.copy(bonePos)
-
     bone.getWorldQuaternion(boneQuat)
-    animRef.current.getWorldQuaternion(parentQuat)
-    localFaceQuat.copy(parentQuat).invert().multiply(boneQuat)
-    facePlate.quaternion.copy(localFaceQuat)
-    facePlate.translateZ(0.015)
+
+    const faceOffset = faceOffsetWorldRef.current
+      .copy(FACE_SPRITE_OFFSET)
+      .applyQuaternion(boneQuat)
+
+    const localFacePos = faceLocalPosRef.current.copy(bonePos).add(faceOffset)
+    animRef.current.worldToLocal(localFacePos)
+
+    faceAnchor.visible = true
+    faceAnchor.position.copy(localFacePos)
   }
 
   // Animation loop — only sets OFFSETS on the inner group (relative to 0,0,0)
@@ -200,7 +222,7 @@ export default function Fighter({ modelPath, position, opponentPosition, side, p
         ? -deathRef.current * Math.PI * 0.5
         : deathRef.current * Math.PI * 0.5
       animRef.current.position.set(0, -deathRef.current * 0.5, 0)
-      updateFacePlate()
+      updateFaceSprite()
       return
     }
 
@@ -234,7 +256,7 @@ export default function Fighter({ modelPath, position, opponentPosition, side, p
     }
 
     animRef.current.position.set(ox, bobY, oz)
-    updateFacePlate()
+    updateFaceSprite()
   })
 
   const fighterScale = side === 'left' ? 1.0 : 0.95
@@ -249,16 +271,27 @@ export default function Fighter({ modelPath, position, opponentPosition, side, p
           scale={fighterScale}
           rotation={[0, dir.angle, 0]}
         />
-        <group ref={facePlateRef}>
-          <mesh position={[0, 0, -0.001]}>
-            <planeGeometry args={[0.145, 0.178]} />
-            <meshBasicMaterial color="#0c111c" toneMapped={false} side={THREE.DoubleSide} />
-          </mesh>
-          <mesh>
-            <planeGeometry args={[0.128, 0.16]} />
-            <meshBasicMaterial map={portraitTexture} toneMapped={false} side={THREE.DoubleSide} />
-          </mesh>
-        </group>
+        {showPortraitSprite && (
+          <group ref={faceAnchorRef}>
+            <sprite scale={[0.22, 0.27, 1]} renderOrder={10}>
+              <spriteMaterial
+                color="#0c111c"
+                opacity={0.92}
+                transparent
+                depthWrite={false}
+                toneMapped={false}
+              />
+            </sprite>
+            <sprite scale={[0.19, 0.235, 1]} renderOrder={11}>
+              <spriteMaterial
+                map={portraitTexture}
+                transparent
+                depthWrite={false}
+                toneMapped={false}
+              />
+            </sprite>
+          </group>
+        )}
       </group>
     </group>
   )
