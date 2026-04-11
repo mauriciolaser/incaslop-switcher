@@ -30,7 +30,8 @@
       "Bash(find c:\\\\\\\\IncaSlop\\\\\\\\incaslop-mechas -type f -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.js\" -o -name \"*.jsx\" -o -name \"*.json\")",
       "Bash(ssh -i c:/IncaSlop/incaslop-mechas/ssh.txt -o StrictHostKeyChecking=accept-new mauri@172.234.228.138 \"cat /home/mauri/incaslop-chat/.env\")",
       "Bash(ssh -i c:/IncaSlop/incaslop-mechas/ssh.txt -o StrictHostKeyChecking=accept-new mauri@172.234.228.138 \"sed -i 's|CHAT_ALLOWED_ORIGINS=.*|CHAT_ALLOWED_ORIGINS=https://chat.incaslop.online,https://congreso.incaslop.online,https://mechas.incaslop.online|' /home/mauri/incaslop-chat/.env && systemctl --user restart incaslop-chat.service && sleep 1 && systemctl --user is-active incaslop-chat.service\")",
-      "Bash(ssh -i c:/IncaSlop/incaslop-mechas/ssh.txt -o StrictHostKeyChecking=accept-new mauri@172.234.228.138 \"curl -fsS https://chat.incaslop.online/health && echo && grep CHAT_ALLOWED_ORIGINS /home/mauri/incaslop-chat/.env\")"
+      "Bash(ssh -i c:/IncaSlop/incaslop-mechas/ssh.txt -o StrictHostKeyChecking=accept-new mauri@172.234.228.138 \"curl -fsS https://chat.incaslop.online/health && echo && grep CHAT_ALLOWED_ORIGINS /home/mauri/incaslop-chat/.env\")",
+      "Bash(node scripts/gen-spritesheet-parties.mjs)"
     ]
   }
 }

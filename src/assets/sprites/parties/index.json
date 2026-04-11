@@ -1,0 +1,483 @@
+[
+  {
+    "id": "ahora-nacion",
+    "png": "parties/ahora-nacion.png",
+    "json": "parties/ahora-nacion.json",
+    "palette": {
+      "suit": "#003366",
+      "suitDark": "#001f44",
+      "suitLight": "#1a4d8a",
+      "tie": "#CC0000",
+      "belt": "#8b6914",
+      "accent": "#CC0000"
+    }
+  },
+  {
+    "id": "alianza-electoral-venceremos",
+    "png": "parties/alianza-electoral-venceremos.png",
+    "json": "parties/alianza-electoral-venceremos.json",
+    "palette": {
+      "suit": "#CC0000",
+      "suitDark": "#880000",
+      "suitLight": "#DD3333",
+      "tie": "#003366",
+      "belt": "#5a3000",
+      "accent": "#003366"
+    }
+  },
+  {
+    "id": "alianza-para-el-progreso",
+    "png": "parties/alianza-para-el-progreso.png",
+    "json": "parties/alianza-para-el-progreso.json",
+    "palette": {
+      "suit": "#003399",
+      "suitDark": "#001f66",
+      "suitLight": "#1a4dcc",
+      "tie": "#CC0000",
+      "belt": "#8b6914",
+      "accent": "#ffcc00"
+    }
+  },
+  {
+    "id": "avanza-pais",
+    "png": "parties/avanza-pais.png",
+    "json": "parties/avanza-pais.json",
+    "palette": {
+      "suit": "#E8A000",
+      "suitDark": "#b07800",
+      "suitLight": "#f0b820",
+      "tie": "#003366",
+      "belt": "#5a3000",
+      "accent": "#003366"
+    }
+  },
+  {
+    "id": "fe-en-el-peru",
+    "png": "parties/fe-en-el-peru.png",
+    "json": "parties/fe-en-el-peru.json",
+    "palette": {
+      "suit": "#1a5276",
+      "suitDark": "#0d2b3e",
+      "suitLight": "#2e86c1",
+      "tie": "#C0392B",
+      "belt": "#6e3b00",
+      "accent": "#f0c000"
+    }
+  },
+  {
+    "id": "frente-popular-agricola-del-peru",
+    "png": "parties/frente-popular-agricola-del-peru.png",
+    "json": "parties/frente-popular-agricola-del-peru.json",
+    "palette": {
+      "suit": "#27AE60",
+      "suitDark": "#1a7040",
+      "suitLight": "#3dc472",
+      "tie": "#f0c000",
+      "belt": "#5a3000",
+      "accent": "#f0c000"
+    }
+  },
+  {
+    "id": "fuerza-popular",
+    "png": "parties/fuerza-popular.png",
+    "json": "parties/fuerza-popular.json",
+    "palette": {
+      "suit": "#FF6600",
+      "suitDark": "#cc4400",
+      "suitLight": "#ff8833",
+      "tie": "#1a1a1a",
+      "belt": "#8b6914",
+      "accent": "#ffffff"
+    }
+  },
+  {
+    "id": "fuerza-y-libertad",
+    "png": "parties/fuerza-y-libertad.png",
+    "json": "parties/fuerza-y-libertad.json",
+    "palette": {
+      "suit": "#8B0000",
+      "suitDark": "#5a0000",
+      "suitLight": "#aa2222",
+      "tie": "#f0c000",
+      "belt": "#5a3000",
+      "accent": "#f0c000"
+    }
+  },
+  {
+    "id": "juntos-por-el-peru",
+    "png": "parties/juntos-por-el-peru.png",
+    "json": "parties/juntos-por-el-peru.json",
+    "palette": {
+      "suit": "#CC0000",
+      "suitDark": "#880000",
+      "suitLight": "#DD2222",
+      "tie": "#003366",
+      "belt": "#5a3000",
+      "accent": "#003366"
+    }
+  },
+  {
+    "id": "libertad-popular",
+    "png": "parties/libertad-popular.png",
+    "json": "parties/libertad-popular.json",
+    "palette": {
+      "suit": "#003366",
+      "suitDark": "#001f44",
+      "suitLight": "#1a4d8a",
+      "tie": "#CC0000",
+      "belt": "#8b6914",
+      "accent": "#f0c000"
+    }
+  },
+  {
+    "id": "partido-aprista-peruano",
+    "png": "parties/partido-aprista-peruano.png",
+    "json": "parties/partido-aprista-peruano.json",
+    "palette": {
+      "suit": "#CC0000",
+      "suitDark": "#880000",
+      "suitLight": "#DD2222",
+      "tie": "#ffffff",
+      "belt": "#5a3000",
+      "accent": "#000000"
+    }
+  },
+  {
+    "id": "partido-civico-obras",
+    "png": "parties/partido-civico-obras.png",
+    "json": "parties/partido-civico-obras.json",
+    "palette": {
+      "suit": "#0055A4",
+      "suitDark": "#003370",
+      "suitLight": "#2277cc",
+      "tie": "#f0c000",
+      "belt": "#8b6914",
+      "accent": "#f0c000"
+    }
+  },
+  {
+    "id": "partido-de-los-trabajadores-y-emprendedores",
+    "png": "parties/partido-de-los-trabajadores-y-emprendedores.png",
+    "json": "parties/partido-de-los-trabajadores-y-emprendedores.json",
+    "palette": {
+      "suit": "#CC0000",
+      "suitDark": "#880000",
+      "suitLight": "#ee3333",
+      "tie": "#f0c000",
+      "belt": "#5a3000",
+      "accent": "#f0c000"
+    }
+  },
+  {
+    "id": "partido-del-buen-gobierno",
+    "png": "parties/partido-del-buen-gobierno.png",
+    "json": "parties/partido-del-buen-gobierno.json",
+    "palette": {
+      "suit": "#005500",
+      "suitDark": "#003300",
+      "suitLight": "#1a7a1a",
+      "tie": "#f0c000",
+      "belt": "#5a3000",
+      "accent": "#f0c000"
+    }
+  },
+  {
+    "id": "partido-democrata-unido-peru",
+    "png": "parties/partido-democrata-unido-peru.png",
+    "json": "parties/partido-democrata-unido-peru.json",
+    "palette": {
+      "suit": "#003366",
+      "suitDark": "#001f44",
+      "suitLight": "#1a4d8a",
+      "tie": "#CC0000",
+      "belt": "#8b6914",
+      "accent": "#CC0000"
+    }
+  },
+  {
+    "id": "partido-democrata-verde",
+    "png": "parties/partido-democrata-verde.png",
+    "json": "parties/partido-democrata-verde.json",
+    "palette": {
+      "suit": "#2E7D32",
+      "suitDark": "#1b5e20",
+      "suitLight": "#43a047",
+      "tie": "#f0c000",
+      "belt": "#5a3000",
+      "accent": "#f0c000"
+    }
+  },
+  {
+    "id": "partido-democratico-federal",
+    "png": "parties/partido-democratico-federal.png",
+    "json": "parties/partido-democratico-federal.json",
+    "palette": {
+      "suit": "#1565C0",
+      "suitDark": "#0d3e7a",
+      "suitLight": "#2980d4",
+      "tie": "#CC0000",
+      "belt": "#8b6914",
+      "accent": "#CC0000"
+    }
+  },
+  {
+    "id": "partido-democratico-somos-peru",
+    "png": "parties/partido-democratico-somos-peru.png",
+    "json": "parties/partido-democratico-somos-peru.json",
+    "palette": {
+      "suit": "#009900",
+      "suitDark": "#006600",
+      "suitLight": "#22bb22",
+      "tie": "#CC0000",
+      "belt": "#5a3000",
+      "accent": "#CC0000"
+    }
+  },
+  {
+    "id": "partido-frente-de-la-esperanza-2021",
+    "png": "parties/partido-frente-de-la-esperanza-2021.png",
+    "json": "parties/partido-frente-de-la-esperanza-2021.json",
+    "palette": {
+      "suit": "#1a237e",
+      "suitDark": "#0d1457",
+      "suitLight": "#303f9f",
+      "tie": "#f0c000",
+      "belt": "#8b6914",
+      "accent": "#f0c000"
+    }
+  },
+  {
+    "id": "partido-morado",
+    "png": "parties/partido-morado.png",
+    "json": "parties/partido-morado.json",
+    "palette": {
+      "suit": "#6A1B9A",
+      "suitDark": "#4a0e72",
+      "suitLight": "#8E24AA",
+      "tie": "#f0c000",
+      "belt": "#5a3000",
+      "accent": "#f0c000"
+    }
+  },
+  {
+    "id": "partido-pais-para-todos",
+    "png": "parties/partido-pais-para-todos.png",
+    "json": "parties/partido-pais-para-todos.json",
+    "palette": {
+      "suit": "#E53935",
+      "suitDark": "#b71c1c",
+      "suitLight": "#EF5350",
+      "tie": "#003366",
+      "belt": "#5a3000",
+      "accent": "#003366"
+    }
+  },
+  {
+    "id": "partido-patriotico-del-peru",
+    "png": "parties/partido-patriotico-del-peru.png",
+    "json": "parties/partido-patriotico-del-peru.json",
+    "palette": {
+      "suit": "#CC0000",
+      "suitDark": "#880000",
+      "suitLight": "#DD2222",
+      "tie": "#f0c000",
+      "belt": "#5a3000",
+      "accent": "#f0c000"
+    }
+  },
+  {
+    "id": "partido-politico-cooperacion-popular",
+    "png": "parties/partido-politico-cooperacion-popular.png",
+    "json": "parties/partido-politico-cooperacion-popular.json",
+    "palette": {
+      "suit": "#8B0000",
+      "suitDark": "#5a0000",
+      "suitLight": "#AA1111",
+      "tie": "#f0c000",
+      "belt": "#5a3000",
+      "accent": "#f0c000"
+    }
+  },
+  {
+    "id": "partido-politico-integridad-democratica",
+    "png": "parties/partido-politico-integridad-democratica.png",
+    "json": "parties/partido-politico-integridad-democratica.json",
+    "palette": {
+      "suit": "#1565C0",
+      "suitDark": "#0d3e7a",
+      "suitLight": "#2980d4",
+      "tie": "#f0c000",
+      "belt": "#8b6914",
+      "accent": "#f0c000"
+    }
+  },
+  {
+    "id": "partido-politico-nacional-peru-libre",
+    "png": "parties/partido-politico-nacional-peru-libre.png",
+    "json": "parties/partido-politico-nacional-peru-libre.json",
+    "palette": {
+      "suit": "#CC0000",
+      "suitDark": "#880000",
+      "suitLight": "#EE3333",
+      "tie": "#f0c000",
+      "belt": "#5a3000",
+      "accent": "#f0c000"
+    }
+  },
+  {
+    "id": "partido-politico-peru-accion",
+    "png": "parties/partido-politico-peru-accion.png",
+    "json": "parties/partido-politico-peru-accion.json",
+    "palette": {
+      "suit": "#FF6600",
+      "suitDark": "#cc4400",
+      "suitLight": "#ff8833",
+      "tie": "#003366",
+      "belt": "#8b6914",
+      "accent": "#003366"
+    }
+  },
+  {
+    "id": "partido-politico-peru-primero",
+    "png": "parties/partido-politico-peru-primero.png",
+    "json": "parties/partido-politico-peru-primero.json",
+    "palette": {
+      "suit": "#003366",
+      "suitDark": "#001f44",
+      "suitLight": "#1a4d8a",
+      "tie": "#CC0000",
+      "belt": "#8b6914",
+      "accent": "#CC0000"
+    }
+  },
+  {
+    "id": "partido-politico-prin",
+    "png": "parties/partido-politico-prin.png",
+    "json": "parties/partido-politico-prin.json",
+    "palette": {
+      "suit": "#006400",
+      "suitDark": "#004000",
+      "suitLight": "#1a7a1a",
+      "tie": "#CC0000",
+      "belt": "#5a3000",
+      "accent": "#CC0000"
+    }
+  },
+  {
+    "id": "partido-sicreo",
+    "png": "parties/partido-sicreo.png",
+    "json": "parties/partido-sicreo.json",
+    "palette": {
+      "suit": "#1a237e",
+      "suitDark": "#0d1457",
+      "suitLight": "#303f9f",
+      "tie": "#CC0000",
+      "belt": "#8b6914",
+      "accent": "#CC0000"
+    }
+  },
+  {
+    "id": "peru-moderno",
+    "png": "parties/peru-moderno.png",
+    "json": "parties/peru-moderno.json",
+    "palette": {
+      "suit": "#0077B6",
+      "suitDark": "#004e7a",
+      "suitLight": "#0096d4",
+      "tie": "#f0c000",
+      "belt": "#8b6914",
+      "accent": "#f0c000"
+    }
+  },
+  {
+    "id": "podemos-peru",
+    "png": "parties/podemos-peru.png",
+    "json": "parties/podemos-peru.json",
+    "palette": {
+      "suit": "#E53935",
+      "suitDark": "#b71c1c",
+      "suitLight": "#EF5350",
+      "tie": "#f0c000",
+      "belt": "#5a3000",
+      "accent": "#f0c000"
+    }
+  },
+  {
+    "id": "primero-la-gente",
+    "png": "parties/primero-la-gente.png",
+    "json": "parties/primero-la-gente.json",
+    "palette": {
+      "suit": "#2E7D32",
+      "suitDark": "#1b5e20",
+      "suitLight": "#43a047",
+      "tie": "#CC0000",
+      "belt": "#5a3000",
+      "accent": "#CC0000"
+    }
+  },
+  {
+    "id": "progresemos",
+    "png": "parties/progresemos.png",
+    "json": "parties/progresemos.json",
+    "palette": {
+      "suit": "#E65100",
+      "suitDark": "#BF360C",
+      "suitLight": "#F4511E",
+      "tie": "#003366",
+      "belt": "#8b6914",
+      "accent": "#003366"
+    }
+  },
+  {
+    "id": "renovacion-popular",
+    "png": "parties/renovacion-popular.png",
+    "json": "parties/renovacion-popular.json",
+    "palette": {
+      "suit": "#003366",
+      "suitDark": "#001f44",
+      "suitLight": "#1a4d8a",
+      "tie": "#CC0000",
+      "belt": "#8b6914",
+      "accent": "#CC0000"
+    }
+  },
+  {
+    "id": "salvemos-al-peru",
+    "png": "parties/salvemos-al-peru.png",
+    "json": "parties/salvemos-al-peru.json",
+    "palette": {
+      "suit": "#CC0000",
+      "suitDark": "#880000",
+      "suitLight": "#DD2222",
+      "tie": "#003366",
+      "belt": "#5a3000",
+      "accent": "#003366"
+    }
+  },
+  {
+    "id": "un-camino-diferente",
+    "png": "parties/un-camino-diferente.png",
+    "json": "parties/un-camino-diferente.json",
+    "palette": {
+      "suit": "#00897B",
+      "suitDark": "#00574f",
+      "suitLight": "#26A69A",
+      "tie": "#f0c000",
+      "belt": "#5a3000",
+      "accent": "#f0c000"
+    }
+  },
+  {
+    "id": "unidad-nacional",
+    "png": "parties/unidad-nacional.png",
+    "json": "parties/unidad-nacional.json",
+    "palette": {
+      "suit": "#1565C0",
+      "suitDark": "#0d3e7a",
+      "suitLight": "#2980d4",
+      "tie": "#CC0000",
+      "belt": "#8b6914",
+      "accent": "#CC0000"
+    }
+  }
+]
