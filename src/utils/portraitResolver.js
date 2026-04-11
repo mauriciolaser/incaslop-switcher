@@ -1,19 +1,7 @@
-// Resuelve rutas de retratos de candidatos al asset procesado por Vite.
-// Puede recibir rutas relativas ("images/candidates/..."), rutas con slash inicial,
-// rutas de uploads del backend o URLs absolutas a la API de candidatos.
-
-const candidateAssets = import.meta.glob(
-  '../assets/images/candidates/*.webp',
-  { eager: true, import: 'default' },
-)
-
-// Construye un mapa: "images/candidates/cand_xxx.webp" → URL del asset
-const portraitMap = {}
-for (const [modulePath, url] of Object.entries(candidateAssets)) {
-  // modulePath: "../assets/images/candidates/cand_xxx.webp"
-  const filename = modulePath.split('/').pop()
-  portraitMap[`images/candidates/${filename}`] = url
-}
+// Resuelve retratos de candidatos a una ruta publica estable.
+// La fuente de verdad vive en src/assets/images/candidates, pero durante dev/build
+// esa carpeta se expone como /images/candidates para no depender de assets hasheados
+// ni meter miles de imagenes dentro del bundle JS.
 
 function normalizePortraitKey(portraitPath) {
   if (!portraitPath) return null
@@ -40,5 +28,5 @@ function normalizePortraitKey(portraitPath) {
 export function resolvePortraitUrl(portraitPath) {
   const key = normalizePortraitKey(portraitPath)
   if (!key) return null
-  return portraitMap[key] ?? null
+  return `/${key}`
 }
