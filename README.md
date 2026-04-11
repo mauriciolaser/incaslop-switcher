@@ -1,248 +1,84 @@
-# Mechas IncaSlop - Deploy en AlmaLinux VPS
+# IncaSlop Mechas
 
-Guia practica para publicar esta aplicacion en un VPS con AlmaLinux usando:
-- Frontend React/Vite (archivos estaticos `dist/`)
-- Backend Node/Express (`server/`)
-- Nginx como reverse proxy
-- MariaDB para persistencia
-- systemd para mantener el backend levantado
+Frontend React/Vite para `mechas.incaslop.online` y backend Node/Express para la arena online publicada en `api-mechas.incaslop.online`.
 
-## 1) Requisitos
+## Estado real del proyecto
 
-- VPS con AlmaLinux 9
-- Dominio apuntando al servidor (opcional, pero recomendado)
-- Usuario con permisos `sudo`
-- Puertos 80/443 accesibles
+- La fuente de verdad del frontend vive en la raiz del repo: `index.html`, `src/`, `vite.config.js`.
+- `dist/` es solo un artefacto generado por `npm run build`.
+- El backend vive en `server/`.
+- El despliegue del frontend se hace con GitHub Actions por FTP.
+- El despliegue del backend se documenta aparte para el VPS AlmaLinux.
 
-## 2) Instalar paquetes base
+## Estructura util
 
-```bash
-sudo dnf -y update
-sudo dnf -y install nginx git mariadb-server
-sudo systemctl enable --now nginx
-sudo systemctl enable --now mariadb
+- `index.html`: entrada real del frontend en desarrollo.
+- `src/`: codigo fuente React, utilidades y assets.
+- `src/assets/images/candidates/`: repositorio fuente de retratos de candidatos.
+- `server/`: backend online Node/Express.
+- `.github/workflows/deploy.yml`: build y deploy del frontend.
+- `scripts/deploy.ps1`: helper local para disparar el workflow `Deploy`.
+- `docs/`: documentacion operativa.
+
+## Flujo correcto de frontend
+
+1. Se modifica codigo fuente en `index.html`, `src/` o `vite.config.js`.
+2. `npm run build` genera `dist/`.
+3. El workflow `Deploy` sube `dist/` al hosting.
+
+Regla importante:
+
+- No se versionan cambios manuales en `dist/`.
+- Si algo debe aparecer en `dist/`, la logica debe vivir en el codigo fuente o en el pipeline de build.
+
+## Retratos de candidatos
+
+Los retratos viven en `src/assets/images/candidates/`, pero la URL publica estable del proyecto es:
+
+`/images/candidates/<archivo>.webp`
+
+Eso se resuelve asi:
+
+- en desarrollo, `vite.config.js` expone esa carpeta en `/images/candidates`
+- en build, `vite.config.js` copia la carpeta a `dist/images/candidates`
+- `src/utils/portraitResolver.js` normaliza rutas del backend o de la API a esa URL publica estable
+
+La idea es evitar:
+
+- `404` por rutas antiguas como `/images/candidates/...` que no existian en hosting
+- dependencia de assets hasheados de Vite para miles de imagenes
+- bundles gigantes por meter todos los retratos dentro del JS
+
+## Variables y deploy del frontend
+
+El workflow `Deploy` exige estos secretos:
+
+- `FTP_HOST`
+- `FTP_USERNAME`
+- `FTP_PASSWORD`
+- `FTP_DESTINATION`
+- `VITE_GA_ID`
+- `VITE_ONLINE_API_BASE`
+
+`VITE_ONLINE_API_BASE` debe apuntar a:
+
+`https://api-mechas.incaslop.online/server`
+
+Para lanzar el deploy desde local:
+
+```powershell
+npm run deploy
 ```
 
-Configura seguridad inicial de MariaDB:
+Modo debug:
 
-```bash
-sudo mysql_secure_installation
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/deploy.ps1 -DebugDeploy
 ```
 
-## 3) Instalar Node.js (LTS)
+## Documentacion relacionada
 
-Ejemplo con Node 20:
-
-```bash
-sudo dnf -y module list nodejs
-sudo dnf -y module enable nodejs:20
-sudo dnf -y install nodejs
-node -v
-npm -v
-```
-
-## 4) Crear base de datos
-
-Entra a MariaDB:
-
-```bash
-sudo mariadb
-```
-
-Crea DB y usuario (cambia la clave):
-
-```sql
-CREATE DATABASE mechas_incaslop CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'mechas_user'@'localhost' IDENTIFIED BY 'CAMBIA_ESTA_CLAVE_LARGA';
-GRANT ALL PRIVILEGES ON mechas_incaslop.* TO 'mechas_user'@'localhost';
-FLUSH PRIVILEGES;
-```
-
-## 5) Clonar y compilar la aplicacion
-
-```bash
-sudo mkdir -p /opt/mechas-incaslop
-sudo chown -R $USER:$USER /opt/mechas-incaslop
-cd /opt/mechas-incaslop
-
-git clone <URL_DE_TU_REPO> .
-
-npm ci
-npm --prefix server ci
-npm run build
-```
-
-Opcional para frontend (si quieres apuntar a otro catalogo de candidatos):
-
-```bash
-cat > /opt/mechas-incaslop/.env.production <<'EOF'
-VITE_CANDIDATE_API_BASE=https://api.candidatos.incaslop.online
-EOF
-```
-
-## 6) Configurar variables del backend
-
-Crea `server/.env`:
-
-```bash
-cat > /opt/mechas-incaslop/server/.env <<'EOF'
-PORT=3001
-SESSION_COOKIE_NAME=mechas_incaslop_online
-ALLOW_FILE_FALLBACK=false
-CANDIDATE_API_BASE_URL=https://api.candidatos.incaslop.online
-
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_NAME=mechas_incaslop
-DB_USER=mechas_user
-DB_PASSWORD=CAMBIA_ESTA_CLAVE_LARGA
-EOF
-```
-
-Notas:
-- Este backend lee variables desde entorno del proceso (systemd `EnvironmentFile`).
-- Con `ALLOW_FILE_FALLBACK=false`, si falla DB no cae a JSON local silenciosamente.
-
-## 7) Crear servicio systemd
-
-Crear usuario de sistema:
-
-```bash
-sudo useradd --system --create-home --shell /sbin/nologin mechas-incaslop
-sudo chown -R mechas-incaslop:mechas-incaslop /opt/mechas-incaslop
-```
-
-Crear archivo `/etc/systemd/system/mechas-incaslop-online.service`:
-
-```ini
-[Unit]
-Description=Mechas IncaSlop Online Server
-After=network.target mariadb.service
-
-[Service]
-Type=simple
-User=mechas-incaslop
-WorkingDirectory=/opt/mechas-incaslop/server
-EnvironmentFile=/opt/mechas-incaslop/server/.env
-ExecStart=/usr/bin/node /opt/mechas-incaslop/server/src/app.js
-Restart=always
-RestartSec=2
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Activar servicio:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now mechas-incaslop-online.service
-sudo systemctl status mechas-incaslop-online.service
-```
-
-Ver logs:
-
-```bash
-sudo journalctl -u mechas-incaslop-online.service -f
-```
-
-Healthcheck local:
-
-```bash
-curl -s http://127.0.0.1:3001/health
-```
-
-## 8) Configurar Nginx
-
-Crear `/etc/nginx/conf.d/mechas-incaslop.conf`:
-
-```nginx
-server {
-  listen 80;
-  server_name TU_DOMINIO_O_IP;
-
-  root /opt/mechas-incaslop/dist;
-  index index.html;
-
-  location /api/online/ {
-    proxy_pass http://127.0.0.1:3001/api/online/;
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-  }
-
-  location = /health {
-    proxy_pass http://127.0.0.1:3001/health;
-  }
-
-  location / {
-    try_files $uri $uri/ /index.html;
-  }
-}
-```
-
-Validar y recargar:
-
-```bash
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-## 9) Firewall y SELinux
-
-Si usas `firewalld`:
-
-```bash
-sudo firewall-cmd --permanent --add-service=http
-sudo firewall-cmd --permanent --add-service=https
-sudo firewall-cmd --reload
-```
-
-Si SELinux bloquea proxy de Nginx -> Node:
-
-```bash
-sudo setsebool -P httpd_can_network_connect 1
-```
-
-## 10) HTTPS (recomendado)
-
-Instala TLS con Certbot (Let's Encrypt) para servir frontend y API por HTTPS.
-
-Importante de seguridad:
-- En `server/src/app.js` la cookie esta con `secure: false`.
-- En produccion HTTPS conviene cambiar a `secure: true` y usar `app.set('trust proxy', 1)` al estar detras de Nginx.
-
-## 11) Despliegue de actualizaciones
-
-Cada vez que subas cambios:
-
-```bash
-cd /opt/mechas-incaslop
-git pull
-npm ci
-npm --prefix server ci
-npm run build
-sudo systemctl restart mechas-incaslop-online.service
-sudo systemctl reload nginx
-```
-
-## 12) Troubleshooting rapido
-
-- Backend no levanta:
-  - `sudo journalctl -u mechas-incaslop-online.service -n 200 --no-pager`
-- Error de DB:
-  - revisa `DB_*` en `/opt/mechas-incaslop/server/.env`
-  - prueba acceso: `mariadb -u mechas_user -p mechas_incaslop`
-- Frontend carga pero API falla:
-  - revisa bloque `location /api/online/` en Nginx
-  - prueba `curl http://127.0.0.1:3001/health`
-
-## 13) Notas de arquitectura actual
-
-- El modo online es una arena global en una sola instancia de Node (MVP).
-- No hay login real: se usa cookie HTTP-only para identificar jugador.
-- Persistencia recomendada: MariaDB (no fallback a archivos en produccion).
+- [docs/estructura.md](C:/IncaSlop/incaslop-mechas/docs/estructura.md)
+- [docs/api-candidatos.md](C:/IncaSlop/incaslop-mechas/docs/api-candidatos.md)
+- [docs/backend-stack-vps-almalinux.md](C:/IncaSlop/incaslop-mechas/docs/backend-stack-vps-almalinux.md)
+- [docs/codex-ssh-access.md](C:/IncaSlop/incaslop-mechas/docs/codex-ssh-access.md)
