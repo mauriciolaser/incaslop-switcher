@@ -5,7 +5,7 @@ import {
   isStunned, pickAtaque, determineTurnOrder,
 } from '../utils/battleEngine'
 
-const TURN_DELAY = 1800
+const TURN_DELAY = 2200
 
 export function useBattle() {
   const {

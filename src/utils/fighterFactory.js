@@ -5,8 +5,8 @@ import {
 } from './candidateCatalog'
 import { resolvePortraitUrl } from './portraitResolver'
 
-const BALANCED_ATTACK_RANGE = [15, 25]
-const BALANCED_DEFENSE_RANGE = [4, 10]
+const BALANCED_ATTACK_RANGE = [8, 14]
+const BALANCED_DEFENSE_RANGE = [3, 7]
 const BALANCED_SPEED_RANGE = [1, 10]
 
 function randomInRange(min, max) {
@@ -56,7 +56,7 @@ export function buildCandidateProfile(candidate) {
 }
 
 export function instantiateRosterFighter(personaje, overrides = {}) {
-  const maxHp = overrides.maxHp ?? 100
+  const maxHp = overrides.maxHp ?? 180
   const hp = Math.min(overrides.hp ?? maxHp, maxHp)
 
   return {

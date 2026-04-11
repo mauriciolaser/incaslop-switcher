@@ -7,10 +7,10 @@ import spriteSheetUrl from '../assets/sprites/fighter_base.png?url'
 // ── Constantes del spritesheet ────────────────────────────────────────────────
 const { frameWidth: FW, frameHeight: FH, sheetWidth: SW, sheetHeight: SH, faceRegion: FACE } = spriteMeta
 
-// Escala world-units por pixel. 192px de alto ≈ 2 unidades de altura.
-const PX_SCALE = 2.0 / FH
-const W_UNITS = FW * PX_SCALE   // ancho del quad en world units
-const H_UNITS = FH * PX_SCALE   // alto del quad en world units
+// Escala base world-units por pixel. 192px de alto ≈ 2 unidades de altura.
+const PX_SCALE_BASE = 2.0 / FH
+const W_UNITS_BASE = FW * PX_SCALE_BASE
+const H_UNITS_BASE = FH * PX_SCALE_BASE
 
 // Índices de frame por estado
 const FRAME = { idle_a: 0, idle_b: 1, attack_a: 2, attack_b: 3, hit: 4, death: 5 }
@@ -19,8 +19,8 @@ const FRAME = { idle_a: 0, idle_b: 1, attack_a: 2, attack_b: 3, hit: 4, death: 5
 function frameUV(index) {
   const u0 = (index * FW) / SW
   const u1 = u0 + FW / SW
-  const v0 = 0        // Three.js: v=0 es abajo en UV, pero la textura es top-down.
-  const v1 = 1        // Usamos flipY=false y coordenadas directas.
+  const v0 = 0
+  const v1 = 1
   return { u0, u1, v0, v1 }
 }
 
@@ -33,47 +33,6 @@ function makePixelTexture(src) {
   return src
 }
 
-// ── Recorta la imagen del candidato y la pone sobre el frame base en un canvas ─
-function buildCompositeTexture(baseCtx, portraitImg, frameIndex, flipX) {
-  const canvas = baseCtx.canvas
-  const ctx = canvas.getContext('2d')
-
-  // Limpiar
-  ctx.clearRect(0, 0, canvas.width, canvas.height)
-
-  // Frame del spritesheet base
-  ctx.drawImage(
-    baseCtx.canvas,               // fuente = canvas del spritesheet completo
-    frameIndex * FW, 0, FW, FH,  // recorte del frame
-    0, 0, FW, FH,                 // destino
-  )
-
-  if (portraitImg) {
-    // Recorte de la cara: usamos la parte superior centrada de la foto carnet
-    const srcW = portraitImg.naturalWidth
-    const srcH = portraitImg.naturalHeight
-    const cropW = srcW * 0.80
-    const cropH = srcH * 0.65
-    const cropX = (srcW - cropW) / 2
-
-    ctx.save()
-    // Clip redondeado sobre la faceRegion
-    ctx.beginPath()
-    ctx.roundRect(FACE.x, FACE.y, FACE.w, FACE.h, 4)
-    ctx.clip()
-
-    if (flipX) {
-      // Espejear horizontalmente dentro de la faceRegion
-      ctx.translate(FACE.x + FACE.w, FACE.y)
-      ctx.scale(-1, 1)
-      ctx.drawImage(portraitImg, cropX, 0, cropW, cropH, 0, 0, FACE.w, FACE.h)
-    } else {
-      ctx.drawImage(portraitImg, cropX, 0, cropW, cropH, FACE.x, FACE.y, FACE.w, FACE.h)
-    }
-    ctx.restore()
-  }
-}
-
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function FighterSprite({
   position,
@@ -84,7 +43,9 @@ export default function FighterSprite({
   maxHp = 100,
   isAttacking,
   alive,
-  _forceFrame = undefined,  // dev-only: pin a specific frame name
+  scale = 1.0,          // multiplicador de tamaño (player 1 = 1.7, rival = 1.0)
+  facingCamera = false, // true = de espaldas a la cámara (player 1), false = de frente (rival)
+  _forceFrame = undefined,
 }) {
   const meshRef = useRef()
   const timeRef = useRef(0)
@@ -93,12 +54,16 @@ export default function FighterSprite({
   const prevHpRef = useRef(hp)
   const deathRef = useRef(0)
 
+  // Dimensiones del quad según escala
+  const W_UNITS = W_UNITS_BASE * scale
+  const H_UNITS = H_UNITS_BASE * scale
+
   // Cargar el spritesheet base
   const baseSheet = useLoader(THREE.TextureLoader, spriteSheetUrl)
   useMemo(() => makePixelTexture(baseSheet), [baseSheet])
 
   // Canvas de un solo frame para la textura composite (base + cara)
-  const { frameCanvas, frameCtx, frameTex } = useMemo(() => {
+  const { frameCtx, frameTex } = useMemo(() => {
     const canvas = document.createElement('canvas')
     canvas.width = FW
     canvas.height = FH
@@ -108,8 +73,8 @@ export default function FighterSprite({
     return { frameCanvas: canvas, frameCtx: ctx, frameTex: tex }
   }, [])
 
-  // Canvas auxiliar con el spritesheet base completo para poder recortar frames
-  const { baseCanvas, baseCtx } = useMemo(() => {
+  // Canvas auxiliar con el spritesheet base completo
+  const { baseCtx } = useMemo(() => {
     const canvas = document.createElement('canvas')
     canvas.width = SW
     canvas.height = SH
@@ -117,12 +82,10 @@ export default function FighterSprite({
     return { baseCanvas: canvas, baseCtx: ctx }
   }, [])
 
-  // Estado de la imagen del candidato
   const portraitImgRef = useRef(null)
   const portraitReadyRef = useRef(false)
-  const currentFrameRef = useRef(-1)  // fuerza redibujado en el primer frame
+  const currentFrameRef = useRef(-1)
 
-  // Cargar imagen del candidato cuando cambia la URL
   useEffect(() => {
     if (!portraitUrl) {
       portraitImgRef.current = null
@@ -135,7 +98,7 @@ export default function FighterSprite({
     img.onload = () => {
       portraitImgRef.current = img
       portraitReadyRef.current = true
-      currentFrameRef.current = -1  // fuerza redibujado
+      currentFrameRef.current = -1
     }
     img.onerror = () => {
       portraitImgRef.current = null
@@ -144,16 +107,17 @@ export default function FighterSprite({
     img.src = portraitUrl
   }, [portraitUrl])
 
-  // Cuando el baseSheet carga, dibujarlo en el canvas auxiliar
   useEffect(() => {
     if (!baseSheet.image) return
     baseCtx.drawImage(baseSheet.image, 0, 0)
   }, [baseSheet, baseCtx])
 
-  // Orientación: el sprite mira hacia el oponente
-  const flipX = side === 'right'  // fighter derecho mira a la izquierda
+  // Orientación horizontal del sprite:
+  // - facingCamera (player 1, de espaldas): miramos el sprite tal cual está en el sheet
+  //   pero flipeado para que parezca de espaldas mirando al rival a la derecha.
+  // - !facingCamera (rival, de frente): flipX para que mire hacia la cámara (izquierda).
+  const flipX = !facingCamera  // rival flipea, player 1 no
 
-  // Material del quad — usa la textura canvas
   const material = useMemo(() => new THREE.MeshBasicMaterial({
     map: frameTex,
     transparent: true,
@@ -190,16 +154,23 @@ export default function FighterSprite({
       frameIndex = Math.floor(timeRef.current * 4) % 2 === 0 ? FRAME.idle_a : FRAME.idle_b
     }
 
-    // ── Redibujar canvas solo si cambió el frame o la imagen ─────────────────
+    // ── Redibujar canvas solo si cambió el frame ──────────────────────────────
     if (frameIndex !== currentFrameRef.current) {
       currentFrameRef.current = frameIndex
 
-      // Limpiar frame canvas
       frameCtx.clearRect(0, 0, FW, FH)
 
-      // Dibujar el frame base del spritesheet
       if (baseSheet.image) {
-        frameCtx.drawImage(baseSheet.image, frameIndex * FW, 0, FW, FH, 0, 0, FW, FH)
+        if (flipX) {
+          // Espejear el frame base completo horizontalmente
+          frameCtx.save()
+          frameCtx.translate(FW, 0)
+          frameCtx.scale(-1, 1)
+          frameCtx.drawImage(baseSheet.image, frameIndex * FW, 0, FW, FH, 0, 0, FW, FH)
+          frameCtx.restore()
+        } else {
+          frameCtx.drawImage(baseSheet.image, frameIndex * FW, 0, FW, FH, 0, 0, FW, FH)
+        }
       }
 
       // Compositar cara del candidato encima
@@ -211,30 +182,25 @@ export default function FighterSprite({
         const cropH = srcH * 0.65
         const cropX = (srcW - cropW) / 2
 
+        // Calcular la zona de la cara en el canvas ya flipeado
+        const faceX = flipX ? (FW - FACE.x - FACE.w) : FACE.x
+
         frameCtx.save()
         frameCtx.beginPath()
-        // Clip redondeado para la zona de la cara
         if (frameCtx.roundRect) {
-          frameCtx.roundRect(FACE.x, FACE.y, FACE.w, FACE.h, 4)
+          frameCtx.roundRect(faceX, FACE.y, FACE.w, FACE.h, 4)
         } else {
-          frameCtx.rect(FACE.x, FACE.y, FACE.w, FACE.h)
+          frameCtx.rect(faceX, FACE.y, FACE.w, FACE.h)
         }
         frameCtx.clip()
-
-        if (flipX) {
-          frameCtx.translate(FACE.x + FACE.w, FACE.y)
-          frameCtx.scale(-1, 1)
-          frameCtx.drawImage(img, cropX, 0, cropW, cropH, 0, 0, FACE.w, FACE.h)
-        } else {
-          frameCtx.drawImage(img, cropX, 0, cropW, cropH, FACE.x, FACE.y, FACE.w, FACE.h)
-        }
+        frameCtx.drawImage(img, cropX, 0, cropW, cropH, faceX, FACE.y, FACE.w, FACE.h)
         frameCtx.restore()
       }
 
       frameTex.needsUpdate = true
     }
 
-    // ── Billboard: el quad siempre mira a la cámara (solo eje Y) ─────────────
+    // ── Billboard: el quad siempre mira a la cámara (eje Y) ──────────────────
     const mesh = meshRef.current
     mesh.quaternion.copy(camera.quaternion)
 
@@ -248,8 +214,8 @@ export default function FighterSprite({
     } else {
       deathRef.current = 0
 
-      // Idle bounce
-      oy = Math.sin(timeRef.current * 3) * 0.04
+      // Idle bounce — player 1 rebota un poco más por ser más grande
+      oy = Math.sin(timeRef.current * 3) * 0.04 * scale
 
       // Ataque: lunge hacia el oponente
       if (isAttacking === side) {
@@ -258,7 +224,7 @@ export default function FighterSprite({
           const dx = opponentPosition[0] - position[0]
           const dz = opponentPosition[2] - position[2]
           const len = Math.sqrt(dx * dx + dz * dz)
-          const lunge = Math.sin(shakeRef.current * Math.PI) * 0.6
+          const lunge = Math.sin(shakeRef.current * Math.PI) * 0.5
           ox = (dx / len) * lunge
         }
       } else {
@@ -278,14 +244,17 @@ export default function FighterSprite({
 
     mesh.position.set(
       position[0] + ox,
-      position[1] + H_UNITS / 2 + oy,   // centrar verticalmente sobre el suelo
+      position[1] + H_UNITS / 2 + oy,
       position[2],
     )
+
+    // Escalar el quad según la prop scale
+    mesh.scale.setScalar(scale)
   })
 
   return (
     <mesh ref={meshRef} renderOrder={10} material={material}>
-      <planeGeometry args={[W_UNITS, H_UNITS]} />
+      <planeGeometry args={[W_UNITS_BASE, H_UNITS_BASE]} />
     </mesh>
   )
 }
