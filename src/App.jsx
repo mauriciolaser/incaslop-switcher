@@ -153,13 +153,7 @@ export default function App() {
   const [booting, setBooting] = useState(true)
   const isDev = import.meta.env.DEV
 
-  useEffect(() => {
-    // Show boot screen briefly while the page hydrates
-    const tid = setTimeout(() => setBooting(false), 1200)
-    return () => clearTimeout(tid)
-  }, [])
-
-  if (booting) return <BootScreen />
+  if (booting) return <BootScreen onDone={() => setBooting(false)} />
 
   if (route === 'endless') {
     return <EndlessSession onExit={() => setRoute('home')} />
