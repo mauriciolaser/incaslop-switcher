@@ -16,6 +16,11 @@ const staticImageDirs = [
     sourceDir: path.resolve(process.cwd(), 'src/assets/images/partidos'),
     publicDir: 'images/partidos',
   },
+  {
+    route: '/images/transparent',
+    sourceDir: path.resolve(process.cwd(), 'src/assets/images/transparent'),
+    publicDir: 'images/transparent',
+  },
 ]
 
 function getImageContentType(filePath) {

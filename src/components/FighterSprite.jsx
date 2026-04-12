@@ -182,21 +182,9 @@ export default function FighterSprite({
 
       if (portraitImgRef.current && frameName !== 'death') {
         const img = portraitImgRef.current
-        const cropW = img.naturalWidth * 0.8
-        const cropH = img.naturalHeight * 0.65
-        const cropX = (img.naturalWidth - cropW) / 2
         const faceX = flipX ? (FW - FACE.x - FACE.w) : FACE.x
 
-        frameCtx.save()
-        frameCtx.beginPath()
-        if (frameCtx.roundRect) {
-          frameCtx.roundRect(faceX, FACE.y, FACE.w, FACE.h, 4)
-        } else {
-          frameCtx.rect(faceX, FACE.y, FACE.w, FACE.h)
-        }
-        frameCtx.clip()
-        frameCtx.drawImage(img, cropX, 0, cropW, cropH, faceX, FACE.y, FACE.w, FACE.h)
-        frameCtx.restore()
+        frameCtx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, faceX, FACE.y, FACE.w, FACE.h)
       }
 
       frameTex.needsUpdate = true
