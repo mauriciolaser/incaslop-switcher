@@ -28,6 +28,10 @@ function VisualDropdown({
   placeholder,
   disabled = false,
   kind,
+  searchable = false,
+  searchValue = '',
+  onSearchChange,
+  emptyMessage = 'No hay opciones disponibles.',
 }) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef(null)
@@ -47,6 +51,12 @@ function VisualDropdown({
     }
   }, [])
 
+  const handleTriggerClick = (event) => {
+    if (disabled) return
+    if (searchable && event.target instanceof HTMLInputElement) return
+    setOpen((current) => !current)
+  }
+
   return (
     <div className="setup-field">
       <span>{label}</span>
@@ -54,27 +64,64 @@ function VisualDropdown({
         ref={containerRef}
         className={`visual-dropdown ${disabled ? 'disabled' : ''} ${isOpen ? 'open' : ''}`}
       >
-        <button
-          type="button"
-          className="visual-dropdown-trigger"
-          disabled={disabled}
-          onClick={() => setOpen((current) => !current)}
-        >
-          {selectedOption ? (
+        {searchable ? (
+          <div
+            role="button"
+            tabIndex={disabled ? -1 : 0}
+            className={`visual-dropdown-trigger is-searchable ${disabled ? 'is-disabled' : ''}`}
+            onClick={handleTriggerClick}
+            onKeyDown={(event) => {
+              if (disabled) return
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                setOpen((current) => !current)
+              }
+            }}
+          >
             <div className="visual-dropdown-value">
-              <ImageThumb
-                src={selectedOption.image}
-                alt={selectedOption.label}
-                className={`visual-dropdown-thumb ${kind}`}
-                fallback={selectedOption.fallback}
+              {selectedOption ? (
+                <ImageThumb
+                  src={selectedOption.image}
+                  alt={selectedOption.label}
+                  className={`visual-dropdown-thumb ${kind}`}
+                  fallback={selectedOption.fallback}
+                />
+              ) : null}
+              <input
+                type="text"
+                className="visual-dropdown-search-input"
+                placeholder={placeholder}
+                value={searchValue}
+                disabled={disabled}
+                onFocus={() => setOpen(true)}
+                onChange={(event) => onSearchChange?.(event.target.value)}
               />
-              <span className="visual-dropdown-text">{selectedOption.label}</span>
             </div>
-          ) : (
-            <span className="visual-dropdown-placeholder">{placeholder}</span>
-          )}
-          <span className="visual-dropdown-chevron">{isOpen ? '▲' : '▼'}</span>
-        </button>
+            <span className="visual-dropdown-chevron">{isOpen ? '▲' : '▼'}</span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="visual-dropdown-trigger"
+            disabled={disabled}
+            onClick={() => setOpen((current) => !current)}
+          >
+            {selectedOption ? (
+              <div className="visual-dropdown-value">
+                <ImageThumb
+                  src={selectedOption.image}
+                  alt={selectedOption.label}
+                  className={`visual-dropdown-thumb ${kind}`}
+                  fallback={selectedOption.fallback}
+                />
+                <span className="visual-dropdown-text">{selectedOption.label}</span>
+              </div>
+            ) : (
+              <span className="visual-dropdown-placeholder">{placeholder}</span>
+            )}
+            <span className="visual-dropdown-chevron">{isOpen ? '▲' : '▼'}</span>
+          </button>
+        )}
 
         {isOpen && (
           <div className="visual-dropdown-menu">
@@ -97,7 +144,7 @@ function VisualDropdown({
                 <span className="visual-dropdown-option-text">{option.label}</span>
               </button>
             )) : (
-              <div className="visual-dropdown-empty">No hay opciones disponibles.</div>
+              <div className="visual-dropdown-empty">{emptyMessage}</div>
             )}
           </div>
         )}
@@ -140,6 +187,14 @@ function buildCandidateOption(candidate) {
     image: candidate.portraitUrl,
     fallback: initials || '??',
   }
+}
+
+function normalizeSearchValue(value) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
 }
 
 function RandomCandidateModal({ candidate, onConfirm, onClose }) {
@@ -197,6 +252,7 @@ export default function TournamentSetup() {
   const [party, setParty] = useState('')
   const [region, setRegion] = useState('')
   const [candidateId, setCandidateId] = useState('')
+  const [nameQuery, setNameQuery] = useState('')
   const [randomCandidate, setRandomCandidate] = useState(null)
 
   const parties = useMemo(
@@ -224,10 +280,29 @@ export default function TournamentSetup() {
     [party, region],
   )
 
-  const candidateOptions = useMemo(
-    () => candidates.map(buildCandidateOption),
-    [candidates],
-  )
+  const candidateOptions = useMemo(() => {
+    const normalizedQuery = normalizeSearchValue(nameQuery)
+    const options = candidates.map(buildCandidateOption)
+
+    if (!normalizedQuery) return options
+
+    return options.filter((option) => normalizeSearchValue(option.label).includes(normalizedQuery))
+  }, [candidates, nameQuery])
+
+  const candidateEmptyMessage = useMemo(() => {
+    const hasActiveFilters = Boolean(party || region)
+    const hasTypedQuery = Boolean(normalizeSearchValue(nameQuery))
+
+    if (hasTypedQuery) {
+      return `No hay coincidencias para "${nameQuery.trim()}".`
+    }
+
+    if (hasActiveFilters) {
+      return 'No hay opciones disponibles con los filtros actuales.'
+    }
+
+    return 'No hay opciones disponibles.'
+  }, [nameQuery, party, region])
 
   const selectedCandidate = candidateId ? getCandidateById(candidateId) : null
 
@@ -237,15 +312,28 @@ export default function TournamentSetup() {
     setParty(value)
     setRegion('')
     setCandidateId('')
+    setNameQuery('')
   }
 
   const handleRegionChange = (event) => {
     setRegion(event.target.value)
     setCandidateId('')
+    setNameQuery('')
   }
 
   const handleCandidateChange = (value) => {
     setCandidateId(value)
+    const selected = candidates.find((candidate) => candidate.id === value)
+    if (selected) {
+      setNameQuery(selected.name)
+    }
+  }
+
+  const handleNameQueryChange = (value) => {
+    setNameQuery(value)
+    if (candidateId) {
+      setCandidateId('')
+    }
   }
 
   const handleStartTournament = () => {
@@ -267,8 +355,8 @@ export default function TournamentSetup() {
   return (
     <div className="modal-overlay">
       <div className="tournament-setup">
-        <div className="setup-kicker">Tournament</div>
-        <h1 className="setup-title">Elige Tu Congresista</h1>
+        <div className="setup-kicker">Torneo</div>
+        <h1 className="setup-title">Elige Tu Candidato</h1>
         <p className="setup-subtitle">
           Selecciona partido, region y nombre para entrar al torneo de Mechas.
         </p>
@@ -299,8 +387,11 @@ export default function TournamentSetup() {
             onSelect={handleCandidateChange}
             options={candidateOptions}
             placeholder="Selecciona un congresista"
-            disabled={!party || !region}
             kind="candidate"
+            searchable
+            searchValue={nameQuery}
+            onSearchChange={handleNameQueryChange}
+            emptyMessage={candidateEmptyMessage}
           />
         </div>
 
