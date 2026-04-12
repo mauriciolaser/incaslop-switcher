@@ -431,6 +431,17 @@ export default function BattleScene() {
   const fighter1BattlePortrait = fighter1.transparentUrl ?? fighter1.portraitUrl
   const fighter2BattlePortrait = fighter2.transparentUrl ?? fighter2.portraitUrl
   const showFighters = phase === 'fighting' || phase === 'ko' || phase === 'result'
+
+  // Precarga las imágenes de batalla apenas cambian los fighters, sin esperar
+  // a que showFighters sea true. El browser las cachea y FighterSprite las obtiene
+  // instantáneamente cuando la escena 3D aparece.
+  useEffect(() => {
+    const urls = [fighter1BattlePortrait, fighter2BattlePortrait].filter(Boolean)
+    urls.forEach((url) => {
+      const img = new Image()
+      img.src = url
+    })
+  }, [fighter1BattlePortrait, fighter2BattlePortrait])
   const leftAnimationState = koState?.loserSide === 'left' ? 'ko' : 'idle'
   const rightAnimationState = koState?.loserSide === 'right' ? 'ko' : 'idle'
   const previousLogLengthRef = useRef(battleLog.length)

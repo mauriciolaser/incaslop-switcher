@@ -6,7 +6,7 @@ export default function BattleHUD({ sessionType }) {
   const { round, phase, isOnline, connectionStatus, players = [] } = useGame()
   const { bracket, currentMatch, playerStatus } = useTournament()
 
-  const isTournament = sessionType === 'tournament'
+  const isTournament = sessionType === 'torneo'
   const phaseLabel = phase === 'intro'
     ? 'Presentacion'
     : phase === 'betting'

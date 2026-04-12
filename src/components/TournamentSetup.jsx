@@ -436,7 +436,7 @@ export default function TournamentSetup() {
             ★ Aleatorio
           </button>
           <button className="next-round-btn" disabled={!selectedCandidate} onClick={handleStartTournament}>
-            Iniciar Tournament
+            Iniciar Torneo
           </button>
         </div>
       </div>
