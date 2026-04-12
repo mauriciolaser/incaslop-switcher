@@ -18,7 +18,7 @@ const initialState = {
   stage: 'idle',
   fighters: [],
   bracket: [],
-  tournamentSize: 32,
+  tournamentSize: 16,
   currentGlobalMatchIdx: null,
   currentRound: 0,
   champion: null,
@@ -54,7 +54,7 @@ function tournamentReducer(state, action) {
       }
 
     case 'INIT_TOURNAMENT': {
-      const fighters = createTournamentFighters(action.selectedCandidate, action.size ?? 32)
+      const fighters = createTournamentFighters(action.selectedCandidate, action.size ?? 16)
       const playerFighterIdx = fighters.findIndex((fighter) => fighter.candidateId === String(action.selectedCandidate.id))
       const bracket = generateBracket(fighters)
 
@@ -203,7 +203,7 @@ export function TournamentProvider({ children }) {
     dispatch({ type: 'OPEN_SETUP' })
   }, [])
 
-  const initTournament = useCallback((selectedCandidate, size = 32) => {
+  const initTournament = useCallback((selectedCandidate, size = 16) => {
     dispatch({ type: 'INIT_TOURNAMENT', selectedCandidate, size })
   }, [])
 

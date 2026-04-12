@@ -2003,8 +2003,8 @@
 .bracket-match {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 8px 10px;
+  border-radius: 6px;
+  padding: 5px 6px;
   text-align: left;
   transition: all 0.3s;
 }
@@ -2026,20 +2026,26 @@
 
 .bracket-fighter {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 3px 0;
+  gap: 5px;
+  padding: 3px 4px;
 }
 
 .bracket-fighter-name {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   color: #ccc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .bracket-fighter-stats {
-  font-size: 9px;
+  font-size: 8px;
   color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .bracket-fighter.winner .bracket-fighter-name {
@@ -2633,10 +2639,10 @@
 }
 
 .bracket-shell {
-  width: min(1380px, 96vw);
-  max-height: 92vh;
+  width: min(1200px, 97vw);
+  max-height: 96vh;
   overflow: auto;
-  padding: 26px;
+  padding: 20px 22px;
   border-radius: 24px;
   background: linear-gradient(145deg, #141a2c, #101624);
   border: 1px solid rgba(255, 204, 0, 0.14);
@@ -2660,15 +2666,15 @@
 
 .bracket-mirror-layout {
   display: grid;
-  grid-template-columns: minmax(420px, 1fr) minmax(220px, 0.42fr) minmax(420px, 1fr);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 0.32fr) minmax(0, 1fr);
+  gap: 12px;
   align-items: center;
 }
 
 .bracket-side {
   display: grid;
-  grid-template-columns: repeat(4, minmax(200px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
   align-items: center;
 }
 
@@ -2683,14 +2689,45 @@
   gap: 12px;
 }
 
+/* Fighter row — compact card with portrait */
+.bracket-fighter-portrait-wrap {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.bracket-fighter-portrait {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+}
+
+.bracket-fighter-portrait-placeholder {
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.bracket-fighter-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
 .bracket-fighter.player .bracket-fighter-name {
   color: #7dd3fc;
 }
 
 .bracket-player-star {
   color: #ffcc00;
-  font-size: 10px;
-  margin-right: 3px;
+  font-size: 9px;
+  margin-right: 2px;
   vertical-align: middle;
   text-shadow: 0 0 6px rgba(255, 204, 0, 0.7);
 }
@@ -2823,16 +2860,6 @@
   background: rgba(255, 255, 255, 0.12);
 }
 
-@media (max-width: 1200px) {
-  .bracket-mirror-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .bracket-side {
-    grid-template-columns: repeat(2, minmax(220px, 1fr));
-  }
-}
-
 @media (max-width: 900px) {
   .debug-lab-shell {
     grid-template-columns: 1fr;
@@ -2859,6 +2886,10 @@
     margin-top: 8px;
   }
 
+  .bracket-mirror-layout {
+    grid-template-columns: 1fr;
+  }
+
   .bracket-header {
     flex-direction: column;
   }
@@ -2868,7 +2899,7 @@
   }
 
   .bracket-side {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .health-bars-overlay {

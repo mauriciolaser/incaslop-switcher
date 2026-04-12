@@ -338,7 +338,7 @@ export default function TournamentSetup() {
 
   const handleStartTournament = () => {
     if (!selectedCandidate) return
-    initTournament(selectedCandidate, 32)
+    initTournament(selectedCandidate, 16)
   }
 
   const handleRandom = () => {

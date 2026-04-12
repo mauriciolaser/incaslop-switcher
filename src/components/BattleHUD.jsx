@@ -34,7 +34,7 @@ export default function BattleHUD({ sessionType }) {
       )}
       <div className="hud-item">
         <span className="hud-label">Modo</span>
-        <span className="hud-value phase">{isTournament ? 'Tournament' : 'Endless'}</span>
+        <span className="hud-value phase">{isTournament ? 'Torneo' : 'Endless'}</span>
       </div>
       <div className="hud-item">
         <span className="hud-label">Estado</span>

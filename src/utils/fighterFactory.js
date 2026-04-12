@@ -103,7 +103,7 @@ export function generateRandomRosterFighter(side) {
   return createFighterFromCandidate(candidate, { side })
 }
 
-export function createTournamentRoster(selectedCandidate, count = 32) {
+export function createTournamentRoster(selectedCandidate, count = 16) {
   const pool = getLegislativeCandidatePool()
   const selected = createFighterFromCandidate(selectedCandidate, {
     isPlayer: true,

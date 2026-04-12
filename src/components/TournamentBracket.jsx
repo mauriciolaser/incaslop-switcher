@@ -7,18 +7,41 @@ import {
   isPlayerMatch,
 } from '../utils/tournamentEngine'
 
+function getShortName(name) {
+  if (!name) return '???'
+  const words = name.trim().split(/\s+/)
+  return words.slice(0, 2).join(' ')
+}
+
 function FighterRow({ fighter, isWinner, isEliminated, isPlayer }) {
+  const shortName = fighter ? getShortName(fighter.name) : '???'
+  const tooltipText = fighter
+    ? `${fighter.name}${fighter.party ? ` · ${fighter.party}` : ''}${fighter.region ? ` · ${fighter.region}` : ''}`
+    : null
+
   return (
-    <div className={`bracket-fighter ${isWinner ? 'winner' : ''} ${isEliminated ? 'eliminated' : ''} ${isPlayer ? 'player' : ''}`}>
-      <span className="bracket-fighter-name">
-        {isPlayer && <span className="bracket-player-star">★</span>}
-        {fighter ? fighter.name : '???'}
-      </span>
-      {fighter && (
-        <span className="bracket-fighter-stats">
-          {isPlayer ? 'TU PELEADOR' : `${fighter.party || fighter.region || fighter.type}`}
+    <div
+      className={`bracket-fighter ${isWinner ? 'winner' : ''} ${isEliminated ? 'eliminated' : ''} ${isPlayer ? 'player' : ''}`}
+      title={tooltipText ?? undefined}
+    >
+      <div className="bracket-fighter-portrait-wrap">
+        {fighter?.portraitUrl ? (
+          <img className="bracket-fighter-portrait" src={fighter.portraitUrl} alt={shortName} />
+        ) : (
+          <div className="bracket-fighter-portrait-placeholder" />
+        )}
+      </div>
+      <div className="bracket-fighter-info">
+        <span className="bracket-fighter-name">
+          {isPlayer && <span className="bracket-player-star">★</span>}
+          {shortName}
         </span>
-      )}
+        {fighter && (
+          <span className="bracket-fighter-stats">
+            {fighter.party || fighter.region || fighter.type || ''}
+          </span>
+        )}
+      </div>
     </div>
   )
 }
@@ -115,7 +138,7 @@ export default function TournamentBracket() {
         <div className="bracket-header">
           <div>
             <div className="setup-kicker">Tournament</div>
-            <h2 className="bracket-title">Bracket de 32</h2>
+            <h2 className="bracket-title">Bracket de 16</h2>
             <p className="bracket-round-label">
               {getRoundName(bracket, currentRound)} · Combate {currentMatch.matchIndex + 1}
             </p>

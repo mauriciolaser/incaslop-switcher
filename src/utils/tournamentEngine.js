@@ -2,7 +2,7 @@ import { healSurvivor } from './battleEngine'
 import { createTournamentRoster, prepareFighterForMatch } from './fighterFactory'
 import { simulateFight } from './fightSimulator'
 
-export function createTournamentFighters(selectedCandidate, count = 32) {
+export function createTournamentFighters(selectedCandidate, count = 16) {
   return createTournamentRoster(selectedCandidate, count)
 }
 
@@ -46,7 +46,6 @@ export function getRoundStartIndex(bracket, roundIndex) {
 export function getRoundName(bracket, roundIndex) {
   const matches = getMatchesInRound(bracket, roundIndex)
   const namesByMatches = {
-    16: 'Dieciseisavos de Final',
     8: 'Octavos de Final',
     4: 'Cuartos de Final',
     2: 'Semifinales',
