@@ -24,6 +24,7 @@ function normalizeCandidate(raw = {}) {
   const rawPartyImage = raw.partyImage || partyData?.partyImage || null
   const portraitUrl = resolvePortraitUrl(rawPortrait) ?? rawPortrait
   const partyImage = resolvePartyImageUrl(rawPartyImage) ?? rawPartyImage
+  const transparentUrl = raw.transparentImage ? `/${raw.transparentImage}` : null
   const typeKey = String(raw.typeKey ?? raw.type ?? '').trim().toLowerCase()
 
   if (!id || !name) return null
@@ -38,6 +39,7 @@ function normalizeCandidate(raw = {}) {
     typeKey,
     partyId: raw.partyId ?? null,
     portraitUrl,
+    transparentUrl,
   }
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Environment, ContactShadows, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
+import ringTextureUrl from '../assets/textures/ring.png'
 import FighterSprite from './FighterSprite'
 import { useGame } from '../context/GameContext'
 import { getKoProgress } from '../utils/koTimeline'
@@ -109,7 +110,7 @@ function Crowd() {
 }
 
 function RingBase() {
-  const ringTexture = useTexture('/src/assets/textures/ring.png')
+  const ringTexture = useTexture(ringTextureUrl)
 
   return (
     <group position={[0, -0.5, 0]}>
@@ -229,6 +230,8 @@ function CameraController({ koState }) {
 
 export default function BattleScene() {
   const { fighter1, fighter2, currentTurn, phase, koState, battleLog } = useGame()
+  const fighter1BattlePortrait = fighter1.transparentUrl ?? fighter1.portraitUrl
+  const fighter2BattlePortrait = fighter2.transparentUrl ?? fighter2.portraitUrl
   const showFighters = phase === 'fighting' || phase === 'ko' || phase === 'result'
   const leftAnimationState = koState?.loserSide === 'left' ? 'ko' : 'idle'
   const rightAnimationState = koState?.loserSide === 'right' ? 'ko' : 'idle'
@@ -324,7 +327,7 @@ export default function BattleScene() {
               position={POS_LEFT}
               opponentPosition={POS_RIGHT}
               side="left"
-              portraitUrl={fighter1.portraitUrl}
+              portraitUrl={fighter1BattlePortrait}
               hp={fighter1.hp}
               isAttacking={currentTurn}
               alive={fighter1.alive}
@@ -339,7 +342,7 @@ export default function BattleScene() {
               position={POS_RIGHT}
               opponentPosition={POS_LEFT}
               side="right"
-              portraitUrl={fighter2.portraitUrl}
+              portraitUrl={fighter2BattlePortrait}
               hp={fighter2.hp}
               isAttacking={currentTurn}
               alive={fighter2.alive}
