@@ -328,6 +328,7 @@ export default function BattleScene() {
               opponentPosition={POS_RIGHT}
               side="left"
               portraitUrl={fighter1BattlePortrait}
+              spriteSheetUrl={fighter1.partyId ? `/sprites/parties/${fighter1.partyId}.png` : undefined}
               hp={fighter1.hp}
               isAttacking={currentTurn}
               alive={fighter1.alive}
@@ -343,6 +344,7 @@ export default function BattleScene() {
               opponentPosition={POS_LEFT}
               side="right"
               portraitUrl={fighter2BattlePortrait}
+              spriteSheetUrl={fighter2.partyId ? `/sprites/parties/${fighter2.partyId}.png` : undefined}
               hp={fighter2.hp}
               isAttacking={currentTurn}
               alive={fighter2.alive}

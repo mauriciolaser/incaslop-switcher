@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useLoader } from '@react-three/fiber'
 import * as THREE from 'three'
 import spriteMeta from '../assets/sprites/fighter_base.json'
-import spriteSheetUrl from '../assets/sprites/fighter_base.png?url'
+import baseSheetUrl from '../assets/sprites/fighter_base.png?url'
 import { getKoProgress } from '../utils/koTimeline'
 
 const { frameWidth: FW, frameHeight: FH, faceRegion: FACE } = spriteMeta
@@ -33,6 +33,7 @@ export default function FighterSprite({
   opponentPosition,
   side,
   portraitUrl,
+  spriteSheetUrl,
   hp,
   isAttacking,
   alive,
@@ -53,7 +54,9 @@ export default function FighterSprite({
 
   const W_UNITS = W_UNITS_BASE * scale
   const H_UNITS = H_UNITS_BASE * scale
-  const baseSheet = useLoader(THREE.TextureLoader, spriteSheetUrl)
+  const resolvedSheetUrl = spriteSheetUrl ?? baseSheetUrl
+  console.log(`[FighterSprite][${side}] spriteSheetUrl=${spriteSheetUrl} → resolved=${resolvedSheetUrl}`)
+  const baseSheet = useLoader(THREE.TextureLoader, resolvedSheetUrl)
 
   if (drawResourcesRef.current == null) {
     const frameCanvas = document.createElement('canvas')
@@ -242,10 +245,3 @@ export default function FighterSprite({
       mesh.material.opacity = opacity
     }
   })
-
-  return (
-    <mesh ref={meshRef} renderOrder={10} material={material}>
-      <planeGeometry args={[W_UNITS_BASE, H_UNITS_BASE]} />
-    </mesh>
-  )
-}

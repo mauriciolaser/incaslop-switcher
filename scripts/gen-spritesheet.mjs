@@ -103,8 +103,8 @@ function attack_a(oy = 0) { return `
   <rect x="8" y="${neckTop + 22 + oy}" width="20" height="12" rx="4" fill="${C.suitLight}"/>
   <ellipse cx="14" cy="${neckTop + 44 + oy}" rx="10" ry="10" fill="${C.skin}"/>
   <!-- brazo der extendido (puñetazo) -->
-  <rect x="98" y="${neckTop + 14 + oy}" width="30" height="13" rx="4" fill="${C.suitLight}"/>
-  <ellipse cx="130" cy="${neckTop + 20 + oy}" rx="13" ry="12" fill="${C.skin}"/>
+  <rect x="98" y="${neckTop + 14 + oy}" width="24" height="13" rx="4" fill="${C.suitLight}"/>
+  <ellipse cx="120" cy="${neckTop + 20 + oy}" rx="11" ry="11" fill="${C.skin}"/>
 ` }
 
 function attack_b() { return attack_a(-3) }
