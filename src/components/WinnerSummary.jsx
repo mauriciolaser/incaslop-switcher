@@ -1,10 +1,11 @@
 import PartyLogoBadge from './PartyLogoBadge'
 
 function WinnerPortrait({ winner }) {
-  if (winner?.portraitUrl) {
+  const portrait = winner?.transparentUrl ?? winner?.portraitUrl
+  if (portrait) {
     return (
       <div className="winner-portrait-wrapper">
-        <img className="winner-portrait" src={winner.portraitUrl} alt={winner.name} />
+        <img className="winner-portrait" src={portrait} alt={winner.name} />
         <PartyLogoBadge partyImage={winner.partyImage} party={winner.party} className="portrait-corner-badge" />
       </div>
     )

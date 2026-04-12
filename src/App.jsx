@@ -121,7 +121,7 @@ function TournamentSessionGate({ onExit }) {
           <div className="candidate-loading-panel">
             <div className="candidate-loading-title">Cargando catalogo local de congresistas...</div>
             <div className="candidate-loading-subtitle">
-              Preparando el roster completo para el selector y el bracket de 32.
+              Preparando el roster completo para el selector y el bracket de 16.
             </div>
             <div className="candidate-loading-base">{getCandidateApiBase()}</div>
             <button className="session-exit-btn candidate-loading-back" onClick={onExit}>

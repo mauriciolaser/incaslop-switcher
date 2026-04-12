@@ -5,11 +5,12 @@ import { getMatchesInRound, getRoundName } from '../utils/tournamentEngine'
 import PartyLogoBadge from './PartyLogoBadge'
 
 function IntroCard({ fighter, side }) {
+  const portrait = fighter.transparentUrl ?? fighter.portraitUrl
   return (
     <div className={`intro-fighter-card ${side}`}>
       <div className="intro-fighter-portrait-wrap">
-        {fighter.portraitUrl ? (
-          <img className="intro-fighter-portrait" src={fighter.portraitUrl} alt={fighter.name} />
+        {portrait ? (
+          <img className="intro-fighter-portrait" src={portrait} alt={fighter.name} />
         ) : (
           <div className="intro-fighter-portrait-placeholder">Sin Foto</div>
         )}

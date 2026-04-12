@@ -11,15 +11,23 @@ import {
 import { resolvePortraitUrl } from '../utils/portraitResolver'
 import { resolvePartyImageUrl } from '../utils/partyResolver'
 
+function resolveTransparentUrl(transparentImage) {
+  if (!transparentImage) return null
+  const s = String(transparentImage).trim()
+  if (!s) return null
+  return s.startsWith('/') ? s : `/${s}`
+}
+
 function resolveFighterPortrait(fighter) {
   if (!fighter) return fighter
   const resolved = resolvePortraitUrl(fighter.portraitUrl)
   const resolvedPartyImage = resolvePartyImageUrl(fighter.partyImage)
-  if (!resolved && !resolvedPartyImage) return fighter
+  const resolvedTransparent = resolveTransparentUrl(fighter.transparentUrl ?? fighter.transparentImage ?? null)
   return {
     ...fighter,
     portraitUrl: resolved ?? fighter.portraitUrl,
     partyImage: resolvedPartyImage ?? fighter.partyImage,
+    transparentUrl: resolvedTransparent ?? fighter.transparentUrl ?? null,
   }
 }
 
