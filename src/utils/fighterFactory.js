@@ -122,3 +122,13 @@ export function prepareFighterForMatch(fighter, side = fighter.side) {
     introDialog: pickRandomDialog(fighter.dialogos),
   }
 }
+
+export function prepareBothFightersForMatch(rawFighter1, rawFighter2) {
+  const f1 = prepareFighterForMatch(rawFighter1, 'left')
+  const dialogos2 = (rawFighter2.dialogos ?? []).filter((d) => d !== f1.introDialog)
+  const f2 = {
+    ...prepareFighterForMatch(rawFighter2, 'right'),
+    introDialog: pickRandomDialog(dialogos2.length ? dialogos2 : rawFighter2.dialogos ?? []),
+  }
+  return { fighter1: f1, fighter2: f2 }
+}

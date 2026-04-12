@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useReducer, useCallback } from 'react'
 import { DEFAULT_STAKE, generateFighter, healSurvivor, normalizeStake } from '../utils/battleEngine'
-import { prepareFighterForMatch } from '../utils/fighterFactory'
+import { prepareFighterForMatch, prepareBothFightersForMatch } from '../utils/fighterFactory'
 import { createKoState } from '../utils/koTimeline'
 
 export const GameContext = createContext(null)
@@ -141,11 +141,12 @@ function gameReducer(state, action) {
       return { ...state, stake: action.stake }
 
     case 'SET_FIGHTERS': {
+      const { fighter1: sf1, fighter2: sf2 } = prepareBothFightersForMatch(action.fighter1, action.fighter2)
       return {
         ...state,
         phase: 'intro',
-        fighter1: prepareFighterForMatch(action.fighter1, 'left'),
-        fighter2: prepareFighterForMatch(action.fighter2, 'right'),
+        fighter1: sf1,
+        fighter2: sf2,
         bet: null,
         battleLog: [],
         currentTurn: null,
@@ -158,13 +159,15 @@ function gameReducer(state, action) {
       }
     }
 
-    case 'RESET_GAME':
+    case 'RESET_GAME': {
+      const { fighter1: rf1, fighter2: rf2 } = prepareBothFightersForMatch(generateFighter('left'), generateFighter('right'))
       return {
         ...createInitialState(),
-        fighter1: prepareFighterForMatch(generateFighter('left'), 'left'),
-        fighter2: prepareFighterForMatch(generateFighter('right'), 'right'),
+        fighter1: rf1,
+        fighter2: rf2,
         koState: null,
       }
+    }
 
     case 'NEXT_ROUND': {
       if (state.gameOver) return state
@@ -172,11 +175,14 @@ function gameReducer(state, action) {
       const healedSurvivor = healSurvivor(state[survivorKey])
       const newOpponent = generateFighter(state.winner === 'left' ? 'right' : 'left')
 
+      const rawNr1 = state.winner === 'left' ? healedSurvivor : newOpponent
+      const rawNr2 = state.winner === 'right' ? healedSurvivor : newOpponent
+      const { fighter1: nrf1, fighter2: nrf2 } = prepareBothFightersForMatch(rawNr1, rawNr2)
       return {
         ...state,
         phase: 'intro',
-        fighter1: prepareFighterForMatch(state.winner === 'left' ? healedSurvivor : newOpponent, 'left'),
-        fighter2: prepareFighterForMatch(state.winner === 'right' ? healedSurvivor : newOpponent, 'right'),
+        fighter1: nrf1,
+        fighter2: nrf2,
         round: state.round + 1,
         stake: normalizeStake(state.stake, state.coins),
         bet: null,

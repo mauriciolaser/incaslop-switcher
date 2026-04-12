@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Environment, ContactShadows } from '@react-three/drei'
+import { Environment, ContactShadows, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import FighterSprite from './FighterSprite'
 import { useGame } from '../context/GameContext'
@@ -13,12 +13,109 @@ const POS_RIGHT = [1.8, -0.2, -2.5]
 const CAM_POS = new THREE.Vector3(-0.8, 2.2, 5.5)
 const CAM_LOOKAT = new THREE.Vector3(1.0, 0.8, -2.0)
 
+// RingBase world-space surface:
+//   RingBase group Y = -0.5
+//   top box local position [0, 0.15, -0.5], height 0.3
+//   → surface top world Y = -0.5 + 0.15 + 0.15 = -0.20
+//   → X edges: ±5  → [-5, +5]
+//   → Z edges: (-0.5 + -0.5) ± 5 = -1.0 ± 5 → [-6, +4]
+const PY  = -0.20   // platform surface world Y
+const PXL = -5.0    // platform left edge X
+const PXR =  5.0    // platform right edge X
+const PZB = -6.0    // platform back edge Z
+const PZF =  4.0    // platform front edge Z (closest to camera — no ropes)
+
+
+// Minimalist crowd spectator: a small box body + smaller box head, animated
+function SpectatorFigure({ position, color, phaseOffset }) {
+  const groupRef = useRef(null)
+  useFrame(({ clock }) => {
+    if (!groupRef.current) return
+    const t = clock.getElapsedTime()
+    const bounce = Math.abs(Math.sin((t + phaseOffset) * 3.2)) * 0.18
+    groupRef.current.position.y = position[1] + bounce
+  })
+  return (
+    <group ref={groupRef} position={position}>
+      {/* Body */}
+      <mesh position={[0, 0.18, 0]}>
+        <boxGeometry args={[0.18, 0.28, 0.1]} />
+        <meshStandardMaterial color={color} roughness={0.8} />
+      </mesh>
+      {/* Head */}
+      <mesh position={[0, 0.42, 0]}>
+        <boxGeometry args={[0.14, 0.14, 0.1]} />
+        <meshStandardMaterial color="#e8c89a" roughness={0.9} />
+      </mesh>
+    </group>
+  )
+}
+
+const CROWD_COLORS = ['#cc3322', '#2255bb', '#33aa55', '#aa8800', '#8833aa', '#dd6600', '#1199aa']
+
+function Crowd() {
+  const xL = PXL
+  const xR = PXR
+  const zB = PZB
+  const zF = PZF
+
+  const figures = []
+  const rows = 3
+  const gap = 0.7
+  const spacing = 0.55
+
+  // Back rows (z < zB)
+  for (let row = 0; row < rows; row++) {
+    const z = zB - gap - row * spacing
+    const count = 18
+    for (let i = 0; i < count; i++) {
+      const x = xL + (i / (count - 1)) * (xR - xL) + (Math.random() - 0.5) * 0.25
+      figures.push({ x, y: row * 0.18, z, phase: Math.random() * Math.PI * 2 })
+    }
+  }
+
+  // Left rows (x < xL)
+  for (let row = 0; row < rows; row++) {
+    const x = xL - gap - row * spacing
+    const count = 12
+    for (let i = 0; i < count; i++) {
+      const z = zB + (i / (count - 1)) * (zF - zB) + (Math.random() - 0.5) * 0.25
+      figures.push({ x, y: row * 0.18, z, phase: Math.random() * Math.PI * 2 })
+    }
+  }
+
+  // Right rows (x > xR)
+  for (let row = 0; row < rows; row++) {
+    const x = xR + gap + row * spacing
+    const count = 12
+    for (let i = 0; i < count; i++) {
+      const z = zB + (i / (count - 1)) * (zF - zB) + (Math.random() - 0.5) * 0.25
+      figures.push({ x, y: row * 0.18, z, phase: Math.random() * Math.PI * 2 })
+    }
+  }
+
+  return (
+    <group position={[0, PY, 0]}>
+      {figures.map((f, i) => (
+        <SpectatorFigure
+          key={i}
+          position={[f.x, f.y, f.z]}
+          color={CROWD_COLORS[i % CROWD_COLORS.length]}
+          phaseOffset={f.phase}
+        />
+      ))}
+    </group>
+  )
+}
+
 function RingBase() {
+  const ringTexture = useTexture('/src/assets/textures/ring.png')
+
   return (
     <group position={[0, -0.5, 0]}>
       <mesh position={[0, 0.15, -0.5]} receiveShadow castShadow>
         <boxGeometry args={[10, 0.3, 10]} />
-        <meshStandardMaterial color="#1a3a5c" roughness={0.4} metalness={0.1} />
+        <meshStandardMaterial map={ringTexture} roughness={0.4} metalness={0.1} />
       </mesh>
       <mesh position={[0, 0.01, -0.5]} receiveShadow castShadow>
         <boxGeometry args={[10.4, 0.3, 10.4]} />
@@ -217,6 +314,7 @@ export default function BattleScene() {
         <color attach="background" args={['#050508']} />
         <Lights koState={phase === 'ko' ? koState : null} />
         <RingBase />
+        <Crowd />
         <CameraController koState={phase === 'ko' ? koState : null} />
 
         {showFighters && (

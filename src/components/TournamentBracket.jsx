@@ -10,7 +10,10 @@ import {
 function FighterRow({ fighter, isWinner, isEliminated, isPlayer }) {
   return (
     <div className={`bracket-fighter ${isWinner ? 'winner' : ''} ${isEliminated ? 'eliminated' : ''} ${isPlayer ? 'player' : ''}`}>
-      <span className="bracket-fighter-name">{fighter ? fighter.name : '???'}</span>
+      <span className="bracket-fighter-name">
+        {isPlayer && <span className="bracket-player-star">★</span>}
+        {fighter ? fighter.name : '???'}
+      </span>
       {fighter && (
         <span className="bracket-fighter-stats">
           {isPlayer ? 'TU PELEADOR' : `${fighter.party || fighter.region || fighter.type}`}

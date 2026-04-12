@@ -6,6 +6,8 @@ import {
   getCandidateParties,
   getCandidateRegionsByParty,
   getCandidatesByFilters,
+  getLegislativeCandidatePool,
+  pickRandomCandidate,
 } from '../utils/candidateCatalog'
 import { resolvePartyImageUrl } from '../utils/partyResolver'
 import PartyLogoBadge from './PartyLogoBadge'
@@ -140,11 +142,62 @@ function buildCandidateOption(candidate) {
   }
 }
 
+function RandomCandidateModal({ candidate, onConfirm, onClose }) {
+  const [phase, setPhase] = useState('loading')
+
+  useEffect(() => {
+    const timer = setTimeout(() => setPhase('reveal'), 1800)
+    return () => clearTimeout(timer)
+  }, [])
+
+  return (
+    <div className="modal-overlay random-modal-overlay" onClick={phase === 'reveal' ? onClose : undefined}>
+      <div className="random-candidate-modal" onClick={(e) => e.stopPropagation()}>
+        {phase === 'loading' ? (
+          <div className="random-loading">
+            <div className="random-spinner" />
+            <p className="random-loading-text">CARGANDO CANDIDATO...</p>
+          </div>
+        ) : (
+          <div className="random-reveal">
+            <div className="random-reveal-kicker">Tu Candidato Aleatorio</div>
+            <div className="random-reveal-portrait-outer">
+              <div className="random-reveal-portrait-wrap">
+                {candidate.portraitUrl ? (
+                  <img className="random-reveal-portrait" src={candidate.portraitUrl} alt={candidate.name} />
+                ) : (
+                  <div className="random-reveal-placeholder">Sin Foto</div>
+                )}
+              </div>
+              <PartyLogoBadge
+                partyImage={candidate.partyImage}
+                party={candidate.party}
+                className="portrait-corner-badge"
+              />
+            </div>
+            <h2 className="random-reveal-name">{candidate.name}</h2>
+            <p className="random-reveal-meta">{candidate.type} · {candidate.region}</p>
+            <div className="random-reveal-stats">
+              <div className="random-stat"><span>ATK</span><strong>8–14</strong></div>
+              <div className="random-stat"><span>DEF</span><strong>3–7</strong></div>
+              <div className="random-stat"><span>VEL</span><strong>1–10</strong></div>
+            </div>
+            <button className="next-round-btn random-confirm-btn" onClick={onConfirm}>
+              Continuar
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function TournamentSetup() {
   const { stage, initTournament } = useTournament()
   const [party, setParty] = useState('')
   const [region, setRegion] = useState('')
   const [candidateId, setCandidateId] = useState('')
+  const [randomCandidate, setRandomCandidate] = useState(null)
 
   const parties = useMemo(
     () => getCandidateParties({ legislativeOnly: true }),
@@ -198,6 +251,17 @@ export default function TournamentSetup() {
   const handleStartTournament = () => {
     if (!selectedCandidate) return
     initTournament(selectedCandidate, 32)
+  }
+
+  const handleRandom = () => {
+    const pool = getLegislativeCandidatePool()
+    const picked = pickRandomCandidate({ pool })
+    setRandomCandidate(picked)
+  }
+
+  const handleConfirmRandom = () => {
+    if (!randomCandidate) return
+    initTournament(randomCandidate, 32)
   }
 
   return (
@@ -276,10 +340,23 @@ export default function TournamentSetup() {
           )}
         </div>
 
-        <button className="next-round-btn" disabled={!selectedCandidate} onClick={handleStartTournament}>
-          Iniciar Tournament
-        </button>
+        <div className="setup-actions">
+          <button className="random-btn" onClick={handleRandom}>
+            ★ Aleatorio
+          </button>
+          <button className="next-round-btn" disabled={!selectedCandidate} onClick={handleStartTournament}>
+            Iniciar Tournament
+          </button>
+        </div>
       </div>
+
+      {randomCandidate && (
+        <RandomCandidateModal
+          candidate={randomCandidate}
+          onConfirm={handleConfirmRandom}
+          onClose={() => setRandomCandidate(null)}
+        />
+      )}
     </div>
   )
 }
