@@ -18,6 +18,7 @@ import TournamentResult from './components/TournamentResult'
 import TournamentRoundSummary from './components/TournamentRoundSummary'
 import TournamentSetup from './components/TournamentSetup'
 import SpriteDebugLab from './components/SpriteDebugLab'
+import BootScreen from './components/BootScreen'
 import { ensureCandidatePool, getCandidateApiBase } from './utils/candidateCatalog'
 import './App.css'
 
@@ -149,7 +150,16 @@ function EndlessSession({ onExit }) {
 
 export default function App() {
   const [route, setRoute] = useState('home')
+  const [booting, setBooting] = useState(true)
   const isDev = import.meta.env.DEV
+
+  useEffect(() => {
+    // Show boot screen briefly while the page hydrates
+    const tid = setTimeout(() => setBooting(false), 1200)
+    return () => clearTimeout(tid)
+  }, [])
+
+  if (booting) return <BootScreen />
 
   if (route === 'endless') {
     return <EndlessSession onExit={() => setRoute('home')} />

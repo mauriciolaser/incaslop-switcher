@@ -661,7 +661,7 @@
 }
 
 .health-bar-container.right .fighter-role-line {
-  margin-left: auto;
+  margin-left: 0;
 }
 
 .health-bar-container.right .health-party-badge {
@@ -2128,6 +2128,56 @@
   }
 }
 
+/* ── Boot Screen ─────────────────────────────────────────── */
+.boot-screen {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #05070f;
+}
+
+.boot-sprite {
+  width: clamp(160px, 22vw, 320px);
+  height: auto;
+  will-change: transform;
+}
+
+/* ── Live Badge ───────────────────────────────────────────── */
+.mode-card-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 50, 50, 0.18);
+  border: 1px solid rgba(255, 80, 80, 0.4);
+  border-radius: 4px;
+  padding: 1px 7px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #ff6060;
+  text-transform: uppercase;
+  vertical-align: middle;
+  margin-left: 8px;
+  position: relative;
+}
+
+.mode-card-live-badge::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff4040;
+  animation: live-blink 1.2s ease-in-out infinite;
+}
+
+@keyframes live-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
 .home-shell {
   width: 100vw;
   height: 100vh;
@@ -2152,11 +2202,12 @@
 }
 
 .home-title {
-  font-size: 52px;
-  font-weight: 900;
-  letter-spacing: 2px;
-  color: #ffcc00;
-  margin-bottom: 10px;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #8c95ac;
+  margin-bottom: 18px;
+  text-transform: uppercase;
 }
 
 .home-subtitle {
@@ -2188,6 +2239,15 @@
   text-transform: uppercase;
   color: #8c95ac;
   margin-bottom: 10px;
+}
+
+.home-kicker {
+  font-size: 52px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #ffcc00;
+  margin-bottom: 6px;
+  text-transform: none;
 }
 
 .setup-title {

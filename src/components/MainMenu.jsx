@@ -2,15 +2,15 @@ export default function MainMenu({ onSelect, isDev = false }) {
   return (
     <div className="home-shell">
       <div className="home-panel">
-        <div className="setup-kicker">Mechas IncaSlop</div>
+        <div className="home-kicker">Mechas IncaSlop</div>
         <h1 className="home-title">Selecciona el Modo</h1>
-        <p className="home-subtitle">
-          Endless es la arena online permanente. Tournament te deja elegir un congresista y llevarlo por una llave de 32.
-        </p>
 
         <div className="home-grid">
           <button className="mode-card online" onClick={() => onSelect('endless')}>
-            <span className="mode-card-title">ENDLESS</span>
+            <span className="mode-card-title">
+              ENDLESS
+              <span className="mode-card-live-badge">EN VIVO</span>
+            </span>
             <span className="mode-card-desc">
               Apuesta en la arena permanente, mira a los jugadores conectados y sobrevive todo lo posible.
             </span>
