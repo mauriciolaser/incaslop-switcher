@@ -270,7 +270,7 @@ export default function TournamentSetup() {
         <div className="setup-kicker">Tournament</div>
         <h1 className="setup-title">Elige Tu Congresista</h1>
         <p className="setup-subtitle">
-          Selecciona partido, region y nombre para entrar a un bracket de 32 peleadores.
+          Selecciona partido, region y nombre para entrar al torneo de Mechas.
         </p>
 
         <div className="setup-form">
@@ -286,7 +286,7 @@ export default function TournamentSetup() {
           <label className="setup-field">
             <span>Region</span>
             <select value={region} onChange={handleRegionChange} disabled={!party}>
-              <option value="">Selecciona una region</option>
+              <option value="">Selecciona una región</option>
               {regions.map((option) => (
                 <option key={option} value={option}>{option}</option>
               ))}
@@ -335,7 +335,7 @@ export default function TournamentSetup() {
             </>
           ) : (
             <div className="setup-empty">
-              Elige un congresista para preparar el bracket y generar a los 31 rivales.
+              Elige tu candidato para entrar al torneo de Mechas.
             </div>
           )}
         </div>

@@ -578,7 +578,7 @@
 /* === Health Bars === */
 .health-bars-overlay {
   position: absolute;
-  top: 70px;
+  top: 108px;
   left: 0;
   right: 0;
   display: flex;
@@ -2474,13 +2474,37 @@
   object-fit: cover;
 }
 
-.setup-preview-placeholder,
-.setup-empty {
+.setup-preview-placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
   height: 100%;
   color: #9aa5c2;
+}
+
+.setup-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 180px;
+  color: #7a8aaa;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  text-align: center;
+  border: 1.5px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 32px 24px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.setup-empty::before {
+  content: '★';
+  font-size: 32px;
+  opacity: 0.25;
+  line-height: 1;
 }
 
 .setup-preview-body h2 {

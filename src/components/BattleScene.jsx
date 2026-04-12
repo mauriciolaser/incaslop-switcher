@@ -228,6 +228,74 @@ function CameraController({ koState }) {
   return null
 }
 
+// ── Whimsical Stars (ThreeJS, shown on result phase) ─────────────────────────
+const STAR_COUNT = 120
+const STAR_COLORS = [0xffd700, 0xffffff, 0xff88cc, 0x88ccff, 0xffaa44, 0xaaffcc]
+
+function buildStarData() {
+  return Array.from({ length: STAR_COUNT }, () => ({
+    x: (Math.random() - 0.5) * 22,
+    y: 4 + Math.random() * 8,
+    z: (Math.random() - 0.5) * 12,
+    vy: -(0.015 + Math.random() * 0.025),
+    spin: Math.random() * Math.PI * 2,
+    spinV: (Math.random() - 0.5) * 0.12,
+    orbitR: 0.4 + Math.random() * 3.5,
+    orbitSpeed: (Math.random() - 0.5) * 1.2,
+    orbitPhase: Math.random() * Math.PI * 2,
+    scale: 0.04 + Math.random() * 0.12,
+    colorIdx: Math.floor(Math.random() * STAR_COLORS.length),
+  }))
+}
+
+function WhimsicalStars({ active }) {
+  const groupRef = useRef(null)
+  const starsRef = useRef(buildStarData())
+
+  useFrame((_, delta) => {
+    if (!groupRef.current || !active) return
+    const children = groupRef.current.children
+    starsRef.current.forEach((s, i) => {
+      s.y += s.vy
+      s.spin += s.spinV
+      s.orbitPhase += s.orbitSpeed * delta
+      if (s.y < -3) {
+        s.y = 6 + Math.random() * 4
+        s.x = (Math.random() - 0.5) * 22
+        s.z = (Math.random() - 0.5) * 12
+      }
+      const mesh = children[i]
+      if (!mesh) return
+      mesh.position.set(
+        s.x + Math.cos(s.orbitPhase) * s.orbitR * 0.4,
+        s.y,
+        s.z + Math.sin(s.orbitPhase) * s.orbitR * 0.3,
+      )
+      mesh.rotation.z = s.spin
+      mesh.rotation.y = s.orbitPhase * 0.5
+    })
+  })
+
+  if (!active) return null
+
+  return (
+    <group ref={groupRef}>
+      {starsRef.current.map((s, i) => (
+        <mesh key={i} position={[s.x, s.y, s.z]} scale={s.scale}>
+          <octahedronGeometry args={[1, 0]} />
+          <meshStandardMaterial
+            color={STAR_COLORS[s.colorIdx]}
+            emissive={STAR_COLORS[s.colorIdx]}
+            emissiveIntensity={1.6}
+            roughness={0.1}
+            metalness={0.7}
+          />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
 // ── Confetti ──────────────────────────────────────────────────────────────────
 const CONFETTI_COLORS = ['#ffcc00', '#ff4422', '#44aaff', '#44ee66', '#ff88cc', '#ffffff', '#ff9900']
 const CONFETTI_COUNT = 110
@@ -452,6 +520,7 @@ export default function BattleScene() {
         <RingBase />
         <Crowd />
         <CameraController koState={phase === 'ko' ? koState : null} />
+        <WhimsicalStars active={phase === 'result'} />
 
         {showFighters && (
           <>
