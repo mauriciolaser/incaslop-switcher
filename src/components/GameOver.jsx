@@ -54,7 +54,7 @@ export default function GameOver({ onExitHome }) {
         <WinnerSummary winner={winner} label="GANA!" />
 
         <div className="winner-hp">
-          HP restante: {winner.hp} / {winner.maxHp}
+          Vida restante: {winner.hp} / {winner.maxHp}
         </div>
 
         {lastResult.betResult === 'win' && (

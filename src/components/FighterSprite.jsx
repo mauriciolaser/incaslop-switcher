@@ -55,7 +55,6 @@ export default function FighterSprite({
   const W_UNITS = W_UNITS_BASE * scale
   const H_UNITS = H_UNITS_BASE * scale
   const resolvedSheetUrl = spriteSheetUrl ?? baseSheetUrl
-  console.log(`[FighterSprite][${side}] spriteSheetUrl=${spriteSheetUrl} → resolved=${resolvedSheetUrl}`)
   const baseSheet = useLoader(THREE.TextureLoader, resolvedSheetUrl)
 
   if (drawResourcesRef.current == null) {
@@ -245,3 +244,10 @@ export default function FighterSprite({
       mesh.material.opacity = opacity
     }
   })
+
+  return (
+    <mesh ref={meshRef} renderOrder={10} material={material}>
+      <planeGeometry args={[W_UNITS_BASE, H_UNITS_BASE]} />
+    </mesh>
+  )
+}

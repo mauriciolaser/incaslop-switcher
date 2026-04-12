@@ -61,7 +61,7 @@ function Bar({ fighter, side }) {
         />
       </div>
       <div className="health-bar-text">
-        {fighter.hp} / {fighter.maxHp} HP
+        {fighter.hp} / {fighter.maxHp} VIDA
       </div>
     </div>
   )

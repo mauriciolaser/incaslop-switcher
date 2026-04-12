@@ -27,6 +27,7 @@ function normalizeCandidate(raw = {}) {
   const party = String(raw.party ?? '').trim()
   // portraitImage es el campo autoritativo en candidates.json; portraitUrl/imageUrl como fallback
   const portraitUrl = raw.portraitImage || raw.portraitUrl || raw.imageUrl || null
+  const transparentUrl = raw.transparentImage ? `/${raw.transparentImage}` : null
   const partyData = getPartyByName(party)
   const partyImage = raw.partyImage || partyData?.partyImage || null
   const typeKey = String(raw.typeKey ?? raw.type ?? '').trim().toLowerCase()
@@ -37,12 +38,14 @@ function normalizeCandidate(raw = {}) {
     id,
     name,
     portraitUrl,
+    transparentUrl,
     party,
     partyImage,
     region: raw.region || '',
     type: raw.type || '',
     typeKey,
     partyId: raw.partyId ?? null,
+    partyLabel: raw.partyLabel ?? null,
   }
 }
 

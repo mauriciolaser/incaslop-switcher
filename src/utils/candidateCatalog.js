@@ -29,6 +29,13 @@ function normalizeCandidate(raw = {}) {
 
   if (!id || !name) return null
 
+  const partyId = raw.partyId
+    ?? (rawPartyImage
+      ? String(rawPartyImage).split('/').pop().replace(/\.[^.]+$/, '')
+      : null)
+
+  const partyLabel = raw.partyLabel ?? null
+
   return {
     id,
     name,
@@ -37,7 +44,8 @@ function normalizeCandidate(raw = {}) {
     region: String(raw.region ?? '').trim(),
     type: String(raw.type ?? '').trim(),
     typeKey,
-    partyId: raw.partyId ?? null,
+    partyId,
+    partyLabel,
     portraitUrl,
     transparentUrl,
   }

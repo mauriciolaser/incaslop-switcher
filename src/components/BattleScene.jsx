@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Environment, ContactShadows, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
@@ -228,6 +228,136 @@ function CameraController({ koState }) {
   return null
 }
 
+// ── Confetti ──────────────────────────────────────────────────────────────────
+const CONFETTI_COLORS = ['#ffcc00', '#ff4422', '#44aaff', '#44ee66', '#ff88cc', '#ffffff', '#ff9900']
+const CONFETTI_COUNT = 110
+
+function useConfetti(active) {
+  const canvasRef = useRef(null)
+  const particlesRef = useRef([])
+  const rafRef = useRef(null)
+
+  const spawn = useCallback(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const w = canvas.width
+    particlesRef.current = Array.from({ length: CONFETTI_COUNT }, () => ({
+      x: Math.random() * w,
+      y: -10 - Math.random() * 60,
+      vx: (Math.random() - 0.5) * 2.2,
+      vy: 1.8 + Math.random() * 2.8,
+      rot: Math.random() * Math.PI * 2,
+      rotV: (Math.random() - 0.5) * 0.18,
+      w: 7 + Math.random() * 8,
+      h: 4 + Math.random() * 5,
+      color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+      opacity: 0.85 + Math.random() * 0.15,
+    }))
+  }, [])
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const resize = () => {
+      canvas.width = canvas.offsetWidth
+      canvas.height = canvas.offsetHeight
+    }
+    resize()
+    window.addEventListener('resize', resize)
+    return () => window.removeEventListener('resize', resize)
+  }, [])
+
+  useEffect(() => {
+    if (!active) {
+      cancelAnimationFrame(rafRef.current)
+      const canvas = canvasRef.current
+      if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height)
+      particlesRef.current = []
+      return
+    }
+
+    spawn()
+
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext('2d')
+
+    const tick = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      particlesRef.current = particlesRef.current.filter(p => p.y < canvas.height + 20)
+      for (const p of particlesRef.current) {
+        p.x += p.vx
+        p.y += p.vy
+        p.rot += p.rotV
+        p.vy += 0.04
+        ctx.save()
+        ctx.globalAlpha = p.opacity
+        ctx.translate(p.x, p.y)
+        ctx.rotate(p.rot)
+        ctx.fillStyle = p.color
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h)
+        ctx.restore()
+      }
+      rafRef.current = requestAnimationFrame(tick)
+    }
+    rafRef.current = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [active, spawn])
+
+  return canvasRef
+}
+
+// ── Camera flashes ─────────────────────────────────────────────────────────────
+const FLASH_DURATION_MS = 2200   // duración total del efecto
+const FLASH_BURST_INTERVAL = 90  // ms entre ráfagas
+const FLASH_PER_BURST = 4        // flashes simultáneos por ráfaga
+const FLASH_VISIBLE_MS = 160     // cuánto tiempo es visible cada flash
+
+function useCameraFlashes(active) {
+  const [flashes, setFlashes] = useState([])
+  const timersRef = useRef([])
+  const idRef = useRef(0)
+
+  useEffect(() => {
+    if (!active) {
+      timersRef.current.forEach(clearTimeout)
+      timersRef.current = []
+      setFlashes([])
+      return
+    }
+
+    const timers = []
+    const bursts = Math.floor(FLASH_DURATION_MS / FLASH_BURST_INTERVAL)
+
+    for (let b = 0; b < bursts; b++) {
+      const burstDelay = b * FLASH_BURST_INTERVAL
+      const t = setTimeout(() => {
+        const batch = Array.from({ length: FLASH_PER_BURST }, () => {
+          const id = ++idRef.current
+          return {
+            id,
+            x: 3 + Math.random() * 94,   // todo el ancho
+            y: 5 + Math.random() * 88,    // todo el alto (fondo completo)
+            size: 6 + Math.random() * 10,
+          }
+        })
+        setFlashes(prev => [...prev, ...batch])
+        const cleanup = setTimeout(() => {
+          const ids = new Set(batch.map(f => f.id))
+          setFlashes(prev => prev.filter(f => !ids.has(f.id)))
+        }, FLASH_VISIBLE_MS)
+        timers.push(cleanup)
+      }, burstDelay)
+      timers.push(t)
+    }
+
+    timersRef.current = timers
+    return () => timers.forEach(clearTimeout)
+  }, [active])
+
+  return flashes
+}
+
 export default function BattleScene() {
   const { fighter1, fighter2, currentTurn, phase, koState, battleLog } = useGame()
   const fighter1BattlePortrait = fighter1.transparentUrl ?? fighter1.portraitUrl
@@ -242,6 +372,9 @@ export default function BattleScene() {
   })
   const flashSequenceRef = useRef(0)
   const [flashEvent, setFlashEvent] = useState(null)
+  const isKoOrResult = phase === 'ko' || phase === 'result'
+  const confettiCanvasRef = useConfetti(isKoOrResult)
+  const cameraFlashes = useCameraFlashes(isKoOrResult)
 
   useEffect(() => {
     if (battleLog.length < previousLogLengthRef.current) {
@@ -328,7 +461,7 @@ export default function BattleScene() {
               opponentPosition={POS_RIGHT}
               side="left"
               portraitUrl={fighter1BattlePortrait}
-              spriteSheetUrl={fighter1.partyId ? `/sprites/parties/${fighter1.partyId}.png` : undefined}
+              spriteSheetUrl={fighter1.partyLabel ? `/sprites/parties/${fighter1.partyLabel}.png` : undefined}
               hp={fighter1.hp}
               isAttacking={currentTurn}
               alive={fighter1.alive}
@@ -344,7 +477,7 @@ export default function BattleScene() {
               opponentPosition={POS_LEFT}
               side="right"
               portraitUrl={fighter2BattlePortrait}
-              spriteSheetUrl={fighter2.partyId ? `/sprites/parties/${fighter2.partyId}.png` : undefined}
+              spriteSheetUrl={fighter2.partyLabel ? `/sprites/parties/${fighter2.partyLabel}.png` : undefined}
               hp={fighter2.hp}
               isAttacking={currentTurn}
               alive={fighter2.alive}
@@ -373,6 +506,25 @@ export default function BattleScene() {
           <div className="battle-status-flash-tag">{flashEvent.label}</div>
         </div>
       )}
+
+      {/* Confetti canvas */}
+      <canvas
+        ref={confettiCanvasRef}
+        className="battle-confetti-canvas"
+        style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          pointerEvents: 'none', zIndex: 20,
+        }}
+      />
+
+      {/* Camera flashes */}
+      {cameraFlashes.map(f => (
+        <div
+          key={f.id}
+          className="crowd-camera-flash"
+          style={{ left: `${f.x}%`, top: `${f.y}%`, '--flash-size': `${f.size}px` }}
+        />
+      ))}
     </div>
   )
 }

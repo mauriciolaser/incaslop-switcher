@@ -73,7 +73,7 @@ export default function TournamentResult({ onExitHome }) {
         <WinnerSummary winner={winner} label="GANA" />
 
         <div className="winner-hp">
-          HP restante: {winner.hp} / {winner.maxHp}
+          Vida restante: {winner.hp} / {winner.maxHp}
         </div>
 
         <button className="next-round-btn" onClick={handleContinue}>
