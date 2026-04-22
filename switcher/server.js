@@ -2,6 +2,7 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import { StreamManager } from './stream-manager.js'
+import { PlaylistManager } from './playlist-manager.js'
 
 const PORT = process.env.PORT || 3000
 const API_TOKEN = process.env.API_TOKEN || ''
@@ -13,6 +14,8 @@ const app = express()
 app.use(express.json())
 app.use(cors(corsOptions))
 app.options('*', cors(corsOptions))
+
+const DEFAULT_URL = process.env.DEFAULT_URL || 'about:blank'
 
 const manager = new StreamManager({
   DISPLAY_NUM: process.env.DISPLAY_NUM,
@@ -27,6 +30,17 @@ const manager = new StreamManager({
   CHROMIUM_EXECUTABLE_PATH: process.env.CHROMIUM_EXECUTABLE_PATH,
   KICK_RTMP_URL: process.env.KICK_RTMP_URL,
   KICK_STREAM_KEY: process.env.KICK_STREAM_KEY,
+})
+
+const playlist = new PlaylistManager({
+  defaultUrl: DEFAULT_URL,
+  onSwitch: async (url) => {
+    try {
+      if (manager.getStatus().status === 'streaming') await manager.switchUrl(url)
+    } catch (e) {
+      console.error('[playlist] switch error:', e.message)
+    }
+  },
 })
 
 function requireAuth(req, res, next) {
@@ -52,7 +66,7 @@ function validateUrl(url) {
 
 // GET /status — public
 app.get('/status', (req, res) => {
-  res.json(manager.getStatus())
+  res.json({ ...manager.getStatus(), ...playlist.getState() })
 })
 
 // POST /stream/start
@@ -89,9 +103,55 @@ app.post('/switch', requireAuth, async (req, res) => {
   }
 })
 
+// POST /playlist/items
+app.post('/playlist/items', requireAuth, (req, res) => {
+  const { url, duracionSegundos } = req.body || {}
+  if (!url) return res.status(400).json({ error: 'url es requerida' })
+  const dur = Number(duracionSegundos)
+  if (!dur || dur < 5) return res.status(400).json({ error: 'duracionSegundos debe ser >= 5' })
+  try {
+    const safeUrl = validateUrl(url)
+    const item = playlist.addItem(safeUrl, dur)
+    res.json({ ok: true, item, ...playlist.getState() })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+// DELETE /playlist/items/:id
+app.delete('/playlist/items/:id', requireAuth, (req, res) => {
+  playlist.removeItem(req.params.id)
+  res.json({ ok: true, ...playlist.getState() })
+})
+
+// DELETE /playlist/items (clear all)
+app.delete('/playlist/items', requireAuth, (req, res) => {
+  playlist.clearItems()
+  res.json({ ok: true, ...playlist.getState() })
+})
+
+// POST /playlist/start
+app.post('/playlist/start', requireAuth, (req, res) => {
+  playlist.start()
+  res.json({ ok: true, ...playlist.getState() })
+})
+
+// POST /playlist/pause
+app.post('/playlist/pause', requireAuth, (req, res) => {
+  playlist.pause()
+  res.json({ ok: true, ...playlist.getState() })
+})
+
+// POST /playlist/stop
+app.post('/playlist/stop', requireAuth, (req, res) => {
+  playlist.stop()
+  res.json({ ok: true, ...playlist.getState() })
+})
+
 // Graceful shutdown so Xvfb/FFmpeg are cleaned up on PM2 restart
 async function shutdown() {
   console.log('[server] Shutting down...')
+  playlist.stop()
   await manager.stop().catch(() => {})
   process.exit(0)
 }

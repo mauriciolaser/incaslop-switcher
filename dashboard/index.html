@@ -123,6 +123,49 @@
       gap: 10px;
     }
 
+    /* Playlist */
+    input[type="number"] {
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: #e2e8f0;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type="number"]:focus { border-color: #3b82f6; }
+
+    .pl-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      margin-bottom: 4px;
+      background: #0f1117;
+      font-size: 0.8rem;
+    }
+    .pl-item.active { background: #1e3a5f; border: 1px solid #3b82f6; }
+    .pl-item .pl-url {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #94a3b8;
+    }
+    .pl-item.active .pl-url { color: #60a5fa; }
+    .pl-item .pl-dur { color: #475569; font-size: 0.75rem; flex-shrink: 0; }
+    .pl-item .pl-del {
+      background: none;
+      border: none;
+      color: #ef4444;
+      cursor: pointer;
+      padding: 2px 6px;
+      flex-shrink: 0;
+      font-size: 0.875rem;
+    }
+
     /* Log */
     #log {
       background: #0a0c12;
@@ -159,6 +202,24 @@
     <div class="input-row">
       <input type="text" id="url-input" placeholder="https://..." />
       <button class="btn-primary" id="btn-switch" onclick="doSwitch()">Switch</button>
+    </div>
+  </div>
+
+  <!-- Playlist -->
+  <div class="card">
+    <h2>Playlist</h2>
+    <div class="input-row" style="gap: 8px; margin-bottom: 12px;">
+      <input type="text"   id="pl-url"      placeholder="https://..." />
+      <input type="number" id="pl-duracion" placeholder="seg" min="5" style="width: 80px; flex: none;" />
+      <button class="btn-primary" onclick="plAdd()">+ Agregar</button>
+    </div>
+    <div id="pl-list"></div>
+    <div id="pl-status" style="font-size: 0.8rem; color: #94a3b8; margin: 8px 0;"></div>
+    <div class="controls-row">
+      <button class="btn-success" onclick="plStart()">▶ Iniciar</button>
+      <button class="btn-primary"  onclick="plPause()">⏸ Pausar</button>
+      <button class="btn-danger"   onclick="plStop()">■ Detener</button>
+      <button style="background: #374151; color: #e2e8f0; padding: 8px 16px; border-radius: 6px; border: none; font-size: 0.875rem; font-weight: 600; cursor: pointer;" onclick="plClear()">✕ Limpiar</button>
     </div>
   </div>
 
@@ -232,6 +293,7 @@
       }
 
       uptEl.textContent = formatUptime(data.uptimeSeconds)
+      updatePlaylistUI(data)
     }
 
     async function pollStatus() {
@@ -283,6 +345,111 @@
     document.getElementById('url-input').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') doSwitch()
     })
+
+    // --- Playlist ---
+    let _plItems = [], _plState = 'idle', _plCurrentIndex = null,
+        _plRemainingMs = null, _plCountdown = null
+
+    function updatePlaylistUI(data) {
+      if (!data.items) return
+      _plItems = data.items
+      _plState = data.playlistState
+      _plCurrentIndex = data.currentIndex
+      _plRemainingMs = data.remainingMs
+      renderPlList()
+      renderPlStatus()
+    }
+
+    function renderPlList() {
+      const container = document.getElementById('pl-list')
+      if (_plItems.length === 0) {
+        container.innerHTML = '<div style="color:#475569; font-size:0.8rem; padding: 4px 0;">Lista vacía</div>'
+        return
+      }
+      container.innerHTML = _plItems.map((item) => `
+        <div class="pl-item ${item.active ? 'active' : ''}">
+          <span class="pl-url" title="${item.url}">${item.url}</span>
+          <span class="pl-dur">${item.duracionSegundos}s</span>
+          <button class="pl-del" onclick="plRemove('${item.id}')">✕</button>
+        </div>
+      `).join('')
+    }
+
+    function renderPlStatus() {
+      clearInterval(_plCountdown)
+      const el = document.getElementById('pl-status')
+      if (_plState === 'idle') { el.textContent = 'Playlist inactiva'; return }
+      if (_plState === 'paused') {
+        const sec = _plRemainingMs !== null ? Math.ceil(_plRemainingMs / 1000) : '?'
+        el.textContent = `Pausado — ${sec}s restantes`
+        return
+      }
+      // running — countdown local entre polls
+      let ms = _plRemainingMs ?? 0
+      const total = _plItems.length
+      const idx = (_plCurrentIndex ?? 0) + 1
+      function tick() {
+        const sec = Math.max(0, Math.ceil(ms / 1000))
+        el.textContent = `Item ${idx}/${total} — ${sec}s restantes`
+        ms -= 500
+        if (ms <= 0) clearInterval(_plCountdown)
+      }
+      tick()
+      _plCountdown = setInterval(tick, 500)
+    }
+
+    async function plAdd() {
+      const url = document.getElementById('pl-url').value.trim()
+      const dur = parseInt(document.getElementById('pl-duracion').value, 10)
+      if (!url) return log('Playlist: URL es requerida')
+      if (!dur || dur < 5) return log('Playlist: duración debe ser >= 5 segundos')
+      try {
+        await apiFetch('/playlist/items', { method: 'POST', body: JSON.stringify({ url, duracionSegundos: dur }) })
+        document.getElementById('pl-url').value = ''
+        document.getElementById('pl-duracion').value = ''
+        log(`Playlist: agregado ${url} (${dur}s)`)
+        pollStatus()
+      } catch (e) { log('Playlist error: ' + e.message) }
+    }
+
+    async function plRemove(id) {
+      try {
+        await apiFetch('/playlist/items/' + id, { method: 'DELETE' })
+        pollStatus()
+      } catch (e) { log('Playlist error al eliminar: ' + e.message) }
+    }
+
+    async function plClear() {
+      try {
+        await apiFetch('/playlist/items', { method: 'DELETE' })
+        log('Playlist: lista limpiada')
+        pollStatus()
+      } catch (e) { log('Playlist error: ' + e.message) }
+    }
+
+    async function plStart() {
+      try {
+        await apiFetch('/playlist/start', { method: 'POST' })
+        log('Playlist: iniciada')
+        pollStatus()
+      } catch (e) { log('Playlist error: ' + e.message) }
+    }
+
+    async function plPause() {
+      try {
+        await apiFetch('/playlist/pause', { method: 'POST' })
+        log('Playlist: pausada')
+        pollStatus()
+      } catch (e) { log('Playlist error: ' + e.message) }
+    }
+
+    async function plStop() {
+      try {
+        await apiFetch('/playlist/stop', { method: 'POST' })
+        log('Playlist: detenida')
+        pollStatus()
+      } catch (e) { log('Playlist error: ' + e.message) }
+    }
 
     pollStatus()
     setInterval(pollStatus, 5000)
