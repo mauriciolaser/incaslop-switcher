@@ -7,7 +7,7 @@ Permitir enviar mensajes desde `/dashboard` para que aparezcan sobre el navegado
 ## Comportamiento (v1)
 
 - Modo: un solo mensaje activo.
-- Formato: texto plano (sin HTML/markdown).
+- Formato: texto plano (sin HTML/markdown), con soporte de emojis Unicode.
 - Posición: centro de pantalla, estilo grande.
 - Duración: 8 segundos fijos con auto-hide.
 - Si el stream no está activo: la API responde `409` para evitar mensajes fantasma.
@@ -61,7 +61,7 @@ Validaciones:
 
 - `400` si `text` no es string.
 - `400` si `text` queda vacío tras `trim()`.
-- `400` si excede 180 caracteres.
+- `400` si excede 180 caracteres Unicode (conteo por code points, compatible con emojis).
 - `409` si el stream no está en estado `streaming`.
 
 ### `POST /overlay/clear`
@@ -125,4 +125,3 @@ Se agregó tarjeta **Mensajes Overlay** con:
    debe desaparecer de inmediato.
 7. Con stream detenido, intentar enviar mensaje:
    debe devolver `409`.
-

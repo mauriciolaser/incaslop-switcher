@@ -213,8 +213,9 @@ app.post('/overlay/message', requireAuth, async (req, res) => {
   }
 
   const text = textRaw.trim()
+  const textLength = Array.from(text).length
   if (!text) return res.status(400).json({ error: 'text is required' })
-  if (text.length > OVERLAY_MAX_LENGTH) {
+  if (textLength > OVERLAY_MAX_LENGTH) {
     return res.status(400).json({ error: `text exceeds ${OVERLAY_MAX_LENGTH} characters` })
   }
 

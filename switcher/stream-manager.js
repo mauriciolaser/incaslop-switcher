@@ -300,7 +300,10 @@ export class StreamManager {
             border-radius: 16px;
             padding: 26px 34px;
             text-align: center;
-            font: 700 56px/1.18 "Arial", "Helvetica Neue", Helvetica, sans-serif;
+            font-size: 56px;
+            font-weight: 700;
+            line-height: 1.18;
+            font-family: "Segoe UI", "Noto Sans", "DejaVu Sans", "Noto Color Emoji", "Segoe UI Emoji", "Apple Color Emoji", sans-serif;
             letter-spacing: 0.01em;
             text-shadow: 0 2px 14px rgba(0, 0, 0, 0.65);
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
