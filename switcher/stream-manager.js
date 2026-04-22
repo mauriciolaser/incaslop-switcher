@@ -37,6 +37,11 @@ export class StreamManager {
   #runtime = null
   #audioLoop = null
   #config = {}
+  #overlay = {
+    visible: false,
+    text: '',
+    expiresAt: null,
+  }
 
   constructor(config) {
     this.#config = config
@@ -198,6 +203,7 @@ export class StreamManager {
       const pages = await this.#browser.pages()
       this.#page = pages[0] || await this.#browser.newPage()
       await this.#hideChromiumUI()
+      await this.#syncOverlayToPage()
 
       // 6. Start FFmpeg (video + optional audio playlist)
       this.#audioLoop.rescan()
@@ -252,11 +258,102 @@ export class StreamManager {
     } catch {}
   }
 
+  async #syncOverlayToPage() {
+    if (!this.#page) return
+
+    const now = Date.now()
+    const stillVisible = this.#overlay.visible
+      && this.#overlay.expiresAt
+      && this.#overlay.expiresAt > now
+
+    if (!stillVisible) {
+      this.#overlay.visible = false
+      this.#overlay.text = ''
+      this.#overlay.expiresAt = null
+    }
+
+    await this.#page.evaluate(({ visible, text }) => {
+      const STYLE_ID = 'incaslop-overlay-style'
+      const ROOT_ID = 'incaslop-overlay-root'
+      const TEXT_ID = 'incaslop-overlay-text'
+
+      let style = document.getElementById(STYLE_ID)
+      if (!style) {
+        style = document.createElement('style')
+        style.id = STYLE_ID
+        style.textContent = `
+          #${ROOT_ID} {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2147483647;
+            pointer-events: none;
+            padding: 40px;
+          }
+          #${TEXT_ID} {
+            max-width: min(1200px, 90vw);
+            background: rgba(8, 10, 20, 0.82);
+            color: #f8fafc;
+            border: 2px solid rgba(255, 255, 255, 0.18);
+            border-radius: 16px;
+            padding: 26px 34px;
+            text-align: center;
+            font: 700 56px/1.18 "Arial", "Helvetica Neue", Helvetica, sans-serif;
+            letter-spacing: 0.01em;
+            text-shadow: 0 2px 14px rgba(0, 0, 0, 0.65);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+          }
+          @media (max-width: 1400px) {
+            #${TEXT_ID} {
+              font-size: 44px;
+            }
+          }
+        `
+        document.head.appendChild(style)
+      }
+
+      let root = document.getElementById(ROOT_ID)
+      if (!root) {
+        root = document.createElement('div')
+        root.id = ROOT_ID
+        const textEl = document.createElement('div')
+        textEl.id = TEXT_ID
+        root.appendChild(textEl)
+        document.body.appendChild(root)
+      }
+
+      const textEl = document.getElementById(TEXT_ID)
+      if (textEl) textEl.textContent = visible ? (text || '') : ''
+      root.style.display = visible ? 'flex' : 'none'
+    }, { visible: stillVisible, text: this.#overlay.text || '' })
+  }
+
+  async showOverlayMessage({ text, expiresAt }) {
+    if (!this.#page) throw new Error('Stream is not running')
+
+    this.#overlay.visible = true
+    this.#overlay.text = text
+    this.#overlay.expiresAt = expiresAt
+    await this.#syncOverlayToPage()
+  }
+
+  async clearOverlayMessage() {
+    this.#overlay.visible = false
+    this.#overlay.text = ''
+    this.#overlay.expiresAt = null
+    await this.#syncOverlayToPage()
+  }
+
   async switchUrl(url) {
     if (!this.#page) throw new Error('Stream is not running')
 
     await this.#page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 })
     await this.#hideChromiumUI()
+    await this.#syncOverlayToPage()
     this.#currentUrl = url
     this.#saveState()
     console.log('[stream] Switched to:', url)

@@ -16,6 +16,8 @@ app.use(cors(corsOptions))
 app.options('*', cors(corsOptions))
 
 const DEFAULT_URL = process.env.DEFAULT_URL || 'about:blank'
+const OVERLAY_DURATION_MS = 8000
+const OVERLAY_MAX_LENGTH = 180
 
 const manager = new StreamManager({
   DISPLAY_NUM: process.env.DISPLAY_NUM,
@@ -44,6 +46,44 @@ const playlist = new PlaylistManager({
   },
 })
 
+const overlay = {
+  text: '',
+  visible: false,
+  expiresAt: null,
+  updatedAt: null,
+}
+
+let overlayTimer = null
+
+function getOverlayState() {
+  return {
+    text: overlay.text,
+    visible: overlay.visible,
+    expiresAt: overlay.expiresAt,
+    updatedAt: overlay.updatedAt,
+  }
+}
+
+function clearOverlayTimer() {
+  if (!overlayTimer) return
+  clearTimeout(overlayTimer)
+  overlayTimer = null
+}
+
+function hideOverlayState(now = Date.now()) {
+  overlay.text = ''
+  overlay.visible = false
+  overlay.expiresAt = null
+  overlay.updatedAt = now
+}
+
+function setOverlayState(text, now = Date.now()) {
+  overlay.text = text
+  overlay.visible = true
+  overlay.expiresAt = now + OVERLAY_DURATION_MS
+  overlay.updatedAt = now
+}
+
 function requireAuth(req, res, next) {
   const header = req.headers['authorization'] || ''
   const token = header.replace('Bearer ', '')
@@ -67,7 +107,13 @@ function validateUrl(url) {
 
 // GET /status — public
 app.get('/status', (req, res) => {
-  res.json({ ...manager.getStatus(), ...playlist.getState(), audio: manager.getAudioStatus() })
+  const now = Date.now()
+  if (overlay.visible && overlay.expiresAt && overlay.expiresAt <= now) {
+    hideOverlayState(now)
+    clearOverlayTimer()
+  }
+
+  res.json({ ...manager.getStatus(), ...playlist.getState(), audio: manager.getAudioStatus(), overlay: getOverlayState() })
 })
 
 // POST /stream/start
@@ -159,9 +205,67 @@ app.post('/audio/rescan', requireAuth, async (req, res) => {
   }
 })
 
+// POST /overlay/message
+app.post('/overlay/message', requireAuth, async (req, res) => {
+  const textRaw = req.body?.text
+  if (typeof textRaw !== 'string') {
+    return res.status(400).json({ error: 'text must be a string' })
+  }
+
+  const text = textRaw.trim()
+  if (!text) return res.status(400).json({ error: 'text is required' })
+  if (text.length > OVERLAY_MAX_LENGTH) {
+    return res.status(400).json({ error: `text exceeds ${OVERLAY_MAX_LENGTH} characters` })
+  }
+
+  if (manager.getStatus().status !== 'streaming') {
+    return res.status(409).json({ error: 'Stream is not running' })
+  }
+
+  try {
+    const now = Date.now()
+    setOverlayState(text, now)
+    clearOverlayTimer()
+    await manager.showOverlayMessage({ text: overlay.text, expiresAt: overlay.expiresAt })
+
+    overlayTimer = setTimeout(async () => {
+      hideOverlayState()
+      try {
+        await manager.clearOverlayMessage()
+      } catch (e) {
+        console.warn('[overlay] auto-clear error:', e.message)
+      }
+    }, OVERLAY_DURATION_MS)
+
+    res.json({ ok: true, overlay: getOverlayState() })
+  } catch (e) {
+    if (e.message === 'Stream is not running') {
+      return res.status(409).json({ error: e.message })
+    }
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// POST /overlay/clear
+app.post('/overlay/clear', requireAuth, async (req, res) => {
+  clearOverlayTimer()
+  hideOverlayState()
+
+  try {
+    if (manager.getStatus().status === 'streaming') {
+      await manager.clearOverlayMessage()
+    }
+    res.json({ ok: true, overlay: getOverlayState() })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 // Graceful shutdown so Xvfb/FFmpeg are cleaned up on PM2 restart
 async function shutdown() {
   console.log('[server] Shutting down...')
+  clearOverlayTimer()
+  hideOverlayState()
   playlist.stop()
   await manager.stop().catch(() => {})
   process.exit(0)

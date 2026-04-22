@@ -85,9 +85,9 @@ cat switcher/stream-manager.js | plink -pw 'PASS' -P 22 mauri@159.198.65.35 \
 plink -pw 'PASS' -P 22 mauri@159.198.65.35 "echo 'PASS' | sudo -S pm2 restart all"
 ```
 
-## Deploy en un solo comando (backend + audios)
+## Deploy en un solo comando (backend + audios + dashboard)
 
-Ahora existe un script local que empaqueta y despliega backend + `switcher/audio/*.mp3`:
+Ahora existe un script local que empaqueta y despliega backend + `switcher/audio/*.mp3` y tambien sube `dashboard/` por FTP:
 
 ```powershell
 npm run deploy:switcher
@@ -97,9 +97,18 @@ El script:
 
 1. Valida sintaxis de `server.js`, `stream-manager.js`, `playlist-manager.js`, `audio-loop-manager.js`
 2. Empaqueta archivos backend y la carpeta `switcher/audio/`
-3. Sube el paquete al VPS por `pscp`
+3. Sube el paquete temporal a `/tmp` del VPS por `pscp`
 4. Extrae en `/home/mauri/switcher/` con `sudo`
 5. Ejecuta `pm2 restart all` y `pm2 list`
+6. Sube `dashboard/index.html`, `dashboard/config.js`, `dashboard/.htaccess` via FTP
+
+Por defecto toma credenciales desde `credenciales.txt` (prioriza `root`) para correr sin pedir password interactivo.
+
+Si quieres omitir dashboard en una corrida puntual:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/deploy-switcher-backend.ps1 -SkipDashboard
+```
 
 Opcionalmente, puedes pasar host/usuario/puerto:
 

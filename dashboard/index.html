@@ -101,6 +101,18 @@
     }
     input[type="text"]:focus { border-color: #3b82f6; }
 
+    #overlay-input {
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    #overlay-status {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin-bottom: 10px;
+      min-height: 1em;
+    }
+
     button {
       padding: 8px 16px;
       border-radius: 6px;
@@ -202,6 +214,17 @@
     <div class="input-row">
       <input type="text" id="url-input" placeholder="https://..." />
       <button class="btn-primary" id="btn-switch" onclick="doSwitch()">Switch</button>
+    </div>
+  </div>
+
+  <!-- Overlay messages -->
+  <div class="card">
+    <h2>Mensajes Overlay</h2>
+    <input type="text" id="overlay-input" maxlength="180" placeholder="Escribe el mensaje para mostrar en Kick..." />
+    <div id="overlay-status">Sin mensaje activo</div>
+    <div class="controls-row">
+      <button class="btn-primary" onclick="overlayShow()">Mostrar mensaje</button>
+      <button class="btn-danger" onclick="overlayClear()">Ocultar ahora</button>
     </div>
   </div>
 
@@ -307,6 +330,7 @@
       uptEl.textContent = formatUptime(data.uptimeSeconds)
       updatePlaylistUI(data)
       updateAudioUI(data.audio)
+      updateOverlayUI(data.overlay)
     }
 
     async function pollStatus() {
@@ -357,6 +381,51 @@
     // Enter key in URL input triggers switch
     document.getElementById('url-input').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') doSwitch()
+    })
+
+    // --- Overlay ---
+    function updateOverlayUI(overlay) {
+      const status = document.getElementById('overlay-status')
+      if (!overlay || !overlay.visible) {
+        status.textContent = 'Sin mensaje activo'
+        return
+      }
+
+      const ms = Math.max(0, (overlay.expiresAt || 0) - Date.now())
+      const sec = Math.ceil(ms / 1000)
+      status.textContent = `Activo (${sec}s): ${overlay.text || ''}`
+    }
+
+    async function overlayShow() {
+      const text = document.getElementById('overlay-input').value.trim()
+      if (!text) return log('Overlay: el mensaje es requerido')
+
+      try {
+        const data = await apiFetch('/overlay/message', {
+          method: 'POST',
+          body: JSON.stringify({ text }),
+        })
+        log('Overlay: mensaje enviado')
+        updateOverlayUI(data.overlay)
+        pollStatus()
+      } catch (e) {
+        log('Overlay error: ' + e.message)
+      }
+    }
+
+    async function overlayClear() {
+      try {
+        const data = await apiFetch('/overlay/clear', { method: 'POST' })
+        log('Overlay: mensaje ocultado')
+        updateOverlayUI(data.overlay)
+        pollStatus()
+      } catch (e) {
+        log('Overlay error: ' + e.message)
+      }
+    }
+
+    document.getElementById('overlay-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') overlayShow()
     })
 
     // --- Playlist ---
