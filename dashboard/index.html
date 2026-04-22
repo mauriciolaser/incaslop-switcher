@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IncaSlop Switcher — Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 24px;
+      letter-spacing: 0.02em;
+    }
+
+    .card {
+      background: #1a1d27;
+      border: 1px solid #2d3148;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .card h2 {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #64748b;
+      margin-bottom: 12px;
+    }
+
+    /* Status */
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot.streaming { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+    .dot.stopped   { background: #475569; }
+    .dot.starting  { background: #f59e0b; }
+    .dot.error     { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
+
+    #status-text {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    #current-url {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: #94a3b8;
+      word-break: break-all;
+    }
+
+    #current-url a {
+      color: #60a5fa;
+      text-decoration: none;
+    }
+    #current-url a:hover { text-decoration: underline; }
+
+    #uptime {
+      margin-top: 4px;
+      font-size: 0.75rem;
+      color: #475569;
+    }
+
+    /* Switch form */
+    .input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: #e2e8f0;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus { border-color: #3b82f6; }
+
+    button {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: none;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-primary  { background: #3b82f6; color: #fff; }
+    .btn-success  { background: #22c55e; color: #fff; }
+    .btn-danger   { background: #ef4444; color: #fff; }
+    button:not(:disabled):hover { opacity: 0.85; }
+
+    /* Controls */
+    .controls-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    /* Log */
+    #log {
+      background: #0a0c12;
+      border: 1px solid #1e2235;
+      border-radius: 6px;
+      padding: 12px;
+      height: 180px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.75rem;
+      color: #64748b;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <h1>IncaSlop Switcher</h1>
+
+  <!-- Status -->
+  <div class="card">
+    <h2>Estado del stream</h2>
+    <div class="status-row">
+      <div class="dot stopped" id="status-dot"></div>
+      <span id="status-text">Cargando...</span>
+    </div>
+    <div id="current-url">—</div>
+    <div id="uptime"></div>
+  </div>
+
+  <!-- Switch URL -->
+  <div class="card">
+    <h2>Cambiar URL</h2>
+    <div class="input-row">
+      <input type="text" id="url-input" placeholder="https://..." />
+      <button class="btn-primary" id="btn-switch" onclick="doSwitch()">Switch</button>
+    </div>
+  </div>
+
+  <!-- Stream controls -->
+  <div class="card">
+    <h2>Controles</h2>
+    <div class="controls-row">
+      <button class="btn-success" id="btn-start" onclick="doStart()">▶ Start Stream</button>
+      <button class="btn-danger"  id="btn-stop"  onclick="doStop()">■ Stop Stream</button>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="card">
+    <h2>Log</h2>
+    <pre id="log"></pre>
+  </div>
+
+  <script src="config.js"></script>
+  <script>
+    const API   = (window.SWITCHER_API   || 'http://localhost:3000').replace(/\/$/, '')
+    const TOKEN = window.SWITCHER_TOKEN  || ''
+
+    async function apiFetch(path, options = {}) {
+      const res = await fetch(API + path, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + TOKEN,
+          ...(options.headers || {}),
+        },
+        ...options,
+      })
+      const text = await res.text()
+      let data
+      try { data = JSON.parse(text) } catch { data = { error: text } }
+      if (!res.ok) throw new Error(data.error || res.statusText)
+      return data
+    }
+
+    function log(msg) {
+      const el = document.getElementById('log')
+      const ts = new Date().toLocaleTimeString('es-PE')
+      el.textContent += `[${ts}] ${msg}\n`
+      el.scrollTop = el.scrollHeight
+    }
+
+    function formatUptime(s) {
+      if (!s) return ''
+      const h = Math.floor(s / 3600)
+      const m = Math.floor((s % 3600) / 60)
+      const sec = s % 60
+      return `Uptime: ${h}h ${m}m ${sec}s`
+    }
+
+    function updateUI(data) {
+      const dot    = document.getElementById('status-dot')
+      const text   = document.getElementById('status-text')
+      const urlEl  = document.getElementById('current-url')
+      const uptEl  = document.getElementById('uptime')
+
+      dot.className = 'dot ' + (data.status || 'stopped')
+
+      const labels = { streaming: 'Streameando', stopped: 'Detenido', starting: 'Iniciando...', error: 'Error' }
+      text.textContent = labels[data.status] || data.status
+
+      if (data.currentUrl) {
+        urlEl.innerHTML = `<a href="${data.currentUrl}" target="_blank" rel="noopener">${data.currentUrl}</a>`
+        document.getElementById('url-input').value = data.currentUrl
+      } else {
+        urlEl.textContent = '—'
+      }
+
+      uptEl.textContent = formatUptime(data.uptimeSeconds)
+    }
+
+    async function pollStatus() {
+      try {
+        const data = await apiFetch('/status')
+        updateUI(data)
+      } catch (e) {
+        document.getElementById('status-dot').className = 'dot error'
+        document.getElementById('status-text').textContent = 'Sin conexión'
+      }
+    }
+
+    async function doSwitch() {
+      const url = document.getElementById('url-input').value.trim()
+      if (!url) return
+      try {
+        log(`Cambiando a: ${url}`)
+        await apiFetch('/switch', { method: 'POST', body: JSON.stringify({ url }) })
+        log('URL cambiada correctamente')
+        pollStatus()
+      } catch (e) {
+        log('Error al cambiar URL: ' + e.message)
+      }
+    }
+
+    async function doStart() {
+      try {
+        log('Iniciando stream...')
+        await apiFetch('/stream/start', { method: 'POST' })
+        log('Stream iniciado')
+        pollStatus()
+      } catch (e) {
+        log('Error al iniciar: ' + e.message)
+      }
+    }
+
+    async function doStop() {
+      try {
+        log('Deteniendo stream...')
+        await apiFetch('/stream/stop', { method: 'POST' })
+        log('Stream detenido')
+        pollStatus()
+      } catch (e) {
+        log('Error al detener: ' + e.message)
+      }
+    }
+
+    // Enter key in URL input triggers switch
+    document.getElementById('url-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doSwitch()
+    })
+
+    pollStatus()
+    setInterval(pollStatus, 5000)
+  </script>
+</body>
+</html>

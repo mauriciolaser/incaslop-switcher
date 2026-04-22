@@ -3,3 +3,4 @@ dist/
 ssh.txt
 credenciales.txt
 server/node_modules/
+switcher/.env
