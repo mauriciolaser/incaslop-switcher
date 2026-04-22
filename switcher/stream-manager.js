@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import puppeteer from 'puppeteer-core'
+import { AudioLoopManager } from './audio-loop-manager.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const STATE_FILE = path.join(__dirname, 'data', 'state.json')
@@ -33,10 +34,13 @@ export class StreamManager {
   #browser = null
   #page = null
   #startedAt = null
+  #runtime = null
+  #audioLoop = null
   #config = {}
 
   constructor(config) {
     this.#config = config
+    this.#audioLoop = new AudioLoopManager()
     this.#loadState()
   }
 
@@ -76,6 +80,18 @@ export class StreamManager {
     }
   }
 
+  getAudioStatus() {
+    return this.#audioLoop.getStatus({ isStreaming: this.#status === 'streaming' })
+  }
+
+  async rescanAudio() {
+    this.#audioLoop.rescan()
+    if (this.#status === 'streaming') {
+      await this.#restartFfmpeg()
+    }
+    return this.getAudioStatus()
+  }
+
   async start() {
     if (this.#status !== 'stopped' && this.#status !== 'error') {
       throw new Error('Stream is already running')
@@ -83,8 +99,7 @@ export class StreamManager {
 
     this.#status = 'starting'
     const { DISPLAY_NUM, STREAM_WIDTH, STREAM_HEIGHT, CHROMIUM_EXECUTABLE_PATH,
-      KICK_RTMP_URL, KICK_STREAM_KEY, STREAM_FPS, VIDEO_BITRATE, MAXRATE,
-      BUFSIZE, GOP, PRESET } = this.#config
+      KICK_RTMP_URL, KICK_STREAM_KEY, STREAM_FPS } = this.#config
 
     const display = DISPLAY_NUM || ':99'
     const w = STREAM_WIDTH || '1920'
@@ -101,6 +116,7 @@ export class StreamManager {
       ...process.env,
       DISPLAY: display,
     }
+    this.#runtime = { display, w, h, fps, rtmpTarget, env }
 
     try {
       // 1. Kill stale processes
@@ -183,34 +199,9 @@ export class StreamManager {
       this.#page = pages[0] || await this.#browser.newPage()
       await this.#hideChromiumUI()
 
-      // 6. Start FFmpeg (video only)
-      this.#ffmpegProc = spawn('ffmpeg', [
-        // Video: x11grab
-        '-f', 'x11grab',
-        '-framerate', fps,
-        '-video_size', `${w}x${h}`,
-        '-i', `${display}.0`,
-        // Video encoding
-        '-c:v', 'libx264',
-        '-preset', PRESET || 'veryfast',
-        '-b:v', VIDEO_BITRATE || '4500k',
-        '-maxrate', MAXRATE || '4500k',
-        '-bufsize', BUFSIZE || '9000k',
-        '-pix_fmt', 'yuv420p',
-        '-g', GOP || '60',
-        '-an',
-        '-f', 'flv',
-        rtmpTarget,
-      ], { stdio: ['ignore', 'pipe', 'pipe'], env })
-
-      this.#ffmpegProc.stderr.on('data', (d) => process.stdout.write(`[ffmpeg] ${d}`))
-      this.#ffmpegProc.on('error', (e) => console.error('[ffmpeg] error:', e.message))
-      this.#ffmpegProc.on('close', (code) => {
-        if (this.#status === 'streaming') {
-          console.error('[ffmpeg] exited unexpectedly, code:', code)
-          this.#status = 'error'
-        }
-      })
+      // 6. Start FFmpeg (video + optional audio playlist)
+      this.#audioLoop.rescan()
+      await this.#startFfmpeg()
 
       this.#status = 'streaming'
       this.#startedAt = Date.now()
@@ -229,8 +220,7 @@ export class StreamManager {
     this.#status = 'stopped'
     this.#startedAt = null
 
-    killProc(this.#ffmpegProc)
-    this.#ffmpegProc = null
+    await this.#stopFfmpeg()
 
     try {
       if (this.#browser) await this.#browser.disconnect()
@@ -246,6 +236,7 @@ export class StreamManager {
 
     killProc(this.#xvfbProc)
     this.#xvfbProc = null
+    this.#runtime = null
 
     console.log('[stream] Stopped')
   }
@@ -269,5 +260,101 @@ export class StreamManager {
     this.#currentUrl = url
     this.#saveState()
     console.log('[stream] Switched to:', url)
+  }
+
+  async #restartFfmpeg() {
+    if (!this.#runtime) return
+    await this.#stopFfmpeg()
+    await this.#startFfmpeg()
+    console.log('[audio] FFmpeg reiniciado para aplicar cambios de playlist')
+  }
+
+  async #stopFfmpeg() {
+    const proc = this.#ffmpegProc
+    if (!proc) return
+
+    proc.__intentionalStop = true
+    this.#ffmpegProc = null
+    this.#audioLoop.clearLoopStart()
+
+    await new Promise((resolve) => {
+      let done = false
+      const finish = () => {
+        if (done) return
+        done = true
+        resolve()
+      }
+      proc.once('close', finish)
+      killProc(proc)
+      setTimeout(finish, 4000)
+    })
+  }
+
+  async #startFfmpeg() {
+    if (!this.#runtime) throw new Error('Runtime de stream no inicializado')
+
+    const audio = this.#audioLoop.getStatus({ isStreaming: false })
+    const { display, w, h, fps, rtmpTarget, env } = this.#runtime
+    const { VIDEO_BITRATE, MAXRATE, BUFSIZE, GOP, PRESET, AUDIO_BITRATE } = this.#config
+
+    const ffmpegArgs = [
+      '-f', 'x11grab',
+      '-framerate', fps,
+      '-video_size', `${w}x${h}`,
+      '-i', `${display}.0`,
+    ]
+
+    if (audio.enabled) {
+      ffmpegArgs.push(
+        '-stream_loop', '-1',
+        '-f', 'concat',
+        '-safe', '0',
+        '-i', this.#audioLoop.getPlaylistFile(),
+      )
+    }
+
+    ffmpegArgs.push(
+      '-c:v', 'libx264',
+      '-preset', PRESET || 'veryfast',
+      '-b:v', VIDEO_BITRATE || '4500k',
+      '-maxrate', MAXRATE || '4500k',
+      '-bufsize', BUFSIZE || '9000k',
+      '-pix_fmt', 'yuv420p',
+      '-g', GOP || '60',
+    )
+
+    if (audio.enabled) {
+      ffmpegArgs.push(
+        '-map', '0:v:0',
+        '-map', '1:a:0',
+        '-c:a', 'aac',
+        '-b:a', AUDIO_BITRATE || '192k',
+        '-ar', '44100',
+        '-ac', '2',
+      )
+      this.#audioLoop.markLoopStart()
+      console.log(`[audio] Loop activo con ${audio.trackCount} pista(s)`)
+    } else {
+      ffmpegArgs.push('-an')
+      this.#audioLoop.clearLoopStart()
+      for (const warning of audio.warnings) {
+        console.warn('[audio]', warning)
+      }
+    }
+
+    ffmpegArgs.push('-f', 'flv', rtmpTarget)
+
+    const proc = spawn('ffmpeg', ffmpegArgs, { stdio: ['ignore', 'pipe', 'pipe'], env })
+    this.#ffmpegProc = proc
+
+    proc.stderr.on('data', (d) => process.stdout.write(`[ffmpeg] ${d}`))
+    proc.on('error', (e) => console.error('[ffmpeg] error:', e.message))
+    proc.on('close', (code) => {
+      if (proc.__intentionalStop) return
+      if (this.#status === 'streaming') {
+        console.error('[ffmpeg] exited unexpectedly, code:', code)
+        this.#status = 'error'
+      }
+    })
   }
 }

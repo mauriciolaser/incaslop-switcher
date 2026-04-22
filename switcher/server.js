@@ -27,6 +27,7 @@ const manager = new StreamManager({
   BUFSIZE: process.env.BUFSIZE,
   GOP: process.env.GOP,
   PRESET: process.env.PRESET,
+  AUDIO_BITRATE: process.env.AUDIO_BITRATE,
   CHROMIUM_EXECUTABLE_PATH: process.env.CHROMIUM_EXECUTABLE_PATH,
   KICK_RTMP_URL: process.env.KICK_RTMP_URL,
   KICK_STREAM_KEY: process.env.KICK_STREAM_KEY,
@@ -66,7 +67,7 @@ function validateUrl(url) {
 
 // GET /status — public
 app.get('/status', (req, res) => {
-  res.json({ ...manager.getStatus(), ...playlist.getState() })
+  res.json({ ...manager.getStatus(), ...playlist.getState(), audio: manager.getAudioStatus() })
 })
 
 // POST /stream/start
@@ -146,6 +147,16 @@ app.post('/playlist/pause', requireAuth, (req, res) => {
 app.post('/playlist/stop', requireAuth, (req, res) => {
   playlist.stop()
   res.json({ ok: true, ...playlist.getState() })
+})
+
+// POST /audio/rescan
+app.post('/audio/rescan', requireAuth, async (req, res) => {
+  try {
+    const audio = await manager.rescanAudio()
+    res.json({ ok: true, audio })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
 })
 
 // Graceful shutdown so Xvfb/FFmpeg are cleaned up on PM2 restart

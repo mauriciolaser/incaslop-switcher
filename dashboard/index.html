@@ -225,6 +225,18 @@
 
   <!-- Stream controls -->
   <div class="card">
+    <h2>Audio</h2>
+    <div id="audio-summary" style="font-size: 0.85rem; color: #cbd5e1;">Cargando...</div>
+    <div id="audio-track" style="font-size: 0.8rem; color: #94a3b8; margin-top: 6px;"></div>
+    <div id="audio-meta" style="font-size: 0.75rem; color: #64748b; margin-top: 4px;"></div>
+    <div id="audio-warnings" style="font-size: 0.75rem; color: #f59e0b; margin-top: 8px;"></div>
+    <div style="margin-top: 12px;">
+      <button class="btn-primary" onclick="rescanAudio()">↻ Recargar carpeta</button>
+    </div>
+  </div>
+
+  <!-- Stream controls -->
+  <div class="card">
     <h2>Controles</h2>
     <div class="controls-row">
       <button class="btn-success" id="btn-start" onclick="doStart()">▶ Start Stream</button>
@@ -294,6 +306,7 @@
 
       uptEl.textContent = formatUptime(data.uptimeSeconds)
       updatePlaylistUI(data)
+      updateAudioUI(data.audio)
     }
 
     async function pollStatus() {
@@ -449,6 +462,49 @@
         log('Playlist: detenida')
         pollStatus()
       } catch (e) { log('Playlist error: ' + e.message) }
+    }
+
+    function updateAudioUI(audio) {
+      const summary = document.getElementById('audio-summary')
+      const track = document.getElementById('audio-track')
+      const meta = document.getElementById('audio-meta')
+      const warnings = document.getElementById('audio-warnings')
+
+      if (!audio) {
+        summary.textContent = 'Audio no disponible'
+        track.textContent = ''
+        meta.textContent = ''
+        warnings.textContent = ''
+        return
+      }
+
+      const enabledLabel = audio.enabled ? 'Audio loop activo' : 'Sin audio (video-only)'
+      summary.textContent = `${enabledLabel} · ${audio.trackCount || 0} pista(s)`
+
+      if (audio.currentTrack) {
+        const dur = audio.currentTrack.durationSec ? ` (${Math.round(audio.currentTrack.durationSec)}s)` : ''
+        track.textContent = `Pista actual: ${audio.currentTrack.index + 1}. ${audio.currentTrack.name}${dur}`
+      } else {
+        track.textContent = 'Pista actual: —'
+      }
+
+      const scanText = audio.lastScanAt ? new Date(audio.lastScanAt).toLocaleString('es-PE') : '—'
+      meta.textContent = `Último escaneo: ${scanText}`
+
+      warnings.textContent = Array.isArray(audio.warnings) && audio.warnings.length
+        ? audio.warnings.join(' | ')
+        : ''
+    }
+
+    async function rescanAudio() {
+      try {
+        const data = await apiFetch('/audio/rescan', { method: 'POST' })
+        log('Audio: carpeta recargada')
+        updateAudioUI(data.audio)
+        pollStatus()
+      } catch (e) {
+        log('Audio error: ' + e.message)
+      }
     }
 
     pollStatus()

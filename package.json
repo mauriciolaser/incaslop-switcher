@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "deploy": "powershell -ExecutionPolicy Bypass -File scripts/deploy.ps1",
+    "deploy:switcher": "powershell -ExecutionPolicy Bypass -File scripts/deploy-switcher-backend.ps1",
     "online:install": "npm --prefix server install",
     "online:start": "npm --prefix server start",
     "sprite:money": "node scripts/gen-money-icon.mjs",

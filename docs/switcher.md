@@ -85,6 +85,29 @@ cat switcher/stream-manager.js | plink -pw 'PASS' -P 22 mauri@159.198.65.35 \
 plink -pw 'PASS' -P 22 mauri@159.198.65.35 "echo 'PASS' | sudo -S pm2 restart all"
 ```
 
+## Deploy en un solo comando (backend + audios)
+
+Ahora existe un script local que empaqueta y despliega backend + `switcher/audio/*.mp3`:
+
+```powershell
+npm run deploy:switcher
+```
+
+El script:
+
+1. Valida sintaxis de `server.js`, `stream-manager.js`, `playlist-manager.js`, `audio-loop-manager.js`
+2. Empaqueta archivos backend y la carpeta `switcher/audio/`
+3. Sube el paquete al VPS por `pscp`
+4. Extrae en `/home/mauri/switcher/` con `sudo`
+5. Ejecuta `pm2 restart all` y `pm2 list`
+
+Opcionalmente, puedes pasar host/usuario/puerto:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/deploy-switcher-backend.ps1 `
+  -ServerHost 159.198.65.35 -Port 22 -User mauri
+```
+
 ## Notas
 
 - La llave privada en `ssh.txt` (ed25519) **no funciona** con `root` — el servidor tiene acceso por llave deshabilitado para root.
