@@ -18,6 +18,8 @@ app.options('*', cors(corsOptions))
 const DEFAULT_URL = process.env.DEFAULT_URL || 'about:blank'
 const OVERLAY_DURATION_MS = 8000
 const OVERLAY_MAX_LENGTH = 180
+const OVERLAY_DEFAULT_STYLE = 'neon-burst'
+const OVERLAY_STYLE_PRESETS = new Set(['neon-burst', 'acid-fire', 'pixel-rave', 'cosmic-pop', 'warning-siren'])
 
 const manager = new StreamManager({
   DISPLAY_NUM: process.env.DISPLAY_NUM,
@@ -51,6 +53,7 @@ const overlay = {
   visible: false,
   expiresAt: null,
   updatedAt: null,
+  style: OVERLAY_DEFAULT_STYLE,
 }
 
 let overlayTimer = null
@@ -61,6 +64,7 @@ function getOverlayState() {
     visible: overlay.visible,
     expiresAt: overlay.expiresAt,
     updatedAt: overlay.updatedAt,
+    style: overlay.style,
   }
 }
 
@@ -75,13 +79,20 @@ function hideOverlayState(now = Date.now()) {
   overlay.visible = false
   overlay.expiresAt = null
   overlay.updatedAt = now
+  overlay.style = OVERLAY_DEFAULT_STYLE
 }
 
-function setOverlayState(text, now = Date.now()) {
+function setOverlayState(text, style, now = Date.now()) {
   overlay.text = text
   overlay.visible = true
   overlay.expiresAt = now + OVERLAY_DURATION_MS
   overlay.updatedAt = now
+  overlay.style = style
+}
+
+function normalizeOverlayStyle(styleRaw) {
+  if (typeof styleRaw !== 'string') return OVERLAY_DEFAULT_STYLE
+  return OVERLAY_STYLE_PRESETS.has(styleRaw) ? styleRaw : OVERLAY_DEFAULT_STYLE
 }
 
 function requireAuth(req, res, next) {
@@ -208,8 +219,12 @@ app.post('/audio/rescan', requireAuth, async (req, res) => {
 // POST /overlay/message
 app.post('/overlay/message', requireAuth, async (req, res) => {
   const textRaw = req.body?.text
+  const styleRaw = req.body?.style
   if (typeof textRaw !== 'string') {
     return res.status(400).json({ error: 'text must be a string' })
+  }
+  if (styleRaw !== undefined && typeof styleRaw !== 'string') {
+    return res.status(400).json({ error: 'style must be a string' })
   }
 
   const text = textRaw.trim()
@@ -225,9 +240,10 @@ app.post('/overlay/message', requireAuth, async (req, res) => {
 
   try {
     const now = Date.now()
-    setOverlayState(text, now)
+    const style = normalizeOverlayStyle(styleRaw)
+    setOverlayState(text, style, now)
     clearOverlayTimer()
-    await manager.showOverlayMessage({ text: overlay.text, expiresAt: overlay.expiresAt })
+    await manager.showOverlayMessage({ text: overlay.text, style: overlay.style, expiresAt: overlay.expiresAt })
 
     overlayTimer = setTimeout(async () => {
       hideOverlayState()

@@ -105,6 +105,19 @@
       width: 100%;
       margin-bottom: 10px;
     }
+    #overlay-style {
+      width: 100%;
+      margin-bottom: 10px;
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: #e2e8f0;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    #overlay-style:focus { border-color: #3b82f6; }
 
     #overlay-status {
       font-size: 0.8rem;
@@ -221,6 +234,13 @@
   <div class="card">
     <h2>Mensajes Overlay</h2>
     <input type="text" id="overlay-input" maxlength="180" placeholder="Escribe el mensaje para mostrar en Kick..." />
+    <select id="overlay-style">
+      <option value="neon-burst">Neon Burst</option>
+      <option value="acid-fire">Acid Fire</option>
+      <option value="pixel-rave">Pixel Rave</option>
+      <option value="cosmic-pop">Cosmic Pop</option>
+      <option value="warning-siren">Warning Siren</option>
+    </select>
     <div id="overlay-status">Sin mensaje activo</div>
     <div class="controls-row">
       <button class="btn-primary" onclick="overlayShow()">Mostrar mensaje</button>
@@ -384,8 +404,24 @@
     })
 
     // --- Overlay ---
+    const OVERLAY_STYLE_LABELS = {
+      'neon-burst': 'Neon Burst',
+      'acid-fire': 'Acid Fire',
+      'pixel-rave': 'Pixel Rave',
+      'cosmic-pop': 'Cosmic Pop',
+      'warning-siren': 'Warning Siren',
+    }
+
+    function getOverlayStyleLabel(style) {
+      return OVERLAY_STYLE_LABELS[style] || OVERLAY_STYLE_LABELS['neon-burst']
+    }
+
     function updateOverlayUI(overlay) {
       const status = document.getElementById('overlay-status')
+      const styleInput = document.getElementById('overlay-style')
+      if (overlay?.style && styleInput) {
+        styleInput.value = overlay.style
+      }
       if (!overlay || !overlay.visible) {
         status.textContent = 'Sin mensaje activo'
         return
@@ -393,19 +429,20 @@
 
       const ms = Math.max(0, (overlay.expiresAt || 0) - Date.now())
       const sec = Math.ceil(ms / 1000)
-      status.textContent = `Activo (${sec}s): ${overlay.text || ''}`
+      status.textContent = `Activo (${sec}s · ${getOverlayStyleLabel(overlay.style)}): ${overlay.text || ''}`
     }
 
     async function overlayShow() {
       const text = document.getElementById('overlay-input').value.trim()
+      const style = document.getElementById('overlay-style').value
       if (!text) return log('Overlay: el mensaje es requerido')
 
       try {
         const data = await apiFetch('/overlay/message', {
           method: 'POST',
-          body: JSON.stringify({ text }),
+          body: JSON.stringify({ text, style }),
         })
-        log('Overlay: mensaje enviado')
+        log(`Overlay: mensaje enviado con estilo ${getOverlayStyleLabel(style)}`)
         updateOverlayUI(data.overlay)
         pollStatus()
       } catch (e) {

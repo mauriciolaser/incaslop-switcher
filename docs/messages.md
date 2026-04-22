@@ -8,6 +8,7 @@ Permitir enviar mensajes desde `/dashboard` para que aparezcan sobre el navegado
 
 - Modo: un solo mensaje activo.
 - Formato: texto plano (sin HTML/markdown), con soporte de emojis Unicode.
+- Estilos: 5 presets visuales seleccionables desde dashboard/API que impactan el render.
 - Posición: centro de pantalla, estilo grande.
 - Duración: 8 segundos fijos con auto-hide.
 - Si el stream no está activo: la API responde `409` para evitar mensajes fantasma.
@@ -39,9 +40,18 @@ Request:
 
 ```json
 {
-  "text": "Mensaje para mostrar en stream"
+  "text": "Mensaje para mostrar en stream",
+  "style": "neon-burst"
 }
 ```
+
+`style` es opcional. Presets permitidos:
+
+- `neon-burst`
+- `acid-fire`
+- `pixel-rave`
+- `cosmic-pop`
+- `warning-siren`
 
 Respuesta exitosa:
 
@@ -52,7 +62,8 @@ Respuesta exitosa:
     "text": "Mensaje para mostrar en stream",
     "visible": true,
     "expiresAt": 1760000000000,
-    "updatedAt": 1760000000000
+    "updatedAt": 1760000000000,
+    "style": "neon-burst"
   }
 }
 ```
@@ -77,7 +88,8 @@ Respuesta:
     "text": "",
     "visible": false,
     "expiresAt": null,
-    "updatedAt": 1760000000000
+    "updatedAt": 1760000000000,
+    "style": "neon-burst"
   }
 }
 ```
@@ -91,15 +103,17 @@ Respuesta:
   - `visible`
   - `expiresAt`
   - `updatedAt`
+  - `style`
 - Usa timer en backend para auto-hide a los 8 segundos.
 - Expone el estado `overlay` en `/status`.
 
 ### Stream renderer (`switcher/stream-manager.js`)
 
 - Nuevos métodos públicos:
-  - `showOverlayMessage({ text, expiresAt })`
+  - `showOverlayMessage({ text, expiresAt, style })`
   - `clearOverlayMessage()`
 - Renderiza un contenedor fijo con `page.evaluate(...)` en Chromium.
+- Aplica 5 presets CSS animados (colores y formas) según `style`.
 - Inserta el texto con `textContent` para evitar inyección HTML.
 - Reinyecta el overlay tras `switchUrl()` para persistir mensaje vigente entre cambios de página.
 

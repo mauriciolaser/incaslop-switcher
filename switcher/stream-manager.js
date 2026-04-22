@@ -8,6 +8,13 @@ import { AudioLoopManager } from './audio-loop-manager.js'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const STATE_FILE = path.join(__dirname, 'data', 'state.json')
 const REMOTE_DEBUG_PORT = 9222
+const OVERLAY_DEFAULT_STYLE = 'neon-burst'
+const OVERLAY_STYLE_SET = new Set(['neon-burst', 'acid-fire', 'pixel-rave', 'cosmic-pop', 'warning-siren'])
+
+function normalizeOverlayStyle(style) {
+  if (typeof style !== 'string') return OVERLAY_DEFAULT_STYLE
+  return OVERLAY_STYLE_SET.has(style) ? style : OVERLAY_DEFAULT_STYLE
+}
 
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms))
@@ -41,6 +48,7 @@ export class StreamManager {
     visible: false,
     text: '',
     expiresAt: null,
+    style: OVERLAY_DEFAULT_STYLE,
   }
 
   constructor(config) {
@@ -272,18 +280,20 @@ export class StreamManager {
       this.#overlay.expiresAt = null
     }
 
-    await this.#page.evaluate(async ({ visible, text }) => {
+    await this.#page.evaluate(async ({ visible, text, style }) => {
       const STYLE_ID = 'incaslop-overlay-style'
       const ROOT_ID = 'incaslop-overlay-root'
+      const CARD_ID = 'incaslop-overlay-card'
       const TEXT_ID = 'incaslop-overlay-text'
+      const SHAPES_ID = 'incaslop-overlay-shapes'
       const TWEMOJI_SCRIPT_ID = 'incaslop-twemoji-script'
       const TWEMOJI_SRC = 'https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js'
 
-      let style = document.getElementById(STYLE_ID)
-      if (!style) {
-        style = document.createElement('style')
-        style.id = STYLE_ID
-        style.textContent = `
+      let styleEl = document.getElementById(STYLE_ID)
+      if (!styleEl) {
+        styleEl = document.createElement('style')
+        styleEl.id = STYLE_ID
+        styleEl.textContent = `
           #${ROOT_ID} {
             position: fixed;
             inset: 0;
@@ -292,23 +302,44 @@ export class StreamManager {
             justify-content: center;
             z-index: 2147483647;
             pointer-events: none;
-            padding: 40px;
+            padding: 38px;
+          }
+          #${CARD_ID} {
+            position: relative;
+            max-width: min(1280px, 92vw);
+            border-radius: 24px;
+            border: 3px solid #ffffff;
+            padding: 26px 34px;
+            overflow: hidden;
+            isolation: isolate;
+            transform-origin: center;
+            animation: incaslop-float 3.2s ease-in-out infinite;
+          }
+          #${SHAPES_ID} {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            z-index: 0;
+          }
+          #${SHAPES_ID} span {
+            position: absolute;
+            display: block;
+            border-radius: 999px;
+            opacity: 0.8;
+            filter: blur(2px);
+            mix-blend-mode: screen;
           }
           #${TEXT_ID} {
-            max-width: min(1200px, 90vw);
-            background: rgba(8, 10, 20, 0.82);
+            position: relative;
+            z-index: 2;
             color: #f8fafc;
-            border: 2px solid rgba(255, 255, 255, 0.18);
-            border-radius: 16px;
-            padding: 26px 34px;
             text-align: center;
             font-size: 56px;
-            font-weight: 700;
+            font-weight: 800;
             line-height: 1.18;
             font-family: "Segoe UI", "Noto Sans", "DejaVu Sans", "Noto Color Emoji", "Segoe UI Emoji", "Apple Color Emoji", sans-serif;
             letter-spacing: 0.01em;
-            text-shadow: 0 2px 14px rgba(0, 0, 0, 0.65);
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+            text-shadow: 0 2px 14px rgba(0, 0, 0, 0.55);
             white-space: pre-wrap;
             overflow-wrap: anywhere;
           }
@@ -323,23 +354,138 @@ export class StreamManager {
               font-size: 44px;
             }
           }
+          @keyframes incaslop-float {
+            0%, 100% { transform: translateY(0px) scale(1); }
+            50% { transform: translateY(-4px) scale(1.01); }
+          }
+          @keyframes incaslop-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+          @keyframes incaslop-pulse {
+            0%, 100% { transform: scale(1); opacity: 0.84; }
+            50% { transform: scale(1.14); opacity: 0.42; }
+          }
+          @keyframes incaslop-flicker {
+            0%, 100% { opacity: 1; }
+            15% { opacity: 0.88; }
+            18% { opacity: 0.56; }
+            22% { opacity: 1; }
+            52% { opacity: 0.72; }
+          }
+
+          #${ROOT_ID}[data-style="neon-burst"] #${CARD_ID} {
+            background: radial-gradient(circle at 20% 18%, rgba(236,72,153,0.4), transparent 46%),
+                        radial-gradient(circle at 80% 80%, rgba(14,165,233,0.36), transparent 50%),
+                        linear-gradient(140deg, #0b1022, #161135 52%, #180b2e);
+            border-color: #f9a8d4;
+            box-shadow: 0 0 0 5px rgba(236,72,153,0.24), 0 0 90px rgba(56,189,248,0.46);
+          }
+          #${ROOT_ID}[data-style="neon-burst"] #${TEXT_ID} {
+            color: #fdf4ff;
+            text-shadow: 0 0 16px rgba(244,114,182,0.8), 0 0 30px rgba(56,189,248,0.62);
+          }
+
+          #${ROOT_ID}[data-style="acid-fire"] #${CARD_ID} {
+            background: conic-gradient(from 210deg at 50% 50%, #2e1065, #9333ea, #f97316, #facc15, #2e1065);
+            border-color: #facc15;
+            box-shadow: 0 0 0 5px rgba(250,204,21,0.23), 0 0 85px rgba(249,115,22,0.52);
+            animation: incaslop-float 3.2s ease-in-out infinite, incaslop-flicker 1.4s linear infinite;
+          }
+          #${ROOT_ID}[data-style="acid-fire"] #${TEXT_ID} {
+            color: #fff8d6;
+            text-shadow: 0 2px 10px rgba(96,34,180,0.65), 0 0 26px rgba(249,115,22,0.85);
+          }
+
+          #${ROOT_ID}[data-style="pixel-rave"] #${CARD_ID} {
+            background:
+              repeating-linear-gradient(90deg, rgba(15,23,42,0.94) 0 24px, rgba(30,41,59,0.94) 24px 48px),
+              linear-gradient(135deg, #0f172a, #1e293b);
+            border-color: #22d3ee;
+            box-shadow: 0 0 0 5px rgba(34,211,238,0.24), 0 0 90px rgba(16,185,129,0.44);
+          }
+          #${ROOT_ID}[data-style="pixel-rave"] #${TEXT_ID} {
+            color: #ccfbf1;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            text-shadow: -2px 0 0 #0ea5e9, 2px 0 0 #10b981, 0 0 24px rgba(45,212,191,0.78);
+          }
+
+          #${ROOT_ID}[data-style="cosmic-pop"] #${CARD_ID} {
+            background: radial-gradient(circle at 30% 10%, rgba(250,204,21,0.34), transparent 35%),
+                        radial-gradient(circle at 70% 85%, rgba(34,197,94,0.33), transparent 42%),
+                        linear-gradient(155deg, #082f49, #164e63 46%, #0f766e);
+            border-color: #86efac;
+            box-shadow: 0 0 0 5px rgba(134,239,172,0.2), 0 0 88px rgba(45,212,191,0.48);
+          }
+          #${ROOT_ID}[data-style="cosmic-pop"] #${TEXT_ID} {
+            color: #ecfeff;
+            text-shadow: 0 0 16px rgba(34,211,238,0.7), 0 0 30px rgba(134,239,172,0.55);
+          }
+
+          #${ROOT_ID}[data-style="warning-siren"] #${CARD_ID} {
+            background: repeating-linear-gradient(-22deg, #111827 0 32px, #7f1d1d 32px 64px);
+            border-color: #fca5a5;
+            box-shadow: 0 0 0 5px rgba(248,113,113,0.28), 0 0 90px rgba(220,38,38,0.55);
+            animation: incaslop-float 3.2s ease-in-out infinite, incaslop-flicker 1.05s linear infinite;
+          }
+          #${ROOT_ID}[data-style="warning-siren"] #${TEXT_ID} {
+            color: #ffe4e6;
+            text-shadow: 0 0 14px rgba(248,113,113,0.9), 0 0 28px rgba(185,28,28,0.88);
+          }
         `
-        document.head.appendChild(style)
+        document.head.appendChild(styleEl)
       }
 
       let root = document.getElementById(ROOT_ID)
       if (!root) {
         root = document.createElement('div')
         root.id = ROOT_ID
+        const card = document.createElement('div')
+        card.id = CARD_ID
+        const shapes = document.createElement('div')
+        shapes.id = SHAPES_ID
+        for (let i = 0; i < 4; i += 1) {
+          const bubble = document.createElement('span')
+          bubble.className = `shape-${i + 1}`
+          shapes.appendChild(bubble)
+        }
         const textEl = document.createElement('div')
         textEl.id = TEXT_ID
-        root.appendChild(textEl)
+        card.appendChild(shapes)
+        card.appendChild(textEl)
+        root.appendChild(card)
         document.body.appendChild(root)
       }
 
       const textEl = document.getElementById(TEXT_ID)
+      const shapes = document.querySelectorAll(`#${SHAPES_ID} span`)
+      const palette = {
+        'neon-burst': ['#f472b6', '#38bdf8', '#c084fc', '#fb7185'],
+        'acid-fire': ['#facc15', '#f97316', '#fb7185', '#c084fc'],
+        'pixel-rave': ['#22d3ee', '#10b981', '#0ea5e9', '#67e8f9'],
+        'cosmic-pop': ['#86efac', '#22d3ee', '#fde047', '#2dd4bf'],
+        'warning-siren': ['#fca5a5', '#f87171', '#ef4444', '#fb7185'],
+      }
+      const activePalette = palette[style] || palette['neon-burst']
+      shapes.forEach((shape, index) => {
+        const size = 84 + (index * 44)
+        const positions = [
+          { top: '-16%', left: '-8%' },
+          { top: '62%', left: '74%' },
+          { top: '68%', left: '-6%' },
+          { top: '-20%', left: '78%' },
+        ]
+        shape.style.width = `${size}px`
+        shape.style.height = `${size}px`
+        shape.style.top = positions[index].top
+        shape.style.left = positions[index].left
+        shape.style.background = activePalette[index]
+        shape.style.animation = `incaslop-pulse ${1.3 + index * 0.25}s ease-in-out infinite`
+      })
       if (textEl) textEl.textContent = visible ? (text || '') : ''
       root.style.display = visible ? 'flex' : 'none'
+      root.dataset.style = style || 'neon-burst'
 
       async function ensureTwemoji() {
         if (window.twemoji) return true
@@ -370,15 +516,20 @@ export class StreamManager {
           ext: '.svg',
         })
       }
-    }, { visible: stillVisible, text: this.#overlay.text || '' })
+    }, {
+      visible: stillVisible,
+      text: this.#overlay.text || '',
+      style: normalizeOverlayStyle(this.#overlay.style),
+    })
   }
 
-  async showOverlayMessage({ text, expiresAt }) {
+  async showOverlayMessage({ text, expiresAt, style }) {
     if (!this.#page) throw new Error('Stream is not running')
 
     this.#overlay.visible = true
     this.#overlay.text = text
     this.#overlay.expiresAt = expiresAt
+    this.#overlay.style = normalizeOverlayStyle(style)
     await this.#syncOverlayToPage()
   }
 
@@ -386,6 +537,7 @@ export class StreamManager {
     this.#overlay.visible = false
     this.#overlay.text = ''
     this.#overlay.expiresAt = null
+    this.#overlay.style = OVERLAY_DEFAULT_STYLE
     await this.#syncOverlayToPage()
   }
 
