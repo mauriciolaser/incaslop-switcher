@@ -272,10 +272,12 @@ export class StreamManager {
       this.#overlay.expiresAt = null
     }
 
-    await this.#page.evaluate(({ visible, text }) => {
+    await this.#page.evaluate(async ({ visible, text }) => {
       const STYLE_ID = 'incaslop-overlay-style'
       const ROOT_ID = 'incaslop-overlay-root'
       const TEXT_ID = 'incaslop-overlay-text'
+      const TWEMOJI_SCRIPT_ID = 'incaslop-twemoji-script'
+      const TWEMOJI_SRC = 'https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js'
 
       let style = document.getElementById(STYLE_ID)
       if (!style) {
@@ -310,6 +312,12 @@ export class StreamManager {
             white-space: pre-wrap;
             overflow-wrap: anywhere;
           }
+          #${TEXT_ID} img.emoji {
+            height: 1em;
+            width: 1em;
+            margin: 0 0.04em;
+            vertical-align: -0.1em;
+          }
           @media (max-width: 1400px) {
             #${TEXT_ID} {
               font-size: 44px;
@@ -332,6 +340,36 @@ export class StreamManager {
       const textEl = document.getElementById(TEXT_ID)
       if (textEl) textEl.textContent = visible ? (text || '') : ''
       root.style.display = visible ? 'flex' : 'none'
+
+      async function ensureTwemoji() {
+        if (window.twemoji) return true
+
+        let script = document.getElementById(TWEMOJI_SCRIPT_ID)
+        if (!script) {
+          script = document.createElement('script')
+          script.id = TWEMOJI_SCRIPT_ID
+          script.src = TWEMOJI_SRC
+          script.async = true
+          document.head.appendChild(script)
+        }
+
+        await new Promise((resolve) => {
+          if (window.twemoji) return resolve()
+          const done = () => resolve()
+          script.addEventListener('load', done, { once: true })
+          script.addEventListener('error', done, { once: true })
+          setTimeout(done, 2500)
+        })
+
+        return Boolean(window.twemoji)
+      }
+
+      if (visible && textEl && text && await ensureTwemoji()) {
+        window.twemoji.parse(textEl, {
+          folder: 'svg',
+          ext: '.svg',
+        })
+      }
     }, { visible: stillVisible, text: this.#overlay.text || '' })
   }
 
