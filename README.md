@@ -1,94 +1,35 @@
-# IncaSlop Mechas
-
-Frontend React/Vite para `mechas.incaslop.online` y backend Node/Express para la arena online publicada en `api-mechas.incaslop.online`.
-
-## Estado real del proyecto
-
-- La fuente de verdad del frontend vive en la raiz del repo: `index.html`, `src/`, `vite.config.js`.
-- `dist/` es solo un artefacto generado por `npm run build`.
-- El backend vive en `server/`.
-- El despliegue del frontend se hace con GitHub Actions por FTP.
-- El despliegue del backend se documenta aparte para el VPS AlmaLinux.
-
-## Estructura util
-
-- `index.html`: entrada real del frontend en desarrollo.
-- `src/`: codigo fuente React, utilidades y assets.
-- `src/assets/images/candidates/`: repositorio fuente de retratos de candidatos.
-- `server/`: backend online Node/Express.
-- `.github/workflows/deploy.yml`: build y deploy del frontend.
-- `scripts/deploy.ps1`: helper local para disparar el workflow `Deploy`.
-- `docs/`: documentacion operativa.
-
-## Flujo correcto de frontend
-
-1. Se modifica codigo fuente en `index.html`, `src/` o `vite.config.js`.
-2. `npm run build` genera `dist/`.
-3. El workflow `Deploy` sube `dist/` al hosting.
-
-Regla importante:
-
-- No se versionan cambios manuales en `dist/`.
-- Si algo debe aparecer en `dist/`, la logica debe vivir en el codigo fuente o en el pipeline de build.
-
-## Arena de combate
-
-La vista de pelea ahora se compone de tres bloques visuales principales:
-
-- HUD superior de combatientes con nombre, partido, stats y estados activos.
-- Panel inferior izquierdo para el registro de batalla.
-- Panel inferior derecho reservado para el futuro chat por websocket.
-
-Los flashes de efectos especiales tambien viven completamente en frontend y se disparan desde el estado de combate ya disponible, sin cambiar contratos del backend online.
-
-## Retratos de candidatos
-
-Los retratos viven en `src/assets/images/candidates/`, pero la URL publica estable del proyecto es:
-
-`/images/candidates/<archivo>.webp`
-
-Eso se resuelve asi:
-
-- en desarrollo, `vite.config.js` expone esa carpeta en `/images/candidates`
-- en build, `vite.config.js` copia la carpeta a `dist/images/candidates`
-- `src/utils/portraitResolver.js` normaliza rutas del backend o de la API a esa URL publica estable
-
-La idea es evitar:
-
-- `404` por rutas antiguas como `/images/candidates/...` que no existian en hosting
-- dependencia de assets hasheados de Vite para miles de imagenes
-- bundles gigantes por meter todos los retratos dentro del JS
-
-## Variables y deploy del frontend
-
-El workflow `Deploy` exige estos secretos:
-
-- `FTP_HOST`
-- `FTP_USERNAME`
-- `FTP_PASSWORD`
-- `FTP_DESTINATION`
-- `VITE_GA_ID`
-- `VITE_ONLINE_API_BASE`
-
-`VITE_ONLINE_API_BASE` debe apuntar a:
-
-`https://api-mechas.incaslop.online/server`
-
-Para lanzar el deploy desde local:
-
-```powershell
-npm run deploy
-```
-
-Modo debug:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/deploy.ps1 -DebugDeploy
-```
-
-## Documentacion relacionada
-
-- [docs/estructura.md](C:/IncaSlop/incaslop-mechas/docs/estructura.md)
-- [docs/api-candidatos.md](C:/IncaSlop/incaslop-mechas/docs/api-candidatos.md)
-- [docs/backend-stack-vps-almalinux.md](C:/IncaSlop/incaslop-mechas/docs/backend-stack-vps-almalinux.md)
-- [docs/codex-ssh-access.md](C:/IncaSlop/incaslop-mechas/docs/codex-ssh-access.md)
+# IncaSlop Switcher
+Switcher de streaming para controlar una transmision web hacia Kick y operarlo desde un dashboard estatico.
+## Componentes
+- switcher/: backend Node/Express + control de Chromium/Xvfb/FFmpeg y playlist de audio.
+- dashboard/: frontend estatico (index.html, config.js, .htaccess) para operar el switcher.
+- .github/workflows/deploy.yml: pipeline de deploy (dashboard y backend switcher).
+- scripts/deploy-switcher-backend.ps1: helper local para deploy manual de backend + dashboard.
+- docs/: documentacion operativa.
+## Variables de entorno del switcher
+Referencia: switcher/.env.example.
+Variables principales:
+- PORT
+- KICK_RTMP_URL
+- KICK_STREAM_KEY
+- ALLOWED_ORIGIN
+- API_TOKEN
+- CHROMIUM_EXECUTABLE_PATH
+- DISPLAY_NUM
+- STREAM_WIDTH
+- STREAM_HEIGHT
+- STREAM_FPS
+- VIDEO_BITRATE
+- MAXRATE
+- BUFSIZE
+- GOP
+- PRESET
+- AUDIO_BITRATE
+- DEFAULT_URL
+## Deploy
+- Dashboard: subida por FTP de dashboard/index.html, dashboard/config.js, dashboard/.htaccess.
+- Switcher backend: empaquetado y despliegue al VPS, seguido de pm2 restart.
+## Documentacion
+- [docs/dashboard.md](docs/dashboard.md)
+- [docs/switcher.md](docs/switcher.md)
+- [docs/messages.md](docs/messages.md)

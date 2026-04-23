@@ -1,70 +1,44 @@
-# .github/workflows/deploy.yml
-# ------------------------------------------------------------
-# ► Despliegue manual (workflow_dispatch) vía FTP
-# ► Stack: React + Vite  •  Node LTS 22.16.0
-# ------------------------------------------------------------
-
-name: Deploy
+name: Deploy Switcher
 
 on:
   workflow_dispatch:
     inputs:
+      deploy_dashboard:
+        description: "Desplegar dashboard por FTP"
+        required: true
+        default: true
+        type: boolean
+      deploy_switcher:
+        description: "Desplegar backend switcher al VPS"
+        required: true
+        default: true
+        type: boolean
       debug:
-        description: "Activa pasos extra de diagnostico"
+        description: "Activar pasos extra de diagnostico"
         required: false
         default: false
         type: boolean
 
 jobs:
-  deploy:
+  dashboard:
+    if: ${{ inputs.deploy_dashboard }}
     runs-on: ubuntu-latest
 
     steps:
-      # 0) Inicio del workflow
-      - name: ⏩ Inicio del workflow
-        run: |
-          echo "🚀 Comenzando despliegue por FTP..."
-          echo "Branch/ref: ${{ github.ref }}"
-          echo "Commit SHA: ${{ github.sha }}"
-          echo "Debug activado: ${{ inputs.debug }}"
-
-      # 1) Checkout del código
-      - name: ⤵️  Checkout código
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # 2) Setup de Node.js LTS
-      - name: 🔧 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.16.0
-          cache: npm
-
-      # 3) Instalar dependencias
-      - name: 📦 Instalar dependencias
-        run: npm ci
-
-      - name: 🧪 Debug de entorno del workflow
-        if: ${{ inputs.debug }}
-        run: |
-          echo "Runner: $(uname -a)"
-          echo "Node: $(node --version)"
-          echo "NPM: $(npm --version)"
-          echo "Repositorio: ${{ github.repository }}"
-          echo "Evento: ${{ github.event_name }}"
-          echo "Workspace: ${{ github.workspace }}"
-
-      - name: 🔍 Verificar secretos requeridos
+      - name: Verificar secrets FTP
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           FTP_DESTINATION: ${{ secrets.FTP_DESTINATION }}
-          VITE_GA_ID: ${{ secrets.VITE_GA_ID }}
-          VITE_ONLINE_API_BASE: ${{ secrets.VITE_ONLINE_API_BASE }}
         run: |
+          set -euo pipefail
           missing=0
-          for key in FTP_HOST FTP_USERNAME FTP_PASSWORD FTP_DESTINATION VITE_GA_ID VITE_ONLINE_API_BASE; do
-            value="${!key}"
+          for key in FTP_HOST FTP_USERNAME FTP_PASSWORD FTP_DESTINATION; do
+            value="${!key:-}"
             if [ -z "$value" ]; then
               echo "::error::$key no esta definido en GitHub Secrets"
               missing=1
@@ -72,72 +46,210 @@ jobs:
               echo "$key presente"
             fi
           done
-          if [ "$missing" -ne 0 ]; then
-            exit 1
-          fi
+          [ "$missing" -eq 0 ]
 
-      # 4) Crear archivo .env con variables de entorno
-      - name: 🔐 Crear archivo .env
+      - name: Verificar archivos dashboard
         run: |
-          echo "VITE_GA_ID=${{ secrets.VITE_GA_ID }}" >> .env
-          echo "VITE_ONLINE_API_BASE=${{ secrets.VITE_ONLINE_API_BASE }}" >> .env
-          echo "✔️  Variables de entorno configuradas"
+          set -euo pipefail
+          test -f dashboard/index.html
+          test -f dashboard/config.js
+          test -f dashboard/.htaccess
 
-      - name: 🧾 Debug del .env generado
+      - name: Debug dashboard
         if: ${{ inputs.debug }}
         run: |
-          echo "Contenido de .env con valores ocultos:"
-          sed -E 's/=.*/=[MASKED]/' .env
+          set -euo pipefail
+          echo "Archivos dashboard:"
+          ls -la dashboard
 
-      # 5) Compilar proyecto con Vite
-      - name: 🏗️  Compilar proyecto
-        run: |
-          echo "🔨 Construyendo con Vite..."
-          npm run build
-          echo "✔️  Build completado en dist/"
-
-      - name: 📦 Debug del artefacto generado
-        if: ${{ inputs.debug }}
-        run: |
-          if [ ! -d dist ]; then
-            echo "::error::No existe la carpeta dist despues del build"
-            exit 1
-          fi
-          echo "Archivos generados en dist:"
-          find dist -maxdepth 3 -type f | sort
-          echo "Tamano total:"
-          du -sh dist
-
-      # 6) Mensaje antes de deploy
-      - name: 📤 Preparando subida FTP
-        run: echo "🔄 Cargando carpeta dist/ a tu hosting..."
-
-      - name: 🛰️  Debug previo al FTP
-        if: ${{ inputs.debug }}
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-          FTP_DESTINATION: ${{ secrets.FTP_DESTINATION }}
-        run: |
-          echo "Destino FTP configurado:"
-          echo "Host presente: $([ -n \"$FTP_HOST\" ] && echo yes || echo no)"
-          echo "Usuario presente: $([ -n \"$FTP_USERNAME\" ] && echo yes || echo no)"
-          echo "Directorio remoto presente: $([ -n \"$FTP_DESTINATION\" ] && echo yes || echo no)"
-
-      # 7) Despliegue vía FTP
-      - name: 🚚 Upload via FTP
+      - name: Deploy dashboard via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server:               ${{ secrets.FTP_HOST }}
-          username:             ${{ secrets.FTP_USERNAME }}
-          password:             ${{ secrets.FTP_PASSWORD }}
-          protocol:             ftp
-          port:                 21
-          local-dir:            dist/
-          server-dir:           ${{ secrets.FTP_DESTINATION }}
-          security:             loose
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftp
+          port: 21
+          local-dir: dashboard/
+          server-dir: ${{ secrets.FTP_DESTINATION }}
+          security: loose
           dangerous-clean-slate: false
 
-      # 8) Fin del workflow
-      - name: ✅ Fin del workflow
-        run: echo "🎉 Deploy completado con éxito."
+  switcher:
+    if: ${{ inputs.deploy_switcher }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verificar secrets switcher
+        env:
+          SWITCHER_HOST: ${{ secrets.SWITCHER_HOST }}
+          SWITCHER_PORT: ${{ secrets.SWITCHER_PORT }}
+          SWITCHER_USER: ${{ secrets.SWITCHER_USER }}
+          SWITCHER_PASSWORD: ${{ secrets.SWITCHER_PASSWORD }}
+          SWITCHER_REMOTE_BASE_DIR: ${{ secrets.SWITCHER_REMOTE_BASE_DIR }}
+          SWITCHER_REMOTE_SERVICE_DIR: ${{ secrets.SWITCHER_REMOTE_SERVICE_DIR }}
+          PORT: ${{ secrets.PORT }}
+          KICK_RTMP_URL: ${{ secrets.KICK_RTMP_URL }}
+          KICK_STREAM_KEY: ${{ secrets.KICK_STREAM_KEY }}
+          ALLOWED_ORIGIN: ${{ secrets.ALLOWED_ORIGIN }}
+          API_TOKEN: ${{ secrets.API_TOKEN }}
+          CHROMIUM_EXECUTABLE_PATH: ${{ secrets.CHROMIUM_EXECUTABLE_PATH }}
+          DISPLAY_NUM: ${{ secrets.DISPLAY_NUM }}
+          STREAM_WIDTH: ${{ secrets.STREAM_WIDTH }}
+          STREAM_HEIGHT: ${{ secrets.STREAM_HEIGHT }}
+          STREAM_FPS: ${{ secrets.STREAM_FPS }}
+          VIDEO_BITRATE: ${{ secrets.VIDEO_BITRATE }}
+          MAXRATE: ${{ secrets.MAXRATE }}
+          BUFSIZE: ${{ secrets.BUFSIZE }}
+          GOP: ${{ secrets.GOP }}
+          PRESET: ${{ secrets.PRESET }}
+          AUDIO_BITRATE: ${{ secrets.AUDIO_BITRATE }}
+          DEFAULT_URL: ${{ secrets.DEFAULT_URL }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for key in \
+            SWITCHER_HOST SWITCHER_PORT SWITCHER_USER SWITCHER_PASSWORD \
+            SWITCHER_REMOTE_BASE_DIR SWITCHER_REMOTE_SERVICE_DIR \
+            PORT KICK_RTMP_URL KICK_STREAM_KEY ALLOWED_ORIGIN API_TOKEN \
+            CHROMIUM_EXECUTABLE_PATH DISPLAY_NUM STREAM_WIDTH STREAM_HEIGHT STREAM_FPS \
+            VIDEO_BITRATE MAXRATE BUFSIZE GOP PRESET AUDIO_BITRATE DEFAULT_URL; do
+            value="${!key:-}"
+            if [ -z "$value" ]; then
+              echo "::error::$key no esta definido en GitHub Secrets"
+              missing=1
+            else
+              echo "$key presente"
+            fi
+          done
+          [ "$missing" -eq 0 ]
+
+      - name: Validar sintaxis Node
+        run: |
+          set -euo pipefail
+          node --check switcher/server.js
+          node --check switcher/stream-manager.js
+          node --check switcher/playlist-manager.js
+          node --check switcher/audio-loop-manager.js
+
+      - name: Armar paquete de deploy
+        env:
+          PORT: ${{ secrets.PORT }}
+          KICK_RTMP_URL: ${{ secrets.KICK_RTMP_URL }}
+          KICK_STREAM_KEY: ${{ secrets.KICK_STREAM_KEY }}
+          ALLOWED_ORIGIN: ${{ secrets.ALLOWED_ORIGIN }}
+          API_TOKEN: ${{ secrets.API_TOKEN }}
+          CHROMIUM_EXECUTABLE_PATH: ${{ secrets.CHROMIUM_EXECUTABLE_PATH }}
+          DISPLAY_NUM: ${{ secrets.DISPLAY_NUM }}
+          STREAM_WIDTH: ${{ secrets.STREAM_WIDTH }}
+          STREAM_HEIGHT: ${{ secrets.STREAM_HEIGHT }}
+          STREAM_FPS: ${{ secrets.STREAM_FPS }}
+          VIDEO_BITRATE: ${{ secrets.VIDEO_BITRATE }}
+          MAXRATE: ${{ secrets.MAXRATE }}
+          BUFSIZE: ${{ secrets.BUFSIZE }}
+          GOP: ${{ secrets.GOP }}
+          PRESET: ${{ secrets.PRESET }}
+          AUDIO_BITRATE: ${{ secrets.AUDIO_BITRATE }}
+          DEFAULT_URL: ${{ secrets.DEFAULT_URL }}
+        run: |
+          set -euo pipefail
+          rm -rf deploy_bundle
+          mkdir -p deploy_bundle/switcher
+
+          cp switcher/server.js deploy_bundle/switcher/
+          cp switcher/stream-manager.js deploy_bundle/switcher/
+          cp switcher/playlist-manager.js deploy_bundle/switcher/
+          cp switcher/audio-loop-manager.js deploy_bundle/switcher/
+          cp switcher/package.json deploy_bundle/switcher/
+          cp switcher/ecosystem.config.cjs deploy_bundle/switcher/
+          cp switcher/.env.example deploy_bundle/switcher/
+          cp -r switcher/audio deploy_bundle/switcher/
+
+          {
+            echo "PORT=$PORT"
+            echo "KICK_RTMP_URL=$KICK_RTMP_URL"
+            echo "KICK_STREAM_KEY=$KICK_STREAM_KEY"
+            echo "ALLOWED_ORIGIN=$ALLOWED_ORIGIN"
+            echo "API_TOKEN=$API_TOKEN"
+            echo "CHROMIUM_EXECUTABLE_PATH=$CHROMIUM_EXECUTABLE_PATH"
+            echo "DISPLAY_NUM=$DISPLAY_NUM"
+            echo "STREAM_WIDTH=$STREAM_WIDTH"
+            echo "STREAM_HEIGHT=$STREAM_HEIGHT"
+            echo "STREAM_FPS=$STREAM_FPS"
+            echo "VIDEO_BITRATE=$VIDEO_BITRATE"
+            echo "MAXRATE=$MAXRATE"
+            echo "BUFSIZE=$BUFSIZE"
+            echo "GOP=$GOP"
+            echo "PRESET=$PRESET"
+            echo "AUDIO_BITRATE=$AUDIO_BITRATE"
+            echo "DEFAULT_URL=$DEFAULT_URL"
+          } > deploy_bundle/switcher/.env
+
+          tar -czf switcher-deploy.tgz -C deploy_bundle switcher
+
+      - name: Debug paquete
+        if: ${{ inputs.debug }}
+        run: |
+          set -euo pipefail
+          ls -la
+          tar -tzf switcher-deploy.tgz
+
+      - name: Instalar cliente SSH
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+
+      - name: Subir paquete al VPS
+        env:
+          SWITCHER_HOST: ${{ secrets.SWITCHER_HOST }}
+          SWITCHER_PORT: ${{ secrets.SWITCHER_PORT }}
+          SWITCHER_USER: ${{ secrets.SWITCHER_USER }}
+          SWITCHER_PASSWORD: ${{ secrets.SWITCHER_PASSWORD }}
+        run: |
+          set -euo pipefail
+          archive_remote="/tmp/switcher-deploy-${{ github.run_id }}-${{ github.run_attempt }}.tgz"
+          echo "ARCHIVE_REMOTE=$archive_remote" >> "$GITHUB_ENV"
+
+          sshpass -p "$SWITCHER_PASSWORD" scp -P "$SWITCHER_PORT" -o StrictHostKeyChecking=no \
+            switcher-deploy.tgz "$SWITCHER_USER@$SWITCHER_HOST:$archive_remote"
+
+      - name: Aplicar deploy remoto y reiniciar PM2
+        env:
+          SWITCHER_HOST: ${{ secrets.SWITCHER_HOST }}
+          SWITCHER_PORT: ${{ secrets.SWITCHER_PORT }}
+          SWITCHER_USER: ${{ secrets.SWITCHER_USER }}
+          SWITCHER_PASSWORD: ${{ secrets.SWITCHER_PASSWORD }}
+          SWITCHER_REMOTE_BASE_DIR: ${{ secrets.SWITCHER_REMOTE_BASE_DIR }}
+          SWITCHER_REMOTE_SERVICE_DIR: ${{ secrets.SWITCHER_REMOTE_SERVICE_DIR }}
+          ARCHIVE_REMOTE: ${{ env.ARCHIVE_REMOTE }}
+        run: |
+          set -euo pipefail
+          password_b64="$(printf '%s' "$SWITCHER_PASSWORD" | base64 -w0)"
+          sshpass -p "$SWITCHER_PASSWORD" ssh -p "$SWITCHER_PORT" -o StrictHostKeyChecking=no "$SWITCHER_USER@$SWITCHER_HOST" "
+            set -euo pipefail
+            SUDO_PW=\$(printf '%s' '$password_b64' | base64 -d)
+            mkdir -p '$SWITCHER_REMOTE_SERVICE_DIR/audio'
+            if [ '$SWITCHER_USER' = 'root' ]; then
+              tar -xzf '$ARCHIVE_REMOTE' -C '$SWITCHER_REMOTE_BASE_DIR'
+              rm -f '$ARCHIVE_REMOTE'
+              pm2 restart all || pm2 start '$SWITCHER_REMOTE_SERVICE_DIR/ecosystem.config.cjs'
+              pm2 list
+            else
+              printf '%s\n' \"\$SUDO_PW\" | sudo -S -p '' tar -xzf '$ARCHIVE_REMOTE' -C '$SWITCHER_REMOTE_BASE_DIR'
+              printf '%s\n' \"\$SUDO_PW\" | sudo -S -p '' rm -f '$ARCHIVE_REMOTE'
+              printf '%s\n' \"\$SUDO_PW\" | sudo -S -p '' pm2 restart all || printf '%s\n' \"\$SUDO_PW\" | sudo -S -p '' pm2 start '$SWITCHER_REMOTE_SERVICE_DIR/ecosystem.config.cjs'
+              printf '%s\n' \"\$SUDO_PW\" | sudo -S -p '' pm2 list
+            fi
+          "
+
+      - name: Fin deploy switcher
+        run: echo "Deploy switcher completado"
