@@ -29,13 +29,13 @@ Secrets requeridos:
 ## Verificaciones previas
 
 1. `dashboard/config.js` debe apuntar a la API correcta.
-2. `window.SWITCHER_TOKEN` debe coincidir con `API_TOKEN` del backend.
+2. El backend debe estar corriendo con `/auth/login` habilitado (usuario interno `inca`).
 3. No borrar `.htaccess` si tu hosting depende del redirect HTTPS.
 
 ## Verificacion post deploy
 
 1. Abrir URL publica del dashboard.
-2. Confirmar que las acciones llaman a la API sin `401` ni `CORS`.
+2. Confirmar que aparece modal de login antes de mostrar el panel.
 3. Confirmar que `GET /status` responde.
 
 ## Fallback manual

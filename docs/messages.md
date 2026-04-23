@@ -12,6 +12,7 @@ Permitir enviar mensajes desde `/dashboard` para que aparezcan sobre el navegado
 - Posición: centro de pantalla, estilo grande.
 - Duración: 8 segundos fijos con auto-hide.
 - Si el stream no está activo: la API responde `409` para evitar mensajes fantasma.
+- Extra: al cambiar de canción en el loop de audio, aparece un modal lateral izquierdo con el texto `Ahora suena` y el nombre de la pista.
 
 ## API
 
@@ -116,6 +117,7 @@ Respuesta:
 - Aplica 5 presets CSS animados (colores y formas) según `style`.
 - Inserta el texto con `textContent` para evitar inyección HTML.
 - Reinyecta el overlay tras `switchUrl()` para persistir mensaje vigente entre cambios de página.
+- Incluye un overlay adicional para `Ahora suena` (lado izquierdo), activado automáticamente al detectar cambio real de pista de audio.
 
 ### Dashboard (`dashboard/index.html`)
 

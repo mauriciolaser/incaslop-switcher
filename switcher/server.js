@@ -3,6 +3,7 @@ import express from 'express'
 import cors from 'cors'
 import { StreamManager } from './stream-manager.js'
 import { PlaylistManager } from './playlist-manager.js'
+import { UserService } from './user-service.js'
 
 const PORT = process.env.PORT || 3000
 const API_TOKEN = process.env.API_TOKEN || ''
@@ -20,6 +21,9 @@ const OVERLAY_DURATION_MS = 8000
 const OVERLAY_MAX_LENGTH = 180
 const OVERLAY_DEFAULT_STYLE = 'neon-burst'
 const OVERLAY_STYLE_PRESETS = new Set(['neon-burst', 'acid-fire', 'pixel-rave', 'cosmic-pop', 'warning-siren'])
+const userService = new UserService()
+
+await userService.init()
 
 const manager = new StreamManager({
   DISPLAY_NUM: process.env.DISPLAY_NUM,
@@ -96,12 +100,27 @@ function normalizeOverlayStyle(styleRaw) {
 }
 
 function requireAuth(req, res, next) {
-  const header = req.headers['authorization'] || ''
-  const token = header.replace('Bearer ', '')
-  if (!API_TOKEN || token !== API_TOKEN) {
+  const token = getBearerToken(req)
+  if (!token) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
+
+  if (API_TOKEN && token === API_TOKEN) {
+    req.auth = { kind: 'api-token' }
+    return next()
+  }
+
+  const session = userService.getSession(token)
+  if (!session) return res.status(401).json({ error: 'Unauthorized' })
+
+  req.auth = { kind: 'session', token, session }
   next()
+}
+
+function getBearerToken(req) {
+  const header = req.headers['authorization'] || ''
+  if (!header.startsWith('Bearer ')) return ''
+  return header.slice('Bearer '.length).trim()
 }
 
 function validateUrl(url) {
@@ -116,8 +135,41 @@ function validateUrl(url) {
   }
 }
 
-// GET /status — public
-app.get('/status', (req, res) => {
+// POST /auth/login
+app.post('/auth/login', async (req, res) => {
+  const username = typeof req.body?.username === 'string' ? req.body.username.trim() : ''
+  const password = typeof req.body?.password === 'string' ? req.body.password : ''
+  if (!username || !password) {
+    return res.status(400).json({ error: 'username and password are required' })
+  }
+
+  try {
+    const session = await userService.login(username, password)
+    if (!session) return res.status(401).json({ error: 'Invalid credentials' })
+    res.json({ ok: true, token: session.token, user: session.user, expiresAt: session.expiresAt })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// GET /auth/session
+app.get('/auth/session', requireAuth, (req, res) => {
+  if (req.auth.kind === 'api-token') {
+    return res.json({ ok: true, kind: 'api-token', user: 'api-token' })
+  }
+  res.json({ ok: true, kind: 'session', user: req.auth.session.user, expiresAt: req.auth.session.expiresAt })
+})
+
+// POST /auth/logout
+app.post('/auth/logout', requireAuth, (req, res) => {
+  if (req.auth.kind === 'session') {
+    userService.logout(req.auth.token)
+  }
+  res.json({ ok: true })
+})
+
+// GET /status
+app.get('/status', requireAuth, (req, res) => {
   const now = Date.now()
   if (overlay.visible && overlay.expiresAt && overlay.expiresAt <= now) {
     hideOverlayState(now)

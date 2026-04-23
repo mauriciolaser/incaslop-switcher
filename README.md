@@ -33,7 +33,7 @@ Variables usadas por runtime:
 - `KICK_RTMP_URL`
 - `KICK_STREAM_KEY`
 - `ALLOWED_ORIGIN`
-- `API_TOKEN`
+- `API_TOKEN` (opcional, para acceso por token tecnico)
 - `CHROMIUM_EXECUTABLE_PATH`
 - `DISPLAY_NUM`
 - `STREAM_WIDTH`

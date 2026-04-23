@@ -15,12 +15,34 @@
       padding: 24px;
     }
 
+    .hidden { display: none !important; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
     h1 {
       font-size: 1.25rem;
       font-weight: 600;
       color: #fff;
-      margin-bottom: 24px;
       letter-spacing: 0.02em;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #94a3b8;
+      font-size: 0.8rem;
+    }
+
+    .btn-muted {
+      background: #374151;
+      color: #e2e8f0;
     }
 
     .card {
@@ -88,7 +110,7 @@
       gap: 8px;
     }
 
-    input[type="text"] {
+    input[type="text"], input[type="password"] {
       flex: 1;
       background: #0f1117;
       border: 1px solid #2d3148;
@@ -99,7 +121,7 @@
       outline: none;
       transition: border-color 0.15s;
     }
-    input[type="text"]:focus { border-color: #3b82f6; }
+    input[type="text"]:focus, input[type="password"]:focus { border-color: #3b82f6; }
 
     #overlay-input {
       width: 100%;
@@ -205,10 +227,81 @@
       white-space: pre-wrap;
       word-break: break-all;
     }
+
+    #login-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 12, 18, 0.84);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 50;
+    }
+
+    .login-box {
+      width: 100%;
+      max-width: 420px;
+      background: #151926;
+      border: 1px solid #2d3148;
+      border-radius: 12px;
+      padding: 22px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+    }
+
+    .login-box h2 {
+      font-size: 1rem;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .login-box p {
+      color: #94a3b8;
+      font-size: 0.85rem;
+      margin-bottom: 16px;
+    }
+
+    .login-form-row { margin-bottom: 10px; }
+
+    .login-form-row input {
+      width: 100%;
+    }
+
+    #login-error {
+      min-height: 1em;
+      color: #f87171;
+      font-size: 0.8rem;
+      margin-top: 2px;
+      margin-bottom: 12px;
+    }
   </style>
 </head>
 <body>
-  <h1>IncaSlop Switcher</h1>
+  <div id="login-modal">
+    <div class="login-box">
+      <h2>Iniciar sesión</h2>
+      <p>Acceso interno al switcher.</p>
+      <form id="login-form">
+        <div class="login-form-row">
+          <input type="text" id="login-username" placeholder="Usuario" autocomplete="username" required />
+        </div>
+        <div class="login-form-row">
+          <input type="password" id="login-password" placeholder="Password" autocomplete="current-password" required />
+        </div>
+        <div id="login-error"></div>
+        <button class="btn-primary" type="submit" id="btn-login">Entrar</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="app-shell" class="hidden">
+  <div class="topbar">
+    <h1>IncaSlop Switcher</h1>
+    <div class="topbar-right">
+      <span id="session-user">—</span>
+      <button class="btn-muted" onclick="doLogout()">Cerrar sesión</button>
+    </div>
+  </div>
 
   <!-- Status -->
   <div class="card">
@@ -292,26 +385,154 @@
     <h2>Log</h2>
     <pre id="log"></pre>
   </div>
+  </div>
 
   <script src="config.js"></script>
   <script>
     const API   = (window.SWITCHER_API   || 'http://localhost:3000').replace(/\/$/, '')
-    const TOKEN = window.SWITCHER_TOKEN  || ''
+    const SESSION_STORAGE_KEY = 'incaslop.switcher.session'
+    let SESSION_TOKEN = ''
+    let POLL_TIMER = null
 
     async function apiFetch(path, options = {}) {
+      const { suppressAuthRedirect = false, ...requestOptions } = options
       const res = await fetch(API + path, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + TOKEN,
-          ...(options.headers || {}),
+          ...(SESSION_TOKEN ? { 'Authorization': 'Bearer ' + SESSION_TOKEN } : {}),
+          ...(requestOptions.headers || {}),
         },
-        ...options,
+        ...requestOptions,
       })
       const text = await res.text()
       let data
       try { data = JSON.parse(text) } catch { data = { error: text } }
+      if (res.status === 401 && !suppressAuthRedirect) {
+        await handleUnauthorized()
+      }
       if (!res.ok) throw new Error(data.error || res.statusText)
       return data
+    }
+
+    function saveSession(session) {
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
+    }
+
+    function readStoredSession() {
+      const raw = localStorage.getItem(SESSION_STORAGE_KEY)
+      if (!raw) return null
+      try { return JSON.parse(raw) } catch { return null }
+    }
+
+    function clearSession() {
+      SESSION_TOKEN = ''
+      localStorage.removeItem(SESSION_STORAGE_KEY)
+      clearInterval(POLL_TIMER)
+      POLL_TIMER = null
+    }
+
+    function showLogin() {
+      document.getElementById('login-modal').classList.remove('hidden')
+      document.getElementById('app-shell').classList.add('hidden')
+      document.getElementById('login-password').value = ''
+    }
+
+    function showApp(user) {
+      document.getElementById('session-user').textContent = user ? `Usuario: ${user}` : 'Usuario: —'
+      document.getElementById('login-modal').classList.add('hidden')
+      document.getElementById('app-shell').classList.remove('hidden')
+    }
+
+    function setLoginError(message = '') {
+      document.getElementById('login-error').textContent = message
+    }
+
+    function setLoginBusy(busy) {
+      document.getElementById('btn-login').disabled = !!busy
+    }
+
+    async function handleUnauthorized() {
+      clearSession()
+      showLogin()
+      setLoginError('Sesión expirada. Vuelve a iniciar sesión.')
+      document.getElementById('status-dot').className = 'dot error'
+      document.getElementById('status-text').textContent = 'No autenticado'
+    }
+
+    async function verifySession() {
+      const data = await apiFetch('/auth/session', { method: 'GET', suppressAuthRedirect: true })
+      const user = data?.user || 'inca'
+      saveSession({ token: SESSION_TOKEN, user, expiresAt: data?.expiresAt || null })
+      showApp(user)
+      await pollStatus()
+      startPolling()
+    }
+
+    function startPolling() {
+      clearInterval(POLL_TIMER)
+      POLL_TIMER = setInterval(pollStatus, 5000)
+    }
+
+    async function bootstrapAuth() {
+      const stored = readStoredSession()
+      if (!stored?.token) {
+        showLogin()
+        return
+      }
+
+      SESSION_TOKEN = stored.token
+      try {
+        await verifySession()
+      } catch {
+        clearSession()
+        showLogin()
+      }
+    }
+
+    async function doLogin(event) {
+      event.preventDefault()
+      const username = document.getElementById('login-username').value.trim()
+      const password = document.getElementById('login-password').value
+      if (!username || !password) return setLoginError('Completa usuario y password.')
+
+      setLoginBusy(true)
+      setLoginError('')
+      try {
+        const data = await fetch(API + '/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        }).then(async (res) => {
+          const text = await res.text()
+          let body
+          try { body = JSON.parse(text) } catch { body = { error: text } }
+          if (!res.ok) throw new Error(body.error || res.statusText)
+          return body
+        })
+
+        SESSION_TOKEN = data.token
+        saveSession({ token: data.token, user: data.user, expiresAt: data.expiresAt || null })
+        showApp(data.user)
+        log('Sesión iniciada')
+        await pollStatus()
+        startPolling()
+      } catch (e) {
+        setLoginError(e.message || 'No se pudo iniciar sesión')
+      } finally {
+        setLoginBusy(false)
+      }
+    }
+
+    async function doLogout() {
+      try {
+        if (SESSION_TOKEN) {
+          await apiFetch('/auth/logout', { method: 'POST', suppressAuthRedirect: true })
+        }
+      } catch {}
+      clearSession()
+      showLogin()
+      setLoginError('')
+      log('Sesión cerrada')
     }
 
     function log(msg) {
@@ -358,6 +579,7 @@
         const data = await apiFetch('/status')
         updateUI(data)
       } catch (e) {
+        if (!SESSION_TOKEN) return
         document.getElementById('status-dot').className = 'dot error'
         document.getElementById('status-text').textContent = 'Sin conexión'
       }
@@ -613,8 +835,8 @@
       }
     }
 
-    pollStatus()
-    setInterval(pollStatus, 5000)
+    document.getElementById('login-form').addEventListener('submit', doLogin)
+    bootstrapAuth()
   </script>
 </body>
 </html>

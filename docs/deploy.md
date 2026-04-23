@@ -49,7 +49,7 @@ Consumo en workflow:
 - `KICK_RTMP_URL`
 - `KICK_STREAM_KEY`
 - `ALLOWED_ORIGIN`
-- `API_TOKEN`
+- `API_TOKEN` (opcional, solo para acceso tecnico por token)
 - `CHROMIUM_EXECUTABLE_PATH`
 - `DISPLAY_NUM`
 - `STREAM_WIDTH`
@@ -147,6 +147,7 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy.ps1 -branch feature/over
 2. Verifica todos los secrets de deploy y runtime.
 3. `node --check` para:
 - `switcher/server.js`
+- `switcher/user-service.js`
 - `switcher/stream-manager.js`
 - `switcher/playlist-manager.js`
 - `switcher/audio-loop-manager.js`
@@ -162,7 +163,7 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy.ps1 -branch feature/over
 
 - Abrir dashboard publico.
 - Confirmar que carga sin errores de JS/CORS.
-- Confirmar que `window.SWITCHER_API` y `window.SWITCHER_TOKEN` en `dashboard/config.js` estan alineados con backend.
+- Confirmar que aparece modal de login y acepta `inca` / `slop`.
 
 ### Switcher
 
@@ -193,7 +194,7 @@ Ajustar puerto si `PORT` usa otro valor.
 - Falla PM2:
   verificar que PM2 exista en PATH del usuario remoto y que `ecosystem.config.cjs` este en `SWITCHER_REMOTE_SERVICE_DIR`.
 - API responde `401` desde dashboard:
-  `window.SWITCHER_TOKEN` no coincide con `API_TOKEN` del deploy.
+  la sesion de `localStorage` vencio o se envio credencial invalida.
 
 ## Fallback local (Windows)
 

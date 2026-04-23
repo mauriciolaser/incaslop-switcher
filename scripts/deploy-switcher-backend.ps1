@@ -185,6 +185,7 @@ if (-not $SkipDashboard) {
 # Quick syntax check before shipping files
 Write-Host 'Validando sintaxis Node...'
 & node --check (Join-Path $switcherDir 'server.js')
+& node --check (Join-Path $switcherDir 'user-service.js')
 & node --check (Join-Path $switcherDir 'stream-manager.js')
 & node --check (Join-Path $switcherDir 'playlist-manager.js')
 & node --check (Join-Path $switcherDir 'audio-loop-manager.js')
@@ -199,6 +200,7 @@ try {
   try {
     & tar -czf $archiveLocal `
       switcher/server.js `
+      switcher/user-service.js `
       switcher/stream-manager.js `
       switcher/playlist-manager.js `
       switcher/audio-loop-manager.js `

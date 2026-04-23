@@ -49,6 +49,7 @@ Usar GitHub Actions workflow `Deploy Switcher` con:
 El job `switcher` empaqueta y sube:
 
 - `switcher/server.js`
+- `switcher/user-service.js`
 - `switcher/stream-manager.js`
 - `switcher/playlist-manager.js`
 - `switcher/audio-loop-manager.js`

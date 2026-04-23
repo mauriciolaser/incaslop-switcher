@@ -136,6 +136,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check switcher/server.js
+          node --check switcher/user-service.js
           node --check switcher/stream-manager.js
           node --check switcher/playlist-manager.js
           node --check switcher/audio-loop-manager.js
@@ -165,6 +166,7 @@ jobs:
           mkdir -p deploy_bundle/switcher
 
           cp switcher/server.js deploy_bundle/switcher/
+          cp switcher/user-service.js deploy_bundle/switcher/
           cp switcher/stream-manager.js deploy_bundle/switcher/
           cp switcher/playlist-manager.js deploy_bundle/switcher/
           cp switcher/audio-loop-manager.js deploy_bundle/switcher/

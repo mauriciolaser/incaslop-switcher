@@ -10,6 +10,8 @@ const STATE_FILE = path.join(__dirname, 'data', 'state.json')
 const REMOTE_DEBUG_PORT = 9222
 const OVERLAY_DEFAULT_STYLE = 'neon-burst'
 const OVERLAY_STYLE_SET = new Set(['neon-burst', 'acid-fire', 'pixel-rave', 'cosmic-pop', 'warning-siren'])
+const NOW_PLAYING_DURATION_MS = 6500
+const AUDIO_TRACK_WATCH_INTERVAL_MS = 1000
 
 function normalizeOverlayStyle(style) {
   if (typeof style !== 'string') return OVERLAY_DEFAULT_STYLE
@@ -50,6 +52,15 @@ export class StreamManager {
     expiresAt: null,
     style: OVERLAY_DEFAULT_STYLE,
   }
+  #nowPlayingOverlay = {
+    visible: false,
+    title: '',
+    expiresAt: null,
+  }
+  #nowPlayingTimer = null
+  #audioTrackWatcherTimer = null
+  #lastAudioTrackIndex = null
+  #audioTrackWatcherInFlight = false
 
   constructor(config) {
     this.#config = config
@@ -233,6 +244,12 @@ export class StreamManager {
 
     this.#status = 'stopped'
     this.#startedAt = null
+    this.#clearNowPlayingTimer()
+    this.#clearAudioTrackWatcher()
+    this.#lastAudioTrackIndex = null
+    this.#nowPlayingOverlay.visible = false
+    this.#nowPlayingOverlay.title = ''
+    this.#nowPlayingOverlay.expiresAt = null
 
     await this.#stopFfmpeg()
 
@@ -521,6 +538,147 @@ export class StreamManager {
       text: this.#overlay.text || '',
       style: normalizeOverlayStyle(this.#overlay.style),
     })
+
+    await this.#syncNowPlayingOverlayToPage()
+  }
+
+  async #syncNowPlayingOverlayToPage() {
+    if (!this.#page) return
+
+    const now = Date.now()
+    const stillVisible = this.#nowPlayingOverlay.visible
+      && this.#nowPlayingOverlay.expiresAt
+      && this.#nowPlayingOverlay.expiresAt > now
+
+    if (!stillVisible) {
+      this.#nowPlayingOverlay.visible = false
+      this.#nowPlayingOverlay.title = ''
+      this.#nowPlayingOverlay.expiresAt = null
+    }
+
+    await this.#page.evaluate(({ visible, title }) => {
+      const STYLE_ID = 'incaslop-nowplaying-style'
+      const ROOT_ID = 'incaslop-nowplaying-root'
+      const CARD_ID = 'incaslop-nowplaying-card'
+      const LABEL_ID = 'incaslop-nowplaying-label'
+      const TITLE_ID = 'incaslop-nowplaying-title'
+      const GLOW_ID = 'incaslop-nowplaying-glow'
+
+      let styleEl = document.getElementById(STYLE_ID)
+      if (!styleEl) {
+        styleEl = document.createElement('style')
+        styleEl.id = STYLE_ID
+        styleEl.textContent = `
+          #${ROOT_ID} {
+            position: fixed;
+            left: 34px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 2147483647;
+            pointer-events: none;
+            display: none;
+          }
+          #${CARD_ID} {
+            position: relative;
+            width: min(560px, 40vw);
+            border-radius: 22px;
+            border: 2px solid rgba(255,255,255,0.68);
+            padding: 18px 24px;
+            background:
+              radial-gradient(circle at 12% 8%, rgba(56,189,248,0.24), transparent 34%),
+              radial-gradient(circle at 90% 94%, rgba(167,139,250,0.3), transparent 38%),
+              linear-gradient(130deg, rgba(15,23,42,0.94), rgba(30,41,59,0.95));
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.22), 0 18px 48px rgba(2,6,23,0.72);
+            overflow: hidden;
+            animation: incaslop-nowplaying-enter 380ms cubic-bezier(0.2, 0.7, 0.2, 1), incaslop-nowplaying-float 3.4s ease-in-out infinite;
+          }
+          #${GLOW_ID} {
+            position: absolute;
+            inset: -35% auto auto -20%;
+            width: 65%;
+            height: 150%;
+            background: linear-gradient(90deg, rgba(56,189,248,0.58), rgba(59,130,246,0.1));
+            filter: blur(26px);
+            opacity: 0.48;
+            transform: rotate(-16deg);
+            pointer-events: none;
+          }
+          #${LABEL_ID} {
+            position: relative;
+            font-family: "Segoe UI", "Noto Sans", "DejaVu Sans", "Noto Color Emoji", "Segoe UI Emoji", "Apple Color Emoji", sans-serif;
+            font-size: 14px;
+            line-height: 1;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: #7dd3fc;
+            margin-bottom: 9px;
+            text-shadow: 0 0 14px rgba(56,189,248,0.45);
+          }
+          #${TITLE_ID} {
+            position: relative;
+            font-family: "Segoe UI", "Noto Sans", "DejaVu Sans", "Noto Color Emoji", "Segoe UI Emoji", "Apple Color Emoji", sans-serif;
+            font-size: 35px;
+            line-height: 1.15;
+            font-weight: 900;
+            letter-spacing: 0.01em;
+            color: #f8fafc;
+            text-wrap: balance;
+            overflow-wrap: anywhere;
+            text-shadow: 0 3px 18px rgba(15,23,42,0.74);
+          }
+          @keyframes incaslop-nowplaying-enter {
+            from { opacity: 0; filter: blur(4px); }
+            to { opacity: 1; filter: blur(0); }
+          }
+          @keyframes incaslop-nowplaying-float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-4px); }
+          }
+          @media (max-width: 1500px) {
+            #${CARD_ID} {
+              width: min(510px, 44vw);
+            }
+            #${TITLE_ID} {
+              font-size: 30px;
+            }
+          }
+        `
+        document.head.appendChild(styleEl)
+      }
+
+      let root = document.getElementById(ROOT_ID)
+      if (!root) {
+        root = document.createElement('div')
+        root.id = ROOT_ID
+
+        const card = document.createElement('div')
+        card.id = CARD_ID
+
+        const glow = document.createElement('div')
+        glow.id = GLOW_ID
+        card.appendChild(glow)
+
+        const label = document.createElement('div')
+        label.id = LABEL_ID
+        label.textContent = 'Ahora suena'
+        card.appendChild(label)
+
+        const titleEl = document.createElement('div')
+        titleEl.id = TITLE_ID
+        card.appendChild(titleEl)
+
+        root.appendChild(card)
+        document.body.appendChild(root)
+      }
+
+      const titleEl = document.getElementById(TITLE_ID)
+      if (titleEl) titleEl.textContent = visible ? (title || '') : ''
+      root.style.display = visible ? 'block' : 'none'
+    }, {
+      visible: stillVisible,
+      title: this.#nowPlayingOverlay.title || '',
+    })
   }
 
   async showOverlayMessage({ text, expiresAt, style }) {
@@ -539,6 +697,83 @@ export class StreamManager {
     this.#overlay.expiresAt = null
     this.#overlay.style = OVERLAY_DEFAULT_STYLE
     await this.#syncOverlayToPage()
+  }
+
+  #normalizeTrackLabel(trackName) {
+    if (!trackName || typeof trackName !== 'string') return 'Track desconocido'
+    const noExt = trackName.replace(/\.[^.]+$/, '')
+    const normalized = noExt.replace(/[_-]+/g, ' ').trim()
+    return normalized || 'Track desconocido'
+  }
+
+  #clearNowPlayingTimer() {
+    if (!this.#nowPlayingTimer) return
+    clearTimeout(this.#nowPlayingTimer)
+    this.#nowPlayingTimer = null
+  }
+
+  async #showNowPlayingModal(trackName) {
+    if (!this.#page) return
+
+    const now = Date.now()
+    this.#nowPlayingOverlay.visible = true
+    this.#nowPlayingOverlay.title = this.#normalizeTrackLabel(trackName)
+    this.#nowPlayingOverlay.expiresAt = now + NOW_PLAYING_DURATION_MS
+    this.#clearNowPlayingTimer()
+    await this.#syncNowPlayingOverlayToPage()
+
+    this.#nowPlayingTimer = setTimeout(() => {
+      this.#nowPlayingOverlay.visible = false
+      this.#nowPlayingOverlay.title = ''
+      this.#nowPlayingOverlay.expiresAt = null
+      this.#syncNowPlayingOverlayToPage().catch((e) => {
+        console.warn('[now-playing] auto-hide error:', e.message)
+      })
+    }, NOW_PLAYING_DURATION_MS)
+  }
+
+  #clearAudioTrackWatcher() {
+    if (!this.#audioTrackWatcherTimer) return
+    clearInterval(this.#audioTrackWatcherTimer)
+    this.#audioTrackWatcherTimer = null
+    this.#audioTrackWatcherInFlight = false
+  }
+
+  #startAudioTrackWatcher() {
+    this.#clearAudioTrackWatcher()
+    this.#audioTrackWatcherTimer = setInterval(() => {
+      this.#checkAudioTrackChange().catch((e) => {
+        console.warn('[audio] track watcher error:', e.message)
+      })
+    }, AUDIO_TRACK_WATCH_INTERVAL_MS)
+  }
+
+  async #checkAudioTrackChange() {
+    if (this.#audioTrackWatcherInFlight) return
+    if (this.#status !== 'streaming' || !this.#page) return
+
+    this.#audioTrackWatcherInFlight = true
+    try {
+      const audioStatus = this.#audioLoop.getStatus({ isStreaming: true })
+      const track = audioStatus.currentTrack
+
+      if (!track) {
+        this.#lastAudioTrackIndex = null
+        return
+      }
+
+      if (this.#lastAudioTrackIndex === null) {
+        this.#lastAudioTrackIndex = track.index
+        return
+      }
+
+      if (track.index !== this.#lastAudioTrackIndex) {
+        this.#lastAudioTrackIndex = track.index
+        await this.#showNowPlayingModal(track.name)
+      }
+    } finally {
+      this.#audioTrackWatcherInFlight = false
+    }
   }
 
   async switchUrl(url) {
@@ -565,6 +800,8 @@ export class StreamManager {
 
     proc.__intentionalStop = true
     this.#ffmpegProc = null
+    this.#clearAudioTrackWatcher()
+    this.#lastAudioTrackIndex = null
     this.#audioLoop.clearLoopStart()
 
     await new Promise((resolve) => {
@@ -623,9 +860,14 @@ export class StreamManager {
         '-ac', '2',
       )
       this.#audioLoop.markLoopStart()
+      const initialTrack = this.#audioLoop.getStatus({ isStreaming: true }).currentTrack
+      this.#lastAudioTrackIndex = initialTrack?.index ?? null
+      this.#startAudioTrackWatcher()
       console.log(`[audio] Loop activo con ${audio.trackCount} pista(s)`)
     } else {
       ffmpegArgs.push('-an')
+      this.#clearAudioTrackWatcher()
+      this.#lastAudioTrackIndex = null
       this.#audioLoop.clearLoopStart()
       for (const warning of audio.warnings) {
         console.warn('[audio]', warning)
