@@ -21,6 +21,7 @@ const OVERLAY_DURATION_MS = 8000
 const OVERLAY_MAX_LENGTH = 180
 const OVERLAY_DEFAULT_STYLE = 'neon-burst'
 const OVERLAY_STYLE_PRESETS = new Set(['neon-burst', 'acid-fire', 'pixel-rave', 'cosmic-pop', 'warning-siren'])
+const STICKER_URL_MAX_LENGTH = 2048
 const userService = new UserService()
 
 await userService.init()
@@ -133,6 +134,24 @@ function validateUrl(url) {
   } catch (e) {
     throw new Error('Invalid URL: ' + e.message)
   }
+}
+
+function validateGifUrl(gifUrlRaw) {
+  if (typeof gifUrlRaw !== 'string') throw new Error('gifUrl must be a string')
+  const gifUrl = gifUrlRaw.trim()
+  if (!gifUrl) throw new Error('gifUrl is required')
+  if (gifUrl.length > STICKER_URL_MAX_LENGTH) {
+    throw new Error(`gifUrl exceeds ${STICKER_URL_MAX_LENGTH} characters`)
+  }
+
+  const safeUrl = validateUrl(gifUrl)
+  const parsed = new URL(safeUrl)
+  const pathname = (parsed.pathname || '').toLowerCase()
+  if (!pathname.endsWith('.gif')) {
+    throw new Error('Only .gif files are allowed')
+  }
+
+  return safeUrl
 }
 
 // POST /auth/login
@@ -327,6 +346,24 @@ app.post('/overlay/clear', requireAuth, async (req, res) => {
     res.json({ ok: true, overlay: getOverlayState() })
   } catch (e) {
     res.status(500).json({ error: e.message })
+  }
+})
+
+// POST /overlay/sticker
+app.post('/overlay/sticker', requireAuth, async (req, res) => {
+  if (manager.getStatus().status !== 'streaming') {
+    return res.status(409).json({ error: 'Stream is not running' })
+  }
+
+  try {
+    const safeGifUrl = validateGifUrl(req.body?.gifUrl)
+    await manager.showGifSticker({ gifUrl: safeGifUrl })
+    res.json({ ok: true, sticker: { gifUrl: safeGifUrl } })
+  } catch (e) {
+    if (e.message === 'Stream is not running') {
+      return res.status(409).json({ error: e.message })
+    }
+    res.status(400).json({ error: e.message })
   }
 })
 

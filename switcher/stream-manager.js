@@ -1,4 +1,4 @@
-import { spawn } from 'child_process'
+import { spawn, spawnSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -12,6 +12,8 @@ const OVERLAY_DEFAULT_STYLE = 'neon-burst'
 const OVERLAY_STYLE_SET = new Set(['neon-burst', 'acid-fire', 'pixel-rave', 'cosmic-pop', 'warning-siren'])
 const NOW_PLAYING_DURATION_MS = 6500
 const AUDIO_TRACK_WATCH_INTERVAL_MS = 1000
+const STICKER_DEFAULT_DURATION_MS = 8000
+const STICKER_MAX_DURATION_MS = 45000
 
 function normalizeOverlayStyle(style) {
   if (typeof style !== 'string') return OVERLAY_DEFAULT_STYLE
@@ -61,6 +63,13 @@ export class StreamManager {
   #audioTrackWatcherTimer = null
   #lastAudioTrackIndex = null
   #audioTrackWatcherInFlight = false
+  #sticker = {
+    visible: false,
+    gifUrl: '',
+    expiresAt: null,
+    position: { topPct: 24, leftPct: 30 },
+  }
+  #stickerTimer = null
 
   constructor(config) {
     this.#config = config
@@ -250,6 +259,10 @@ export class StreamManager {
     this.#nowPlayingOverlay.visible = false
     this.#nowPlayingOverlay.title = ''
     this.#nowPlayingOverlay.expiresAt = null
+    this.#clearStickerTimer()
+    this.#sticker.visible = false
+    this.#sticker.gifUrl = ''
+    this.#sticker.expiresAt = null
 
     await this.#stopFfmpeg()
 
@@ -540,6 +553,7 @@ export class StreamManager {
     })
 
     await this.#syncNowPlayingOverlayToPage()
+    await this.#syncStickerToPage()
   }
 
   async #syncNowPlayingOverlayToPage() {
@@ -681,6 +695,95 @@ export class StreamManager {
     })
   }
 
+  async #syncStickerToPage() {
+    if (!this.#page) return
+
+    const now = Date.now()
+    const stillVisible = this.#sticker.visible
+      && this.#sticker.expiresAt
+      && this.#sticker.expiresAt > now
+      && this.#sticker.gifUrl
+
+    if (!stillVisible) {
+      this.#sticker.visible = false
+      this.#sticker.gifUrl = ''
+      this.#sticker.expiresAt = null
+    }
+
+    await this.#page.evaluate(({ visible, gifUrl, topPct, leftPct }) => {
+      const STYLE_ID = 'incaslop-sticker-style'
+      const ROOT_ID = 'incaslop-sticker-root'
+      const IMG_ID = 'incaslop-sticker-img'
+
+      let styleEl = document.getElementById(STYLE_ID)
+      if (!styleEl) {
+        styleEl = document.createElement('style')
+        styleEl.id = STYLE_ID
+        styleEl.textContent = `
+          #${ROOT_ID} {
+            position: fixed;
+            z-index: 2147483646;
+            pointer-events: none;
+            display: none;
+            width: min(320px, 24vw);
+            max-height: 40vh;
+            transform: translate(-50%, -50%);
+            filter: drop-shadow(0 12px 32px rgba(2, 6, 23, 0.62));
+            animation: incaslop-sticker-pop 320ms cubic-bezier(0.22, 0.7, 0.19, 1);
+          }
+          #${IMG_ID} {
+            width: 100%;
+            height: auto;
+            max-height: 40vh;
+            object-fit: contain;
+          }
+          @keyframes incaslop-sticker-pop {
+            from { opacity: 0; transform: translate(-50%, -50%) scale(0.82) rotate(-4deg); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+          }
+          @media (max-width: 1200px) {
+            #${ROOT_ID} {
+              width: min(240px, 38vw);
+            }
+          }
+        `
+        document.head.appendChild(styleEl)
+      }
+
+      let root = document.getElementById(ROOT_ID)
+      if (!root) {
+        root = document.createElement('div')
+        root.id = ROOT_ID
+        const img = document.createElement('img')
+        img.id = IMG_ID
+        img.alt = ''
+        img.decoding = 'async'
+        root.appendChild(img)
+        document.body.appendChild(root)
+      }
+
+      const img = document.getElementById(IMG_ID)
+      root.style.top = `${topPct}%`
+      root.style.left = `${leftPct}%`
+
+      if (!visible || !gifUrl) {
+        root.style.display = 'none'
+        if (img) img.removeAttribute('src')
+        return
+      }
+
+      if (img && img.getAttribute('src') !== gifUrl) {
+        img.setAttribute('src', gifUrl)
+      }
+      root.style.display = 'block'
+    }, {
+      visible: stillVisible,
+      gifUrl: this.#sticker.gifUrl,
+      topPct: this.#sticker.position.topPct,
+      leftPct: this.#sticker.position.leftPct,
+    })
+  }
+
   async showOverlayMessage({ text, expiresAt, style }) {
     if (!this.#page) throw new Error('Stream is not running')
 
@@ -697,6 +800,69 @@ export class StreamManager {
     this.#overlay.expiresAt = null
     this.#overlay.style = OVERLAY_DEFAULT_STYLE
     await this.#syncOverlayToPage()
+  }
+
+  #clearStickerTimer() {
+    if (!this.#stickerTimer) return
+    clearTimeout(this.#stickerTimer)
+    this.#stickerTimer = null
+  }
+
+  #pickStickerPosition() {
+    return {
+      topPct: 18 + Math.round(Math.random() * 64),
+      leftPct: 18 + Math.round(Math.random() * 64),
+    }
+  }
+
+  #probeGifDurationMs(gifUrl) {
+    try {
+      const result = spawnSync(
+        'ffprobe',
+        [
+          '-v', 'error',
+          '-show_entries', 'format=duration',
+          '-of', 'default=noprint_wrappers=1:nokey=1',
+          gifUrl,
+        ],
+        { encoding: 'utf8', timeout: 4000 },
+      )
+      if (result.status !== 0) return null
+      const seconds = Number((result.stdout || '').trim())
+      if (!Number.isFinite(seconds) || seconds <= 0) return null
+      return Math.round(seconds * 1000)
+    } catch {
+      return null
+    }
+  }
+
+  #resolveStickerDurationMs(gifUrl) {
+    const probed = this.#probeGifDurationMs(gifUrl)
+    const fallback = STICKER_DEFAULT_DURATION_MS
+    const raw = probed || fallback
+    return Math.min(STICKER_MAX_DURATION_MS, Math.max(1200, raw))
+  }
+
+  async showGifSticker({ gifUrl }) {
+    if (!this.#page) throw new Error('Stream is not running')
+
+    const durationMs = this.#resolveStickerDurationMs(gifUrl)
+    const now = Date.now()
+    this.#sticker.visible = true
+    this.#sticker.gifUrl = gifUrl
+    this.#sticker.expiresAt = now + durationMs
+    this.#sticker.position = this.#pickStickerPosition()
+    this.#clearStickerTimer()
+    await this.#syncStickerToPage()
+
+    this.#stickerTimer = setTimeout(() => {
+      this.#sticker.visible = false
+      this.#sticker.gifUrl = ''
+      this.#sticker.expiresAt = null
+      this.#syncStickerToPage().catch((e) => {
+        console.warn('[sticker] auto-hide error:', e.message)
+      })
+    }, durationMs)
   }
 
   #normalizeTrackLabel(trackName) {
@@ -802,6 +968,10 @@ export class StreamManager {
     this.#ffmpegProc = null
     this.#clearAudioTrackWatcher()
     this.#lastAudioTrackIndex = null
+    this.#clearStickerTimer()
+    this.#sticker.visible = false
+    this.#sticker.gifUrl = ''
+    this.#sticker.expiresAt = null
     this.#audioLoop.clearLoopStart()
 
     await new Promise((resolve) => {
