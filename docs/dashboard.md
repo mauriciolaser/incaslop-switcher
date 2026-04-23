@@ -1,61 +1,49 @@
 # Deploy del Dashboard
 
-## Stack
+Fuente de verdad: [docs/deploy.md](./deploy.md).
 
-El dashboard es HTML estático puro — no tiene build step. Los archivos en `dashboard/` se suben tal cual al hosting.
+## Objetivo
 
-```
-dashboard/
-├── index.html      # UI del dashboard
-├── config.js       # URL de la API y token de autenticación
-└── .htaccess       # Redirect HTTPS
-```
+Publicar los archivos estaticos de `dashboard/` por FTP.
 
-## Hosting
+Archivos desplegados:
 
-| Campo    | Valor                          |
-|----------|-------------------------------|
-| Host FTP | `162.0.235.179`               |
-| Usuario  | `vallhzty`                    |
-| Destino  | `switcher.incaslop.online/`   |
-| Puerto   | `21`                          |
+- `dashboard/index.html`
+- `dashboard/config.js`
+- `dashboard/.htaccess`
 
-La contraseña FTP está en `credenciales.txt` (no commitear).
+## Metodo recomendado
 
-## Subir manualmente con FileZilla (o similar)
+Usar GitHub Actions workflow `Deploy Switcher` con:
 
-1. Conectar al host `162.0.235.179` puerto `21` con usuario y contraseña
-2. Navegar al directorio `switcher.incaslop.online/`
-3. Subir los tres archivos de `dashboard/`: `index.html`, `config.js`, `.htaccess`
+- `deploy_dashboard=true`
+- `deploy_switcher=false` (si no quieres tocar backend)
 
-## Subir desde línea de comandos (Windows, Git Bash)
+Secrets requeridos:
 
-PuTTY incluye `pscp` que soporta FTP no está disponible directamente, pero se puede usar `curl` con FTP:
+- `FTP_HOST`
+- `FTP_USERNAME`
+- `FTP_PASSWORD`
+- `FTP_DESTINATION`
+
+## Verificaciones previas
+
+1. `dashboard/config.js` debe apuntar a la API correcta.
+2. `window.SWITCHER_TOKEN` debe coincidir con `API_TOKEN` del backend.
+3. No borrar `.htaccess` si tu hosting depende del redirect HTTPS.
+
+## Verificacion post deploy
+
+1. Abrir URL publica del dashboard.
+2. Confirmar que las acciones llaman a la API sin `401` ni `CORS`.
+3. Confirmar que `GET /status` responde.
+
+## Fallback manual
+
+Si no hay Actions, subir por FTP con `curl`:
 
 ```bash
-curl -T dashboard/index.html ftp://162.0.235.179/switcher.incaslop.online/ \
-  --user "vallhzty:PASSWORD" --ftp-create-dirs
-
-curl -T dashboard/config.js ftp://162.0.235.179/switcher.incaslop.online/ \
-  --user "vallhzty:PASSWORD"
-
-curl -T dashboard/.htaccess ftp://162.0.235.179/switcher.incaslop.online/ \
-  --user "vallhzty:PASSWORD"
+curl -T dashboard/index.html "ftp://$FTP_HOST/$FTP_DESTINATION" --user "$FTP_USERNAME:$FTP_PASSWORD" --ftp-create-dirs
+curl -T dashboard/config.js "ftp://$FTP_HOST/$FTP_DESTINATION" --user "$FTP_USERNAME:$FTP_PASSWORD"
+curl -T dashboard/.htaccess "ftp://$FTP_HOST/$FTP_DESTINATION" --user "$FTP_USERNAME:$FTP_PASSWORD"
 ```
-
-## Configuración de la API (`config.js`)
-
-Antes de subir, verificar que `config.js` apunta al servidor correcto:
-
-```js
-window.SWITCHER_API = 'https://api-switcher.incaslop.online'
-window.SWITCHER_TOKEN = 'TOKEN_AQUI'
-```
-
-El token debe coincidir con `API_TOKEN` en el `.env` del switcher en el servidor.
-
-## Notas
-
-- No hay build — lo que está en `dashboard/` es lo que se despliega.
-- El workflow de GitHub Actions en `.github/workflows/deploy.yml` es para el proyecto principal React/Vite (`src/`), **no** para el dashboard.
-- El `.htaccess` fuerza HTTPS redirect — no borrarlo al subir.

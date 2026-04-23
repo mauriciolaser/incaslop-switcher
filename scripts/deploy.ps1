@@ -1,5 +1,8 @@
 param(
   [string]$branch = 'main',
+  [bool]$DeployDashboard = $true,
+  [bool]$DeploySwitcher = $true,
+  [string]$Repo = 'mauriciolaser/incaslop-switcher',
   [switch]$DebugDeploy
 )
 
@@ -26,32 +29,34 @@ if ($LASTEXITCODE -ne 0) {
   }
 }
 
-$remoteUrl = git remote get-url origin 2>$null
-if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($remoteUrl)) {
-  Fail-Step "No se pudo obtener el remote 'origin'."
-}
-
 $resolvedBranch = git rev-parse --verify $branch 2>$null
 if ($LASTEXITCODE -ne 0) {
   Fail-Step "La rama o ref '$branch' no existe localmente."
 }
 
 Write-Host "== Deploy context =="
-Write-Host "Repo remoto: $remoteUrl"
+Write-Host "Repo objetivo: $Repo"
 Write-Host "Ref solicitada: $branch"
 Write-Host "Commit local: $resolvedBranch"
+Write-Host "Deploy dashboard: $DeployDashboard"
+Write-Host "Deploy switcher: $DeploySwitcher"
 Write-Host "Modo debug: $DebugDeploy"
 
-$workflowArgs = @("workflow", "run", "Deploy", "--ref", $branch)
-if ($DebugDeploy) {
-  $workflowArgs += @("-f", "debug=true")
-}
+$debugValue = if ($DebugDeploy) { 'true' } else { 'false' }
+$workflowArgs = @(
+  "workflow", "run", "Deploy Switcher",
+  "-R", $Repo,
+  "--ref", $branch,
+  "-f", "deploy_dashboard=$($DeployDashboard.ToString().ToLowerInvariant())",
+  "-f", "deploy_switcher=$($DeploySwitcher.ToString().ToLowerInvariant())",
+  "-f", "debug=$debugValue"
+)
 
 Write-Host "Lanzando workflow de despliegue..."
 & gh @workflowArgs
 
 if ($LASTEXITCODE -ne 0) {
-  Fail-Step "GitHub CLI no pudo lanzar el workflow 'Deploy'."
+  Fail-Step "GitHub CLI no pudo lanzar el workflow 'Deploy Switcher'."
 }
 
 Write-Host "Workflow enviado correctamente."

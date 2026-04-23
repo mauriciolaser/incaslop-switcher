@@ -1,124 +1,96 @@
-# Acceso y deploy al servidor VPS
+# Deploy del Switcher (Backend)
 
-## Datos de conexión
+Fuente de verdad: [docs/deploy.md](./deploy.md).
 
-| Campo  | Valor               |
-|--------|---------------------|
-| Host   | `159.198.65.35`     |
-| Puerto | `22`                |
-| Usuario| `mauri`             |
-| OS     | AlmaLinux           |
+## Objetivo
 
-Las credenciales completas están en `credenciales.txt` (no commitear).
+Desplegar backend `switcher/` al VPS y reiniciar proceso PM2.
 
-## Herramientas requeridas (Windows)
+## Metodo recomendado
 
-El servidor solo acepta autenticación por contraseña para el usuario `mauri`. Desde Windows se necesita **PuTTY** (incluye `plink` y `pscp`), que ya está instalado en esta máquina.
+Usar GitHub Actions workflow `Deploy Switcher` con:
 
-> `sshpass` no está disponible en Git Bash/Windows, por eso se usa PuTTY.
+- `deploy_dashboard=false` (opcional)
+- `deploy_switcher=true`
 
-## Subir un archivo al servidor
+## Secrets requeridos
 
-Los archivos del proyecto tienen permisos de `root`, así que `pscp` directo falla. La forma correcta es pipar el contenido local via `sudo tee`:
+### Conexion VPS
 
-```bash
-cat ruta/local/archivo.js | plink -pw 'PASSWORD' -P 22 mauri@159.198.65.35 \
-  "echo 'PASSWORD' | sudo -S tee /home/mauri/switcher/archivo.js > /dev/null && echo OK"
-```
+- `SWITCHER_HOST`
+- `SWITCHER_PORT`
+- `SWITCHER_USER`
+- `SWITCHER_PASSWORD`
+- `SWITCHER_REMOTE_BASE_DIR`
+- `SWITCHER_REMOTE_SERVICE_DIR`
 
-Ejemplo concreto — subir `stream-manager.js`:
+### Runtime (.env)
 
-```bash
-cat switcher/stream-manager.js | plink -pw 'PASS' -P 22 mauri@159.198.65.35 \
-  "echo 'PASS' | sudo -S tee /home/mauri/switcher/stream-manager.js > /dev/null && echo OK"
-```
+- `PORT`
+- `KICK_RTMP_URL`
+- `KICK_STREAM_KEY`
+- `ALLOWED_ORIGIN`
+- `API_TOKEN`
+- `CHROMIUM_EXECUTABLE_PATH`
+- `DISPLAY_NUM`
+- `STREAM_WIDTH`
+- `STREAM_HEIGHT`
+- `STREAM_FPS`
+- `VIDEO_BITRATE`
+- `MAXRATE`
+- `BUFSIZE`
+- `GOP`
+- `PRESET`
+- `AUDIO_BITRATE`
+- `DEFAULT_URL`
 
-## Ejecutar comandos remotos
+## Que despliega el workflow
 
-```bash
-plink -pw 'PASSWORD' -P 22 mauri@159.198.65.35 "comando aqui"
-```
+El job `switcher` empaqueta y sube:
 
-Para comandos que requieren `sudo`:
+- `switcher/server.js`
+- `switcher/stream-manager.js`
+- `switcher/playlist-manager.js`
+- `switcher/audio-loop-manager.js`
+- `switcher/package.json`
+- `switcher/ecosystem.config.cjs`
+- `switcher/.env.example`
+- `switcher/audio/`
+- `switcher/.env` generado desde secrets
 
-```bash
-plink -pw 'PASSWORD' -P 22 mauri@159.198.65.35 "echo 'PASSWORD' | sudo -S comando"
-```
+## Secuencia remota
 
-## Reiniciar el switcher (PM2)
+1. Sube tarball a `/tmp` del VPS.
+2. Extrae en `SWITCHER_REMOTE_BASE_DIR`.
+3. Reinicia con `pm2 restart all` o inicia con `pm2 start <ecosystem>`.
+4. Ejecuta `pm2 list`.
 
-```bash
-plink -pw 'PASSWORD' -P 22 mauri@159.198.65.35 "echo 'PASSWORD' | sudo -S pm2 restart all"
-```
+## Validacion post deploy
 
-Ver estado de los procesos:
-
-```bash
-plink -pw 'PASSWORD' -P 22 mauri@159.198.65.35 "echo 'PASSWORD' | sudo -S pm2 list"
-```
-
-## Ubicación del proyecto en el servidor
-
-```
-/home/mauri/switcher/
-├── stream-manager.js
-├── server.js
-├── ecosystem.config.cjs
-├── .env
-└── data/
-```
-
-PM2 corre el proceso como `root` (ver columna `user` en `pm2 list`). El ecosystem está en esa misma carpeta.
-
-## Flujo completo de deploy
-
-1. Editar archivo localmente
-2. Subir con `plink` + `sudo tee`
-3. Reiniciar con `pm2 restart all`
+En VPS:
 
 ```bash
-# 1. Subir
-cat switcher/stream-manager.js | plink -pw 'PASS' -P 22 mauri@159.198.65.35 \
-  "echo 'PASS' | sudo -S tee /home/mauri/switcher/stream-manager.js > /dev/null && echo OK"
-
-# 2. Reiniciar
-plink -pw 'PASS' -P 22 mauri@159.198.65.35 "echo 'PASS' | sudo -S pm2 restart all"
+pm2 list
+pm2 logs --lines 100
 ```
 
-## Deploy en un solo comando (backend + audios + dashboard)
+En API local del VPS:
 
-Ahora existe un script local que empaqueta y despliega backend + `switcher/audio/*.mp3` y tambien sube `dashboard/` por FTP:
+```bash
+curl -s http://127.0.0.1:3000/status
+```
+
+Si `PORT` no es `3000`, usar el puerto configurado en secret.
+
+## Fallback local (Windows)
 
 ```powershell
 npm run deploy:switcher
 ```
 
-El script:
-
-1. Valida sintaxis de `server.js`, `stream-manager.js`, `playlist-manager.js`, `audio-loop-manager.js`
-2. Empaqueta archivos backend y la carpeta `switcher/audio/`
-3. Sube el paquete temporal a `/tmp` del VPS por `pscp`
-4. Extrae en `/home/mauri/switcher/` con `sudo`
-5. Ejecuta `pm2 restart all` y `pm2 list`
-6. Sube `dashboard/index.html`, `dashboard/config.js`, `dashboard/.htaccess` via FTP
-
-Por defecto toma credenciales desde `credenciales.txt` (prioriza `root`) para correr sin pedir password interactivo.
-
-Si quieres omitir dashboard en una corrida puntual:
+Opciones utiles:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/deploy-switcher-backend.ps1 -SkipDashboard
+powershell -ExecutionPolicy Bypass -File scripts/deploy-switcher-backend.ps1 -ServerHost 159.198.65.35 -Port 22 -User mauri
 ```
-
-Opcionalmente, puedes pasar host/usuario/puerto:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/deploy-switcher-backend.ps1 `
-  -ServerHost 159.198.65.35 -Port 22 -User mauri
-```
-
-## Notas
-
-- La llave privada en `ssh.txt` (ed25519) **no funciona** con `root` — el servidor tiene acceso por llave deshabilitado para root.
-- El usuario `mauri` pertenece al grupo `wheel` (sudo habilitado con contraseña).
-- PM2 usa `sudo` porque fue instalado y configurado como root.
