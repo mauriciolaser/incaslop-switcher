@@ -59,6 +59,14 @@
     .login-box h2 { font-size: 1rem; margin-bottom: 8px; }
     .login-box p { color: #94a3b8; font-size: .85rem; margin-bottom: 14px; }
     #login-error { min-height: 1em; color: #f87171; font-size: .8rem; margin: 3px 0 12px; }
+    #import-playlist-modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(10, 12, 18, .86); z-index: 50; }
+    #import-playlist-modal.hidden { display: none !important; }
+    .import-box { width: 100%; max-width: 520px; background: #151926; border: 1px solid #2d3148; border-radius: 10px; padding: 22px; }
+    .import-box h2 { font-size: 1rem; margin-bottom: 8px; }
+    .import-box p { color: #94a3b8; font-size: .85rem; margin-bottom: 10px; }
+    #import-json-input { width: 100%; max-height: 300px; min-height: 120px; resize: vertical; background: #090b11; border: 1px solid #2d3148; border-radius: 6px; color: #e2e8f0; padding: 10px; font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; outline: none; overflow: auto; }
+    #import-json-input:focus { border-color: #3b82f6; }
+    #import-error { min-height: 1em; color: #f87171; font-size: .8rem; margin: 6px 0 0; }
     @media (max-width: 900px) {
       body { padding: 12px; }
       .status-strip, .grid, .two, .three, .split { grid-template-columns: 1fr; }
@@ -77,6 +85,19 @@
         <div id="login-error"></div>
         <button class="btn-primary" id="btn-login" type="submit">Entrar</button>
       </form>
+    </div>
+  </div>
+
+  <div id="import-playlist-modal" class="hidden">
+    <div class="import-box">
+      <h2>Importar video-playlist</h2>
+      <p>Pega el JSON de la playlist. El campo <code>name</code> determina el nombre del archivo guardado.</p>
+      <textarea id="import-json-input" placeholder='{"name":"mi-playlist","repeat":false,"items":[{"url":"https://...","duration":3600}]}'></textarea>
+      <div id="import-error"></div>
+      <div class="row" style="margin-top:12px;">
+        <button class="btn-success" onclick="confirmImportPlaylist()">Importar</button>
+        <button class="btn-muted" onclick="closeImportModal()">Cancelar</button>
+      </div>
     </div>
   </div>
 
@@ -151,6 +172,7 @@
               <button class="btn-success" onclick="saveVideoPlaylist()">Guardar</button>
               <button class="btn-primary" onclick="playVideoEditor()">Guardar y reproducir</button>
               <button class="btn-muted" onclick="clearVideoEditor()">Limpiar</button>
+              <button onclick="openImportModal()">Importar JSON</button>
             </div>
           </div>
         </div>
@@ -553,6 +575,31 @@
     async function videoPause() { try { await apiFetch('/video/playlist/pause', { method: 'POST' }); pollStatus() } catch (e) { log('Video pause error: ' + e.message) } }
     async function videoResume() { try { await apiFetch('/video/playlist/resume', { method: 'POST' }); pollStatus() } catch (e) { log('Video play error: ' + e.message) } }
     async function videoStop() { try { await apiFetch('/video/playlist/stop', { method: 'POST' }); pollStatus() } catch (e) { log('Video stop error: ' + e.message) } }
+    function openImportModal() {
+      document.getElementById('import-json-input').value = ''
+      document.getElementById('import-error').textContent = ''
+      document.getElementById('import-playlist-modal').classList.remove('hidden')
+    }
+    function closeImportModal() {
+      document.getElementById('import-playlist-modal').classList.add('hidden')
+    }
+    async function confirmImportPlaylist() {
+      const raw = document.getElementById('import-json-input').value.trim()
+      const errEl = document.getElementById('import-error')
+      errEl.textContent = ''
+      let parsed
+      try { parsed = JSON.parse(raw) } catch (e) { errEl.textContent = 'JSON inválido: ' + e.message; return }
+      const name = (parsed.name || '').trim()
+      if (!name) { errEl.textContent = 'El campo "name" es requerido.'; return }
+      if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(name)) { errEl.textContent = 'Nombre inválido. Solo letras, números, - y _, mínimo 2 caracteres.'; return }
+      if (!Array.isArray(parsed.items) || parsed.items.length === 0) { errEl.textContent = 'El campo "items" debe ser un array con al menos un elemento.'; return }
+      try {
+        await apiFetch('/video/playlists', { method: 'POST', body: JSON.stringify(parsed) })
+        log(`Playlist importada: ${name}`)
+        closeImportModal()
+        await loadVideoPlaylists()
+      } catch (e) { errEl.textContent = 'Error al guardar: ' + e.message }
+    }
 
     function updateAudioUI(audio) {
       if (!audio) return

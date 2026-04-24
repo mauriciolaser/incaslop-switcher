@@ -17,7 +17,7 @@ import { NamedPlaylistStore, validatePlaylistName } from './named-playlist-store
 import { ScheduleManager } from './schedule-manager.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-dotenv.config({ path: path.join(__dirname, '..', 'telegram', '.env') })
+dotenv.config({ path: path.join(__dirname, '.env') })
 
 const PORT = process.env.PORT || 3000
 const API_TOKEN = process.env.API_TOKEN || ''

@@ -6,19 +6,16 @@ Este documento describe cómo está implementada la notificación por Telegram e
 
 - `switcher/telegram-notifier.js`
 - `switcher/server.js`
-- `telegram/.env` (no versionado)
+- `switcher/.env` (no versionado — único archivo de entorno del servicio)
 
 ## Variables de entorno
 
-Se cargan dos fuentes:
-
-1. `dotenv/config` (entorno general del servicio)
-2. `telegram/.env` (cargado explícitamente desde `server.js`)
+Se cargan desde `switcher/.env` vía `dotenv.config({ path: path.join(__dirname, '.env') })` en `server.js`.
 
 Variables soportadas:
 
-- `TELEGRAM_API` o `TELEGRAM_BOT_TOKEN`: token del bot (requerido).
-- `TELEGRAM_CHAT_ID`: chat destino (opcional).
+- `TELEGRAM_BOT_TOKEN`: token del bot (requerido).
+- `TELEGRAM_CHAT_ID`: chat destino (recomendado — ver sección Resolución de chat_id).
 
 ## Resolución de chat_id
 

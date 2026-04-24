@@ -6,3 +6,4 @@ server/node_modules/
 switcher/.env
 switcher/data/
 telegram/.env
+.env

@@ -113,6 +113,8 @@ jobs:
           PRESET: ${{ secrets.PRESET }}
           AUDIO_BITRATE: ${{ secrets.AUDIO_BITRATE }}
           DEFAULT_URL: ${{ secrets.DEFAULT_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           set -euo pipefail
           missing=0
@@ -121,7 +123,8 @@ jobs:
             SWITCHER_REMOTE_BASE_DIR SWITCHER_REMOTE_SERVICE_DIR \
             PORT KICK_RTMP_URL KICK_STREAM_KEY ALLOWED_ORIGIN API_TOKEN \
             CHROMIUM_EXECUTABLE_PATH DISPLAY_NUM STREAM_WIDTH STREAM_HEIGHT STREAM_FPS \
-            VIDEO_BITRATE MAXRATE BUFSIZE GOP PRESET AUDIO_BITRATE DEFAULT_URL; do
+            VIDEO_BITRATE MAXRATE BUFSIZE GOP PRESET AUDIO_BITRATE DEFAULT_URL \
+            TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID; do
             value="${!key:-}"
             if [ -z "$value" ]; then
               echo "::error::$key no esta definido en GitHub Secrets"
@@ -165,6 +168,8 @@ jobs:
           PRESET: ${{ secrets.PRESET }}
           AUDIO_BITRATE: ${{ secrets.AUDIO_BITRATE }}
           DEFAULT_URL: ${{ secrets.DEFAULT_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           set -euo pipefail
           rm -rf deploy_bundle
@@ -205,6 +210,8 @@ jobs:
             echo "PRESET=$PRESET"
             echo "AUDIO_BITRATE=$AUDIO_BITRATE"
             echo "DEFAULT_URL=$DEFAULT_URL"
+            echo "TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN"
+            echo "TELEGRAM_CHAT_ID=$TELEGRAM_CHAT_ID"
           } > deploy_bundle/switcher/.env
 
           tar -czf switcher-deploy.tgz -C deploy_bundle switcher

@@ -62,6 +62,8 @@ Consumo en workflow:
 - `PRESET`
 - `AUDIO_BITRATE`
 - `DEFAULT_URL`
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_CHAT_ID`
 
 Consumo en workflow:
 
@@ -209,6 +211,11 @@ Script usado: `scripts/deploy-switcher-backend.ps1`.
 Notas:
 
 - Este fallback despliega backend + audios y opcionalmente dashboard FTP.
+- Las credenciales se leen automaticamente desde `.env` en la raiz del repo.
+  Variables usadas: `BACKEND_HOST`, `BACKEND_PORT`, `BACKEND_USER`, `BACKEND_PASS`,
+  `FRONTEND_FTP_HOST`, `FRONTEND_FTP_USER`, `FRONTEND_FTP_PASS`, `FRONTEND_FTP_DESTINATION`.
+  Ver `.env.example` para el formato esperado.
+- No se requiere `credenciales.txt` ni ningun parametro adicional si `.env` esta completo.
 - Para omitir dashboard:
 
 ```powershell

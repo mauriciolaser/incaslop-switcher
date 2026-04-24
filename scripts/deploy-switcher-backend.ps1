@@ -34,31 +34,32 @@ function Escape-BashSingleQuoted {
   return $Value.Replace("'", "'""'""'")
 }
 
-function Get-CredentialsFromFile {
+function Get-CredentialsFromEnv {
   param([string]$Path)
-  if (-not (Test-Path $Path)) { return @{} }
-  $raw = Get-Content -Raw $Path
   $cred = @{
     users = @{}
     kv = @{}
   }
-  $currentUser = ''
-  foreach ($line in ($raw -split "`r?`n")) {
-    if ($line -match '^\s*([A-Za-z0-9_]+)\s*:\s*(.+?)\s*$') {
-      $k = $Matches[1].Trim().ToLowerInvariant()
-      $v = $Matches[2].Trim()
-      $cred.kv[$k] = $v
+  if (-not (Test-Path $Path)) { return $cred }
+  foreach ($line in (Get-Content $Path)) {
+    if ($line -match '^\s*#' -or $line -notmatch '=') { continue }
+    $k, $v = $line -split '=', 2
+    $k = $k.Trim()
+    $v = $v.Trim()
+    switch ($k) {
+      'BACKEND_USER'         { if (-not $cred.users.ContainsKey($v)) { $cred.users[$v] = @{} }; $cred.kv['backend_user'] = $v }
+      'BACKEND_PASS'         { $cred.kv['backend_pass'] = $v }
+      'BACKEND_HOST'         { $cred.kv['backend_host'] = $v }
+      'BACKEND_PORT'         { $cred.kv['backend_port'] = $v }
+      'FRONTEND_FTP_HOST'    { $cred.kv['frontend_ftp_host'] = $v }
+      'FRONTEND_FTP_USER'    { $cred.kv['frontend_ftp_user'] = $v }
+      'FRONTEND_FTP_PASS'    { $cred.kv['frontend_ftp_pass'] = $v }
+      'FRONTEND_FTP_DESTINATION' { $cred.kv['frontend_ftp_destination'] = $v }
     }
-    if ($line -match '^\s*user\s*:\s*(.+?)\s*$') {
-      $currentUser = $Matches[1].Trim()
-      if (-not $cred.users.ContainsKey($currentUser)) {
-        $cred.users[$currentUser] = @{}
-      }
-      continue
-    }
-    if ($line -match '^\s*pass\s*:\s*(.+?)\s*$' -and $currentUser) {
-      $cred.users[$currentUser]['pass'] = $Matches[1].Trim()
-    }
+  }
+  if ($cred.kv.ContainsKey('backend_user') -and $cred.kv.ContainsKey('backend_pass')) {
+    $u = $cred.kv['backend_user']
+    $cred.users[$u] = @{ pass = $cred.kv['backend_pass'] }
   }
   return $cred
 }
@@ -123,21 +124,22 @@ if (-not (Test-Path $switcherDir)) {
 }
 
 if ([string]::IsNullOrWhiteSpace($User) -or [string]::IsNullOrWhiteSpace($Password)) {
-  $credFile = Join-Path $repoRoot 'credenciales.txt'
-  $fileCred = Get-CredentialsFromFile $credFile
+  $credFile = Join-Path $repoRoot '.env'
+  $fileCred = Get-CredentialsFromEnv $credFile
   if ([string]::IsNullOrWhiteSpace($User)) {
-    if ($fileCred.users.ContainsKey('root')) {
-      $User = 'root'
-      $RemoteBaseDir = '/home/mauri'
-      $RemoteServiceDir = '/home/mauri/switcher'
-    } elseif ($fileCred.users.ContainsKey('mauri')) {
-      $User = 'mauri'
+    if ($fileCred.kv.ContainsKey('backend_user')) {
+      $User = $fileCred.kv['backend_user']
     }
   }
   if ([string]::IsNullOrWhiteSpace($Password) -and $fileCred.users.ContainsKey($User)) {
     $Password = $fileCred.users[$User]['pass']
   }
-
+  if ([string]::IsNullOrWhiteSpace($ServerHost) -and $fileCred.kv.ContainsKey('backend_host')) {
+    $ServerHost = $fileCred.kv['backend_host']
+  }
+  if ($Port -eq 22 -and $fileCred.kv.ContainsKey('backend_port')) {
+    $Port = [int]$fileCred.kv['backend_port']
+  }
   if ([string]::IsNullOrWhiteSpace($FtpHost) -and $fileCred.kv.ContainsKey('frontend_ftp_host')) {
     $FtpHost = $fileCred.kv['frontend_ftp_host']
   }
