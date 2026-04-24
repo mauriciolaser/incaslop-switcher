@@ -53,10 +53,17 @@ El job `switcher` empaqueta y sube:
 - `switcher/stream-manager.js`
 - `switcher/playlist-manager.js`
 - `switcher/audio-loop-manager.js`
+- `switcher/settings-manager.js`
+- `switcher/named-playlist-store.js`
+- `switcher/schedule-manager.js`
+- `switcher/log-manager.js`
+- `switcher/telegram-notifier.js`
 - `switcher/package.json`
 - `switcher/ecosystem.config.cjs`
 - `switcher/.env.example`
 - `switcher/audio/`
+- `switcher/audio-playlist/`
+- `switcher/video-playlist/`
 - `switcher/.env` generado desde secrets
 
 ## Secuencia remota

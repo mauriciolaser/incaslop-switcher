@@ -29,7 +29,7 @@ Secrets requeridos:
 ## Verificaciones previas
 
 1. `dashboard/config.js` debe apuntar a la API correcta.
-2. El backend debe estar corriendo con `/auth/login` habilitado (usuario interno `inca`).
+2. El backend debe estar corriendo con `/auth/login` habilitado (usuario `inca` / `slop`).
 3. No borrar `.htaccess` si tu hosting depende del redirect HTTPS.
 
 ## Verificacion post deploy
