@@ -165,7 +165,9 @@ export class SwitcherLogManager {
       try {
         fs.unlinkSync(run.filePath)
         deleted.push(run.fileName)
-      } catch {}
+      } catch {
+        // A concurrent process may have already removed the file.
+      }
     }
     return deleted
   }
@@ -191,7 +193,9 @@ export class SwitcherLogManager {
     for (const listener of this.#listeners) {
       try {
         listener(entry)
-      } catch {}
+      } catch {
+        // Log listeners should not break logging.
+      }
     }
   }
 }

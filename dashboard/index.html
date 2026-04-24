@@ -3,549 +3,309 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IncaSlop Switcher — Dashboard</title>
+  <title>IncaSlop Switcher - Dashboard</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #0f1117;
-      color: #e2e8f0;
-      min-height: 100vh;
-      padding: 24px;
-    }
-
+    body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; padding: 20px; }
     .hidden { display: none !important; }
-
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-
-    h1 {
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: #fff;
-      letter-spacing: 0.02em;
-    }
-
-    .topbar-right {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      color: #94a3b8;
-      font-size: 0.8rem;
-    }
-
-    .btn-muted {
-      background: #374151;
-      color: #e2e8f0;
-    }
-
-    .card {
-      background: #1a1d27;
-      border: 1px solid #2d3148;
-      border-radius: 10px;
-      padding: 20px;
-      margin-bottom: 16px;
-    }
-
-    .card h2 {
-      font-size: 0.7rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: #64748b;
-      margin-bottom: 12px;
-    }
-
-    /* Status */
-    .status-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-    .dot.streaming { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
-    .dot.stopped   { background: #475569; }
-    .dot.starting  { background: #f59e0b; }
-    .dot.error     { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
-
-    #status-text {
-      font-weight: 600;
-      font-size: 0.95rem;
-    }
-
-    #current-url {
-      margin-top: 8px;
-      font-size: 0.8rem;
-      color: #94a3b8;
-      word-break: break-all;
-    }
-
-    #current-url a {
-      color: #60a5fa;
-      text-decoration: none;
-    }
-    #current-url a:hover { text-decoration: underline; }
-
-    #uptime {
-      margin-top: 4px;
-      font-size: 0.75rem;
-      color: #475569;
-    }
-
-    /* Switch form */
-    .input-row {
-      display: flex;
-      gap: 8px;
-    }
-
-    input[type="text"], input[type="password"] {
-      flex: 1;
-      background: #0f1117;
-      border: 1px solid #2d3148;
-      border-radius: 6px;
-      padding: 8px 12px;
-      color: #e2e8f0;
-      font-size: 0.875rem;
-      outline: none;
-      transition: border-color 0.15s;
-    }
-    input[type="text"]:focus, input[type="password"]:focus { border-color: #3b82f6; }
-
-    #overlay-input {
-      width: 100%;
-      margin-bottom: 10px;
-    }
-    #overlay-style {
-      width: 100%;
-      margin-bottom: 10px;
-      background: #0f1117;
-      border: 1px solid #2d3148;
-      border-radius: 6px;
-      padding: 8px 12px;
-      color: #e2e8f0;
-      font-size: 0.875rem;
-      outline: none;
-      transition: border-color 0.15s;
-    }
-    #overlay-style:focus { border-color: #3b82f6; }
-
-    #overlay-status {
-      font-size: 0.8rem;
-      color: #94a3b8;
-      margin-bottom: 10px;
-      min-height: 1em;
-    }
-
-    button {
-      padding: 8px 16px;
-      border-radius: 6px;
-      border: none;
-      font-size: 0.875rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.15s;
-    }
-    button:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    .btn-primary  { background: #3b82f6; color: #fff; }
-    .btn-success  { background: #22c55e; color: #fff; }
-    .btn-danger   { background: #ef4444; color: #fff; }
-    button:not(:disabled):hover { opacity: 0.85; }
-
-    /* Controls */
-    .controls-row {
-      display: flex;
-      gap: 10px;
-    }
-
-    /* Playlist */
-    input[type="number"] {
-      background: #0f1117;
-      border: 1px solid #2d3148;
-      border-radius: 6px;
-      padding: 8px 12px;
-      color: #e2e8f0;
-      font-size: 0.875rem;
-      outline: none;
-      transition: border-color 0.15s;
-    }
-    input[type="number"]:focus { border-color: #3b82f6; }
-
-    .pl-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 10px;
-      border-radius: 6px;
-      margin-bottom: 4px;
-      background: #0f1117;
-      font-size: 0.8rem;
-    }
-    .pl-item.active { background: #1e3a5f; border: 1px solid #3b82f6; }
-    .pl-item .pl-url {
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      color: #94a3b8;
-    }
-    .pl-item.active .pl-url { color: #60a5fa; }
-    .pl-item .pl-dur { color: #475569; font-size: 0.75rem; flex-shrink: 0; }
-    .pl-item .pl-del {
-      background: none;
-      border: none;
-      color: #ef4444;
-      cursor: pointer;
-      padding: 2px 6px;
-      flex-shrink: 0;
-      font-size: 0.875rem;
-    }
-
-    /* Log */
-    #log {
-      background: #0a0c12;
-      border: 1px solid #1e2235;
-      border-radius: 6px;
-      padding: 12px;
-      height: 180px;
-      overflow-y: auto;
-      font-family: monospace;
-      font-size: 0.75rem;
-      color: #64748b;
-      white-space: pre-wrap;
-      word-break: break-all;
-    }
-
-    #login-modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(10, 12, 18, 0.84);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      z-index: 50;
-    }
-
-    .login-box {
-      width: 100%;
-      max-width: 420px;
-      background: #151926;
-      border: 1px solid #2d3148;
-      border-radius: 12px;
-      padding: 22px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
-    }
-
-    .login-box h2 {
-      font-size: 1rem;
-      color: #fff;
-      margin-bottom: 8px;
-    }
-
-    .login-box p {
-      color: #94a3b8;
-      font-size: 0.85rem;
-      margin-bottom: 16px;
-    }
-
-    .login-form-row { margin-bottom: 10px; }
-
-    .login-form-row input {
-      width: 100%;
-    }
-
-    #login-error {
-      min-height: 1em;
-      color: #f87171;
-      font-size: 0.8rem;
-      margin-top: 2px;
-      margin-bottom: 12px;
+    button, input, select { font: inherit; }
+    button { border: 0; border-radius: 6px; padding: 8px 12px; font-weight: 700; cursor: pointer; color: #fff; background: #374151; }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    button:hover:not(:disabled) { opacity: .88; }
+    input, select { width: 100%; background: #0f1117; border: 1px solid #2d3148; border-radius: 6px; color: #e2e8f0; padding: 8px 10px; outline: none; }
+    input:focus, select:focus { border-color: #3b82f6; }
+    .btn-primary { background: #3b82f6; }
+    .btn-success { background: #16a34a; }
+    .btn-danger { background: #dc2626; }
+    .btn-muted { background: #374151; }
+    .shell { max-width: 1320px; margin: 0 auto; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    h1 { font-size: 1.15rem; color: #fff; }
+    .session { display: flex; align-items: center; gap: 10px; color: #94a3b8; font-size: .82rem; }
+    .status-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+    .metric { min-width: 0; background: #151926; border: 1px solid #2d3148; border-radius: 8px; padding: 9px 11px; }
+    .metric-label { color: #64748b; font-size: .66rem; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 3px; }
+    .metric-value { color: #e2e8f0; font-size: .82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; background: #64748b; }
+    .dot.streaming { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+    .dot.starting { background: #f59e0b; }
+    .dot.error { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+    .nav { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .nav button.active { background: #2563eb; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .card { background: #1a1d27; border: 1px solid #2d3148; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    .card h2 { font-size: .72rem; color: #94a3b8; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 12px; }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .row > * { min-width: 0; }
+    .stack { display: grid; gap: 10px; }
+    .hint { color: #94a3b8; font-size: .78rem; line-height: 1.35; }
+    .small { font-size: .76rem; color: #64748b; }
+    .list { display: grid; gap: 6px; margin-top: 10px; }
+    .item { display: flex; align-items: center; gap: 8px; background: #10131d; border: 1px solid #24283a; border-radius: 6px; padding: 8px; min-height: 38px; }
+    .item.active { border-color: #3b82f6; background: #17233a; }
+    .item.archived { opacity: .52; }
+    .item-main { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pill { flex: none; color: #cbd5e1; background: #283044; border-radius: 999px; padding: 3px 7px; font-size: .72rem; }
+    .danger-text { color: #f87171; }
+    .ok-text { color: #86efac; }
+    .warn-text { color: #fbbf24; }
+    .split { display: grid; grid-template-columns: 1fr 130px 130px; gap: 8px; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .three { display: grid; grid-template-columns: 1fr 110px 110px; gap: 8px; }
+    .drag { cursor: grab; color: #64748b; }
+    #log { height: 150px; overflow: auto; background: #090b11; border: 1px solid #1e2235; border-radius: 6px; padding: 10px; color: #64748b; font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre-wrap; }
+    #login-modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(10, 12, 18, .86); z-index: 50; }
+    .login-box { width: 100%; max-width: 420px; background: #151926; border: 1px solid #2d3148; border-radius: 10px; padding: 22px; }
+    .login-box h2 { font-size: 1rem; margin-bottom: 8px; }
+    .login-box p { color: #94a3b8; font-size: .85rem; margin-bottom: 14px; }
+    #login-error { min-height: 1em; color: #f87171; font-size: .8rem; margin: 3px 0 12px; }
+    @media (max-width: 900px) {
+      body { padding: 12px; }
+      .status-strip, .grid, .two, .three, .split { grid-template-columns: 1fr; }
+      .topbar { align-items: flex-start; flex-direction: column; }
     }
   </style>
 </head>
 <body>
   <div id="login-modal">
     <div class="login-box">
-      <h2>Iniciar sesión</h2>
+      <h2>Iniciar sesion</h2>
       <p>Acceso interno al switcher.</p>
-      <form id="login-form">
-        <div class="login-form-row">
-          <input type="text" id="login-username" placeholder="Usuario" autocomplete="username" required />
-        </div>
-        <div class="login-form-row">
-          <input type="password" id="login-password" placeholder="Password" autocomplete="current-password" required />
-        </div>
+      <form id="login-form" class="stack">
+        <input type="text" id="login-username" placeholder="Usuario" autocomplete="username" required>
+        <input type="password" id="login-password" placeholder="Password" autocomplete="current-password" required>
         <div id="login-error"></div>
-        <button class="btn-primary" type="submit" id="btn-login">Entrar</button>
+        <button class="btn-primary" id="btn-login" type="submit">Entrar</button>
       </form>
     </div>
   </div>
 
-  <div id="app-shell" class="hidden">
-  <div class="topbar">
-    <h1>IncaSlop Switcher</h1>
-    <div class="topbar-right">
-      <span id="session-user">—</span>
-      <a href="logs.html" class="btn-muted" style="padding:8px 12px; border-radius:6px; text-decoration:none;">Logs</a>
-      <button class="btn-muted" onclick="doLogout()">Cerrar sesión</button>
+  <main id="app-shell" class="shell hidden">
+    <div class="topbar">
+      <h1>IncaSlop Switcher</h1>
+      <div class="session">
+        <span id="session-user">Usuario: -</span>
+        <a href="logs.html" class="btn-muted" style="color:#fff;text-decoration:none;border-radius:6px;padding:8px 12px;font-weight:700;">Logs</a>
+        <button class="btn-muted" onclick="doLogout()">Cerrar sesion</button>
+      </div>
     </div>
-  </div>
 
-  <!-- Status -->
-  <div class="card">
-    <h2>Estado del stream</h2>
-    <div class="status-row">
-      <div class="dot stopped" id="status-dot"></div>
-      <span id="status-text">Cargando...</span>
-    </div>
-    <div id="current-url">—</div>
-    <div id="uptime"></div>
-  </div>
+    <section class="status-strip">
+      <div class="metric"><div class="metric-label">Status</div><div class="metric-value"><span id="status-dot" class="dot"></span><span id="status-text">Cargando</span></div></div>
+      <div class="metric"><div class="metric-label">Now playing video</div><div id="now-video" class="metric-value">-</div></div>
+      <div class="metric"><div class="metric-label">Now playing audio</div><div id="now-audio" class="metric-value">-</div></div>
+      <div class="metric"><div class="metric-label">Uptime</div><div id="uptime" class="metric-value">-</div></div>
+    </section>
 
-  <!-- Switch URL -->
-  <div class="card">
-    <h2>Cambiar URL</h2>
-    <div class="input-row">
-      <input type="text" id="url-input" placeholder="https://..." />
-      <button class="btn-primary" id="btn-switch" onclick="doSwitch()">Switch</button>
-    </div>
-  </div>
+    <nav class="nav">
+      <button class="active" data-view="live" onclick="showView('live')">LIVE</button>
+      <button data-view="playlist" onclick="showView('playlist')">PLAYLIST</button>
+      <button data-view="audio" onclick="showView('audio')">AUDIO</button>
+      <button data-view="overlay" onclick="showView('overlay')">OVERLAY</button>
+    </nav>
 
-  <!-- Overlay messages -->
-  <div class="card">
-    <h2>Mensajes Overlay</h2>
-    <input type="text" id="overlay-input" maxlength="180" placeholder="Escribe el mensaje para mostrar en Kick..." />
-    <select id="overlay-style">
-      <option value="neon-burst">Neon Burst</option>
-      <option value="acid-fire">Acid Fire</option>
-      <option value="pixel-rave">Pixel Rave</option>
-      <option value="cosmic-pop">Cosmic Pop</option>
-      <option value="warning-siren">Warning Siren</option>
-    </select>
-    <div id="overlay-status">Sin mensaje activo</div>
-    <div class="controls-row">
-      <button class="btn-primary" onclick="overlayShow()">Mostrar mensaje</button>
-      <button class="btn-danger" onclick="overlayClear()">Ocultar ahora</button>
-    </div>
-  </div>
+    <section id="view-live">
+      <div class="grid">
+        <div class="card">
+          <h2>Control live</h2>
+          <div class="stack">
+            <div class="row">
+              <button class="btn-success" onclick="doStart()">Start Stream</button>
+              <button class="btn-danger" onclick="doStop()">Stop Stream</button>
+            </div>
+            <div class="row">
+              <input type="text" id="url-input" placeholder="https://...">
+              <button class="btn-primary" onclick="doSwitch()">Switch</button>
+            </div>
+            <div id="current-url" class="hint">-</div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>DEFAULT_URL</h2>
+          <div class="stack">
+            <input type="text" id="default-url-input" placeholder="https://sinadef.incaslop.online">
+            <button class="btn-primary" onclick="saveDefaultUrl()">Guardar DEFAULT_URL</button>
+            <div class="hint">Fallback usado cuando termina una video-playlist sin repetir.</div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-  <!-- Sticker GIF -->
-  <div class="card">
-    <h2>Sticker GIF</h2>
-    <input type="text" id="sticker-gif-input" placeholder="https://.../sticker.gif" />
-    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 8px; margin-bottom: 10px;">
-      Se aceptan solo URLs públicas terminadas en <code>.gif</code>.
-    </div>
-    <div class="controls-row">
-      <button class="btn-primary" onclick="stickerShow()">Lanzar sticker</button>
-    </div>
-  </div>
+    <section id="view-playlist" class="hidden">
+      <div class="grid">
+        <div class="card">
+          <h2>Crear video-playlist</h2>
+          <div class="stack">
+            <input id="video-name" type="text" placeholder="nombre_playlist">
+            <div class="three">
+              <input id="video-url" type="text" placeholder="https://...">
+              <input id="video-min" type="number" min="0" placeholder="min">
+              <input id="video-sec" type="number" min="0" max="59" placeholder="seg">
+            </div>
+            <div class="row">
+              <button class="btn-primary" onclick="addVideoItem()">Agregar item</button>
+              <label class="hint"><input id="video-repeat" type="checkbox" style="width:auto;margin-right:6px;">Repetir</label>
+            </div>
+            <div id="video-editor-list" class="list"></div>
+            <div class="row">
+              <button class="btn-success" onclick="saveVideoPlaylist()">Guardar</button>
+              <button class="btn-primary" onclick="playVideoEditor()">Guardar y reproducir</button>
+              <button class="btn-muted" onclick="clearVideoEditor()">Limpiar</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Video-playlists guardadas</h2>
+          <div id="video-playlists" class="list"></div>
+          <div class="row" style="margin-top:12px;">
+            <button class="btn-primary" onclick="videoPause()">Pausar</button>
+            <button class="btn-success" onclick="videoResume()">Play</button>
+            <button class="btn-danger" onclick="videoStop()">Stop</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Programar video-playlist (hora Peru GMT-5)</h2>
+        <div class="split">
+          <select id="video-schedule-playlist"></select>
+          <input id="video-schedule-start" type="datetime-local">
+          <button class="btn-primary" onclick="createSchedule('video')">Programar</button>
+        </div>
+      </div>
+    </section>
 
-  <!-- Playlist -->
-  <div class="card">
-    <h2>Playlist</h2>
-    <div class="input-row" style="gap: 8px; margin-bottom: 12px;">
-      <input type="text"   id="pl-url"      placeholder="https://..." />
-      <input type="number" id="pl-duracion" placeholder="seg" min="5" style="width: 80px; flex: none;" />
-      <button class="btn-primary" onclick="plAdd()">+ Agregar</button>
-    </div>
-    <div id="pl-list"></div>
-    <div id="pl-status" style="font-size: 0.8rem; color: #94a3b8; margin: 8px 0;"></div>
-    <div class="controls-row">
-      <button class="btn-success" onclick="plStart()">▶ Iniciar</button>
-      <button class="btn-primary"  onclick="plPause()">⏸ Pausar</button>
-      <button class="btn-danger"   onclick="plStop()">■ Detener</button>
-      <button style="background: #374151; color: #e2e8f0; padding: 8px 16px; border-radius: 6px; border: none; font-size: 0.875rem; font-weight: 600; cursor: pointer;" onclick="plClear()">✕ Limpiar</button>
-    </div>
-  </div>
+    <section id="view-audio" class="hidden">
+      <div class="grid">
+        <div class="card">
+          <h2>Audio</h2>
+          <div class="stack">
+            <input id="audio-file" type="file" accept=".mp3,audio/mpeg">
+            <div class="row">
+              <button class="btn-primary" onclick="uploadAudio()">Subir MP3</button>
+              <button class="btn-success" onclick="audioPlay()">Play catalogo</button>
+              <button class="btn-primary" onclick="audioMute()">Mute</button>
+              <button class="btn-danger" onclick="audioStop()">Stop</button>
+            </div>
+            <div id="audio-summary" class="hint">-</div>
+            <div id="audio-warnings" class="warn-text small"></div>
+            <div id="audio-tracks" class="list"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Crear audio-playlist</h2>
+          <div class="stack">
+            <input id="audio-name" type="text" placeholder="nombre_playlist">
+            <label class="hint"><input id="audio-repeat" type="checkbox" style="width:auto;margin-right:6px;">Repetir</label>
+            <div class="hint">Agrega canciones desde el catalogo. Puedes reordenarlas con drag-and-drop.</div>
+            <div id="audio-editor-list" class="list"></div>
+            <div class="row">
+              <button class="btn-success" onclick="saveAudioPlaylist()">Guardar</button>
+              <button class="btn-primary" onclick="playAudioEditor()">Guardar y reproducir</button>
+              <button class="btn-muted" onclick="clearAudioEditor()">Limpiar</button>
+            </div>
+            <h2 style="margin-top:10px;">Audio-playlists guardadas</h2>
+            <div id="audio-playlists" class="list"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Programar audio-playlist (hora Peru GMT-5)</h2>
+        <div class="split">
+          <select id="audio-schedule-playlist"></select>
+          <input id="audio-schedule-start" type="datetime-local">
+          <button class="btn-primary" onclick="createSchedule('audio')">Programar</button>
+        </div>
+      </div>
+    </section>
 
-  <!-- Stream controls -->
-  <div class="card">
-    <h2>Audio</h2>
-    <div id="audio-summary" style="font-size: 0.85rem; color: #cbd5e1;">Cargando...</div>
-    <div id="audio-track" style="font-size: 0.8rem; color: #94a3b8; margin-top: 6px;"></div>
-    <div id="audio-meta" style="font-size: 0.75rem; color: #64748b; margin-top: 4px;"></div>
-    <div id="audio-warnings" style="font-size: 0.75rem; color: #f59e0b; margin-top: 8px;"></div>
-    <div style="margin-top: 12px;">
-      <button class="btn-primary" onclick="rescanAudio()">↻ Recargar carpeta</button>
-    </div>
-  </div>
+    <section id="view-overlay" class="hidden">
+      <div class="grid">
+        <div class="card">
+          <h2>Mensajes Overlay</h2>
+          <div class="stack">
+            <input type="text" id="overlay-input" maxlength="180" placeholder="Mensaje para mostrar en Kick">
+            <select id="overlay-style">
+              <option value="neon-burst">Neon Burst</option>
+              <option value="acid-fire">Acid Fire</option>
+              <option value="pixel-rave">Pixel Rave</option>
+              <option value="cosmic-pop">Cosmic Pop</option>
+              <option value="warning-siren">Warning Siren</option>
+            </select>
+            <div id="overlay-status" class="hint">Sin mensaje activo</div>
+            <div class="row">
+              <button class="btn-primary" onclick="overlayShow()">Mostrar mensaje</button>
+              <button class="btn-danger" onclick="overlayClear()">Ocultar ahora</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Sticker imagen/GIF</h2>
+          <div class="stack">
+            <input type="text" id="sticker-gif-input" placeholder="https://.../imagen.jpg?metadata=...">
+            <div class="hint">Acepta .gif, .png, .jpg, .jpeg o .webp. Se corta metadata despues de la extension.</div>
+            <button class="btn-primary" onclick="stickerShow()">Lanzar sticker</button>
+          </div>
+        </div>
+      </div>
+    </section>
 
-  <!-- Stream controls -->
-  <div class="card">
-    <h2>Controles</h2>
-    <div class="controls-row">
-      <button class="btn-success" id="btn-start" onclick="doStart()">▶ Start Stream</button>
-      <button class="btn-danger"  id="btn-stop"  onclick="doStop()">■ Stop Stream</button>
+    <div class="card">
+      <h2>Programaciones</h2>
+      <div id="schedule-list" class="list"></div>
     </div>
-  </div>
 
-  <!-- Log -->
-  <div class="card">
-    <h2>Log</h2>
-    <pre id="log"></pre>
-  </div>
-  </div>
+    <div class="card">
+      <h2>Log</h2>
+      <pre id="log"></pre>
+    </div>
+  </main>
 
   <script src="config.js"></script>
   <script>
-    const API   = (window.SWITCHER_API   || 'http://localhost:3000').replace(/\/$/, '')
+    const API = (window.SWITCHER_API || 'http://localhost:3000').replace(/\/$/, '')
     const SESSION_STORAGE_KEY = 'incaslop.switcher.session'
+    const STICKER_ALLOWED_EXTENSIONS = ['.gif', '.png', '.jpg', '.jpeg', '.webp']
     let SESSION_TOKEN = ''
     let POLL_TIMER = null
+    let urlDirty = false
+    let videoEditorItems = []
+    let audioEditorTracks = []
+    let videoPlaylists = []
+    let audioPlaylists = []
+    let audioTracks = []
+    let schedules = []
+    let dragState = null
 
     async function apiFetch(path, options = {}) {
-      const { suppressAuthRedirect = false, ...requestOptions } = options
+      const { suppressAuthRedirect = false, headers = {}, ...requestOptions } = options
       const res = await fetch(API + path, {
         headers: {
           'Content-Type': 'application/json',
           ...(SESSION_TOKEN ? { 'Authorization': 'Bearer ' + SESSION_TOKEN } : {}),
-          ...(requestOptions.headers || {}),
+          ...headers,
         },
         ...requestOptions,
       })
       const text = await res.text()
       let data
       try { data = JSON.parse(text) } catch { data = { error: text } }
-      if (res.status === 401 && !suppressAuthRedirect) {
-        await handleUnauthorized()
-      }
+      if (res.status === 401 && !suppressAuthRedirect) await handleUnauthorized()
       if (!res.ok) throw new Error(data.error || res.statusText)
       return data
     }
 
-    function saveSession(session) {
-      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
-    }
-
-    function readStoredSession() {
-      const raw = localStorage.getItem(SESSION_STORAGE_KEY)
-      if (!raw) return null
-      try { return JSON.parse(raw) } catch { return null }
-    }
-
-    function clearSession() {
-      SESSION_TOKEN = ''
-      localStorage.removeItem(SESSION_STORAGE_KEY)
-      clearInterval(POLL_TIMER)
-      POLL_TIMER = null
-    }
-
-    function showLogin() {
-      document.getElementById('login-modal').classList.remove('hidden')
-      document.getElementById('app-shell').classList.add('hidden')
-      document.getElementById('login-password').value = ''
-    }
-
-    function showApp(user) {
-      document.getElementById('session-user').textContent = user ? `Usuario: ${user}` : 'Usuario: —'
-      document.getElementById('login-modal').classList.add('hidden')
-      document.getElementById('app-shell').classList.remove('hidden')
-    }
-
-    function setLoginError(message = '') {
-      document.getElementById('login-error').textContent = message
-    }
-
-    function setLoginBusy(busy) {
-      document.getElementById('btn-login').disabled = !!busy
-    }
-
-    async function handleUnauthorized() {
-      clearSession()
-      showLogin()
-      setLoginError('Sesión expirada. Vuelve a iniciar sesión.')
-      document.getElementById('status-dot').className = 'dot error'
-      document.getElementById('status-text').textContent = 'No autenticado'
-    }
-
-    async function verifySession() {
-      const data = await apiFetch('/auth/session', { method: 'GET', suppressAuthRedirect: true })
-      const user = data?.user || 'inca'
-      saveSession({ token: SESSION_TOKEN, user, expiresAt: data?.expiresAt || null })
-      showApp(user)
-      await pollStatus()
-      startPolling()
-    }
-
-    function startPolling() {
-      clearInterval(POLL_TIMER)
-      POLL_TIMER = setInterval(pollStatus, 5000)
-    }
-
-    async function bootstrapAuth() {
-      const stored = readStoredSession()
-      if (!stored?.token) {
-        showLogin()
-        return
-      }
-
-      SESSION_TOKEN = stored.token
-      try {
-        await verifySession()
-      } catch {
-        clearSession()
-        showLogin()
-      }
-    }
-
-    async function doLogin(event) {
-      event.preventDefault()
-      const username = document.getElementById('login-username').value.trim()
-      const password = document.getElementById('login-password').value
-      if (!username || !password) return setLoginError('Completa usuario y password.')
-
-      setLoginBusy(true)
-      setLoginError('')
-      try {
-        const data = await fetch(API + '/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password }),
-        }).then(async (res) => {
-          const text = await res.text()
-          let body
-          try { body = JSON.parse(text) } catch { body = { error: text } }
-          if (!res.ok) throw new Error(body.error || res.statusText)
-          return body
-        })
-
-        SESSION_TOKEN = data.token
-        saveSession({ token: data.token, user: data.user, expiresAt: data.expiresAt || null })
-        showApp(data.user)
-        log('Sesión iniciada')
-        await pollStatus()
-        startPolling()
-      } catch (e) {
-        setLoginError(e.message || 'No se pudo iniciar sesión')
-      } finally {
-        setLoginBusy(false)
-      }
-    }
-
-    async function doLogout() {
-      try {
-        if (SESSION_TOKEN) {
-          await apiFetch('/auth/logout', { method: 'POST', suppressAuthRedirect: true })
-        }
-      } catch {}
-      clearSession()
-      showLogin()
-      setLoginError('')
-      log('Sesión cerrada')
+    async function apiUpload(path, formData) {
+      const res = await fetch(API + path, {
+        method: 'POST',
+        headers: SESSION_TOKEN ? { 'Authorization': 'Bearer ' + SESSION_TOKEN } : {},
+        body: formData,
+      })
+      const text = await res.text()
+      let data
+      try { data = JSON.parse(text) } catch { data = { error: text } }
+      if (res.status === 401) await handleUnauthorized()
+      if (!res.ok) throw new Error(data.error || res.statusText)
+      return data
     }
 
     function log(msg) {
@@ -555,90 +315,399 @@
       el.scrollTop = el.scrollHeight
     }
 
+    function saveSession(session) { localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session)) }
+    function readStoredSession() { try { return JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || 'null') } catch { return null } }
+    function clearSession() {
+      SESSION_TOKEN = ''
+      localStorage.removeItem(SESSION_STORAGE_KEY)
+      clearInterval(POLL_TIMER)
+      POLL_TIMER = null
+    }
+    function showLogin() {
+      document.getElementById('login-modal').classList.remove('hidden')
+      document.getElementById('app-shell').classList.add('hidden')
+      document.getElementById('login-password').value = ''
+    }
+    function showApp(user) {
+      document.getElementById('session-user').textContent = user ? `Usuario: ${user}` : 'Usuario: -'
+      document.getElementById('login-modal').classList.add('hidden')
+      document.getElementById('app-shell').classList.remove('hidden')
+    }
+    function setLoginError(message = '') { document.getElementById('login-error').textContent = message }
+    function setLoginBusy(busy) { document.getElementById('btn-login').disabled = !!busy }
+
+    async function handleUnauthorized() {
+      clearSession()
+      showLogin()
+      setLoginError('Sesion expirada. Vuelve a iniciar sesion.')
+    }
+
+    async function verifySession() {
+      const data = await apiFetch('/auth/session', { method: 'GET', suppressAuthRedirect: true })
+      const user = data?.user || 'inca'
+      saveSession({ token: SESSION_TOKEN, user, expiresAt: data?.expiresAt || null })
+      showApp(user)
+      await refreshAll()
+      startPolling()
+    }
+
+    async function bootstrapAuth() {
+      const stored = readStoredSession()
+      if (!stored?.token) return showLogin()
+      SESSION_TOKEN = stored.token
+      try { await verifySession() } catch { clearSession(); showLogin() }
+    }
+
+    function startPolling() {
+      clearInterval(POLL_TIMER)
+      POLL_TIMER = setInterval(pollStatus, 5000)
+    }
+
+    async function doLogin(event) {
+      event.preventDefault()
+      const username = document.getElementById('login-username').value.trim()
+      const password = document.getElementById('login-password').value
+      if (!username || !password) return setLoginError('Completa usuario y password.')
+      setLoginBusy(true)
+      setLoginError('')
+      try {
+        const data = await fetch(API + '/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        }).then(async (res) => {
+          const text = await res.text()
+          const body = JSON.parse(text)
+          if (!res.ok) throw new Error(body.error || res.statusText)
+          return body
+        })
+        SESSION_TOKEN = data.token
+        saveSession({ token: data.token, user: data.user, expiresAt: data.expiresAt || null })
+        showApp(data.user)
+        log('Sesion iniciada')
+        await refreshAll()
+        startPolling()
+      } catch (e) {
+        setLoginError(e.message || 'No se pudo iniciar sesion')
+      } finally {
+        setLoginBusy(false)
+      }
+    }
+
+    async function doLogout() {
+      try { if (SESSION_TOKEN) await apiFetch('/auth/logout', { method: 'POST', suppressAuthRedirect: true }) } catch {}
+      clearSession()
+      showLogin()
+      setLoginError('')
+      log('Sesion cerrada')
+    }
+
+    function showView(view) {
+      for (const id of ['live', 'playlist', 'audio', 'overlay']) {
+        document.getElementById(`view-${id}`).classList.toggle('hidden', id !== view)
+      }
+      document.querySelectorAll('.nav button').forEach((btn) => btn.classList.toggle('active', btn.dataset.view === view))
+    }
+
     function formatUptime(s) {
-      if (!s) return ''
+      if (!s) return '-'
       const h = Math.floor(s / 3600)
       const m = Math.floor((s % 3600) / 60)
       const sec = s % 60
-      return `Uptime: ${h}h ${m}m ${sec}s`
+      return `${h}h ${m}m ${sec}s`
     }
 
-    function updateUI(data) {
-      const dot    = document.getElementById('status-dot')
-      const text   = document.getElementById('status-text')
-      const urlEl  = document.getElementById('current-url')
-      const uptEl  = document.getElementById('uptime')
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]))
+    }
 
-      dot.className = 'dot ' + (data.status || 'stopped')
-
-      const labels = { streaming: 'Streameando', stopped: 'Detenido', starting: 'Iniciando...', error: 'Error' }
-      text.textContent = labels[data.status] || data.status
-
-      if (data.currentUrl) {
-        urlEl.innerHTML = `<a href="${data.currentUrl}" target="_blank" rel="noopener">${data.currentUrl}</a>`
-        document.getElementById('url-input').value = data.currentUrl
-      } else {
-        urlEl.textContent = '—'
-      }
-
-      uptEl.textContent = formatUptime(data.uptimeSeconds)
-      updatePlaylistUI(data)
-      updateAudioUI(data.audio)
-      updateOverlayUI(data.overlay)
+    async function refreshAll() {
+      await Promise.all([pollStatus(), loadVideoPlaylists(), loadAudioPlaylists(), loadSchedules()])
     }
 
     async function pollStatus() {
       try {
         const data = await apiFetch('/status')
-        updateUI(data)
-      } catch (e) {
+        updateStatus(data)
+      } catch {
         if (!SESSION_TOKEN) return
         document.getElementById('status-dot').className = 'dot error'
-        document.getElementById('status-text').textContent = 'Sin conexión'
+        document.getElementById('status-text').textContent = 'Sin conexion'
       }
     }
 
+    function updateStatus(data) {
+      const dot = document.getElementById('status-dot')
+      const labels = { streaming: 'Streameando', stopped: 'Detenido', starting: 'Iniciando', error: 'Error' }
+      dot.className = 'dot ' + (data.status || 'stopped')
+      document.getElementById('status-text').textContent = labels[data.status] || data.status || '-'
+      document.getElementById('uptime').textContent = formatUptime(data.uptimeSeconds)
+      document.getElementById('now-video').textContent = data.nowPlayingVideo || data.currentUrl || '-'
+      const currentAudio = data.audio?.currentTrack?.name || (data.audio?.mode ? `Audio ${data.audio.mode}` : '-')
+      document.getElementById('now-audio').textContent = currentAudio
+      document.getElementById('current-url').innerHTML = data.currentUrl ? `<a href="${escapeHtml(data.currentUrl)}" target="_blank" rel="noopener" style="color:#60a5fa;">${escapeHtml(data.currentUrl)}</a>` : '-'
+      if (data.currentUrl && !urlDirty && document.activeElement !== document.getElementById('url-input')) {
+        document.getElementById('url-input').value = data.currentUrl
+      }
+      if (data.settings?.defaultUrl) document.getElementById('default-url-input').value = data.settings.defaultUrl
+      updateAudioUI(data.audio)
+      updateOverlayUI(data.overlay)
+    }
+
+    async function doStart() {
+      try { await apiFetch('/stream/start', { method: 'POST' }); log('Stream iniciado'); pollStatus() } catch (e) { log('Error al iniciar: ' + e.message) }
+    }
+    async function doStop() {
+      try { await apiFetch('/stream/stop', { method: 'POST' }); log('Stream detenido'); pollStatus() } catch (e) { log('Error al detener: ' + e.message) }
+    }
     async function doSwitch() {
       const url = document.getElementById('url-input').value.trim()
       if (!url) return
       try {
-        log(`Cambiando a: ${url}`)
         await apiFetch('/switch', { method: 'POST', body: JSON.stringify({ url }) })
-        log('URL cambiada correctamente')
+        urlDirty = false
+        log('URL cambiada')
         pollStatus()
-      } catch (e) {
-        log('Error al cambiar URL: ' + e.message)
-      }
+      } catch (e) { log('Error al cambiar URL: ' + e.message) }
     }
-
-    async function doStart() {
+    async function saveDefaultUrl() {
+      const defaultUrl = document.getElementById('default-url-input').value.trim()
       try {
-        log('Iniciando stream...')
-        await apiFetch('/stream/start', { method: 'POST' })
-        log('Stream iniciado')
+        await apiFetch('/settings/default-url', { method: 'PUT', body: JSON.stringify({ defaultUrl }) })
+        log('DEFAULT_URL actualizado')
         pollStatus()
-      } catch (e) {
-        log('Error al iniciar: ' + e.message)
-      }
+      } catch (e) { log('DEFAULT_URL error: ' + e.message) }
     }
 
-    async function doStop() {
+    async function loadVideoPlaylists() {
+      const data = await apiFetch('/video/playlists')
+      videoPlaylists = data.playlists || []
+      renderVideoPlaylists()
+      renderScheduleSelects()
+    }
+    function addVideoItem() {
+      const url = document.getElementById('video-url').value.trim()
+      const minutes = parseInt(document.getElementById('video-min').value || '0', 10)
+      const seconds = parseInt(document.getElementById('video-sec').value || '0', 10)
+      const durationSeconds = (minutes * 60) + seconds
+      if (!url || durationSeconds < 5) return log('Video playlist: URL y duracion >= 5s son requeridas')
+      videoEditorItems.push({ url, durationSeconds })
+      document.getElementById('video-url').value = ''
+      document.getElementById('video-min').value = ''
+      document.getElementById('video-sec').value = ''
+      renderVideoEditor()
+    }
+    function renderVideoEditor() {
+      const el = document.getElementById('video-editor-list')
+      el.innerHTML = videoEditorItems.length ? videoEditorItems.map((item, index) => `
+        <div class="item" draggable="true" ondragstart="dragStart('video', ${index})" ondragover="event.preventDefault()" ondrop="dragDrop('video', ${index})">
+          <span class="drag">::</span><span class="item-main" title="${escapeHtml(item.url)}">${escapeHtml(item.url)}</span>
+          <span class="pill">${item.durationSeconds}s</span><button class="btn-danger" onclick="removeVideoItem(${index})">Quitar</button>
+        </div>`).join('') : '<div class="hint">Lista vacia</div>'
+    }
+    function removeVideoItem(index) { videoEditorItems.splice(index, 1); renderVideoEditor() }
+    function clearVideoEditor() {
+      videoEditorItems = []
+      document.getElementById('video-name').value = ''
+      document.getElementById('video-repeat').checked = false
+      renderVideoEditor()
+    }
+    async function saveVideoPlaylist() {
+      const name = document.getElementById('video-name').value.trim()
+      const repeat = document.getElementById('video-repeat').checked
       try {
-        log('Deteniendo stream...')
-        await apiFetch('/stream/stop', { method: 'POST' })
-        log('Stream detenido')
-        pollStatus()
-      } catch (e) {
-        log('Error al detener: ' + e.message)
-      }
+        await apiFetch('/video/playlists', { method: 'POST', body: JSON.stringify({ name, repeat, items: videoEditorItems }) })
+        log(`Video playlist guardada: ${name}`)
+        await loadVideoPlaylists()
+      } catch (e) { log('Video playlist error: ' + e.message) }
+    }
+    async function playVideoEditor() {
+      await saveVideoPlaylist()
+      const name = document.getElementById('video-name').value.trim()
+      if (name) await playVideoPlaylist(name)
+    }
+    function editVideoPlaylist(name) {
+      const found = videoPlaylists.find((playlist) => playlist.name === name)
+      if (!found) return
+      document.getElementById('video-name').value = found.name
+      document.getElementById('video-repeat').checked = !!found.repeat
+      videoEditorItems = (found.items || []).map((item) => ({ url: item.url, durationSeconds: item.durationSeconds || item.duracionSegundos }))
+      renderVideoEditor()
+    }
+    function renderVideoPlaylists() {
+      const el = document.getElementById('video-playlists')
+      el.innerHTML = videoPlaylists.length ? videoPlaylists.map((playlist) => `
+        <div class="item">
+          <span class="item-main">${escapeHtml(playlist.name)}</span><span class="pill">${(playlist.items || []).length} items</span><span class="pill">${playlist.repeat ? 'repeat' : 'fallback'}</span>
+          <button class="btn-primary" onclick="playVideoPlaylist('${escapeHtml(playlist.name)}')">Play</button>
+          <button onclick="editVideoPlaylist('${escapeHtml(playlist.name)}')">Editar</button>
+          <button class="btn-danger" onclick="deleteVideoPlaylist('${escapeHtml(playlist.name)}')">Borrar</button>
+        </div>`).join('') : '<div class="hint">No hay video-playlists guardadas</div>'
+    }
+    async function playVideoPlaylist(name) {
+      try { await apiFetch(`/video/playlists/${encodeURIComponent(name)}/play`, { method: 'POST' }); log(`Video playlist iniciada: ${name}`); pollStatus() } catch (e) { log('Video play error: ' + e.message) }
+    }
+    async function deleteVideoPlaylist(name) {
+      try { await apiFetch(`/video/playlists/${encodeURIComponent(name)}`, { method: 'DELETE' }); await loadVideoPlaylists(); log(`Video playlist borrada: ${name}`) } catch (e) { log('Video delete error: ' + e.message) }
+    }
+    async function videoPause() { try { await apiFetch('/video/playlist/pause', { method: 'POST' }); pollStatus() } catch (e) { log('Video pause error: ' + e.message) } }
+    async function videoResume() { try { await apiFetch('/video/playlist/resume', { method: 'POST' }); pollStatus() } catch (e) { log('Video play error: ' + e.message) } }
+    async function videoStop() { try { await apiFetch('/video/playlist/stop', { method: 'POST' }); pollStatus() } catch (e) { log('Video stop error: ' + e.message) } }
+
+    function updateAudioUI(audio) {
+      if (!audio) return
+      audioTracks = audio.tracks || audioTracks
+      document.getElementById('audio-summary').textContent = `${audio.enabled ? 'Audio activo' : 'Sin audio'} · modo ${audio.mode || '-'} · ${audio.trackCount || 0} pista(s)`
+      document.getElementById('audio-warnings').textContent = Array.isArray(audio.warnings) ? audio.warnings.join(' | ') : ''
+      renderAudioTracks()
+    }
+    async function uploadAudio() {
+      const file = document.getElementById('audio-file').files[0]
+      if (!file) return log('Audio: selecciona un MP3')
+      const form = new FormData()
+      form.append('file', file)
+      try {
+        const data = await apiUpload('/audio/upload', form)
+        log(`Audio subido: ${data.file.name}`)
+        updateAudioUI(data.audio)
+        await loadAudioPlaylists()
+      } catch (e) { log('Audio upload error: ' + e.message) }
+    }
+    function renderAudioTracks() {
+      const el = document.getElementById('audio-tracks')
+      el.innerHTML = audioTracks.length ? audioTracks.map((track) => {
+        const encodedName = encodeURIComponent(track.name)
+        return `
+        <div class="item ${track.archived ? 'archived' : ''}">
+          <span class="item-main">${escapeHtml(track.name)}</span>
+          <span class="pill">${track.durationSec ? Math.round(track.durationSec) + 's' : '?'}</span>
+          <button class="btn-primary" ${track.archived ? 'disabled' : ''} onclick="addAudioTrack(decodeURIComponent('${encodedName}'))">Agregar</button>
+          <button class="${track.archived ? 'btn-success' : 'btn-danger'}" onclick="${track.archived ? 'unarchiveAudioTrack' : 'archiveAudioTrack'}(decodeURIComponent('${encodedName}'))">${track.archived ? 'Desarchivar' : 'Archivar'}</button>
+        </div>`
+      }).join('') : '<div class="hint">No hay tracks cargados</div>'
+    }
+    function addAudioTrack(name) {
+      if (!audioEditorTracks.includes(name)) audioEditorTracks.push(name)
+      renderAudioEditor()
+    }
+    function renderAudioEditor() {
+      const el = document.getElementById('audio-editor-list')
+      el.innerHTML = audioEditorTracks.length ? audioEditorTracks.map((name, index) => `
+        <div class="item" draggable="true" ondragstart="dragStart('audio', ${index})" ondragover="event.preventDefault()" ondrop="dragDrop('audio', ${index})">
+          <span class="drag">::</span><span class="item-main">${escapeHtml(name)}</span><button class="btn-danger" onclick="removeAudioEditorTrack(${index})">Quitar</button>
+        </div>`).join('') : '<div class="hint">Lista vacia</div>'
+    }
+    function removeAudioEditorTrack(index) { audioEditorTracks.splice(index, 1); renderAudioEditor() }
+    function clearAudioEditor() {
+      audioEditorTracks = []
+      document.getElementById('audio-name').value = ''
+      document.getElementById('audio-repeat').checked = false
+      renderAudioEditor()
+    }
+    async function saveAudioPlaylist() {
+      const name = document.getElementById('audio-name').value.trim()
+      const repeat = document.getElementById('audio-repeat').checked
+      try {
+        await apiFetch('/audio/playlists', { method: 'POST', body: JSON.stringify({ name, repeat, tracks: audioEditorTracks }) })
+        log(`Audio playlist guardada: ${name}`)
+        await loadAudioPlaylists()
+      } catch (e) { log('Audio playlist error: ' + e.message) }
+    }
+    async function playAudioEditor() {
+      await saveAudioPlaylist()
+      const name = document.getElementById('audio-name').value.trim()
+      if (name) await playAudioPlaylist(name)
+    }
+    async function loadAudioPlaylists() {
+      const data = await apiFetch('/audio/playlists')
+      audioPlaylists = data.playlists || []
+      renderAudioPlaylists()
+      renderScheduleSelects()
+    }
+    function renderAudioPlaylists() {
+      const el = document.getElementById('audio-playlists')
+      el.innerHTML = audioPlaylists.length ? audioPlaylists.map((playlist) => `
+        <div class="item">
+          <span class="item-main">${escapeHtml(playlist.name)}</span><span class="pill">${(playlist.tracks || []).length} tracks</span><span class="pill">${playlist.repeat ? 'repeat' : 'catalogo'}</span>
+          <button class="btn-primary" onclick="playAudioPlaylist('${escapeHtml(playlist.name)}')">Play</button>
+          <button onclick="editAudioPlaylist('${escapeHtml(playlist.name)}')">Editar</button>
+          <button class="btn-danger" onclick="deleteAudioPlaylist('${escapeHtml(playlist.name)}')">Borrar</button>
+        </div>`).join('') : '<div class="hint">No hay audio-playlists guardadas</div>'
+    }
+    function editAudioPlaylist(name) {
+      const found = audioPlaylists.find((playlist) => playlist.name === name)
+      if (!found) return
+      document.getElementById('audio-name').value = found.name
+      document.getElementById('audio-repeat').checked = !!found.repeat
+      audioEditorTracks = [...(found.tracks || [])]
+      renderAudioEditor()
+    }
+    async function playAudioPlaylist(name) {
+      try { const data = await apiFetch(`/audio/playlists/${encodeURIComponent(name)}/play`, { method: 'POST' }); updateAudioUI(data.audio); log(`Audio playlist iniciada: ${name}`) } catch (e) { log('Audio play error: ' + e.message) }
+    }
+    async function deleteAudioPlaylist(name) {
+      try { await apiFetch(`/audio/playlists/${encodeURIComponent(name)}`, { method: 'DELETE' }); await loadAudioPlaylists(); log(`Audio playlist borrada: ${name}`) } catch (e) { log('Audio delete error: ' + e.message) }
+    }
+    async function archiveAudioTrack(name) {
+      try { const data = await apiFetch(`/audio/tracks/${encodeURIComponent(name)}/archive`, { method: 'POST' }); updateAudioUI(data.audio); log(`Archivado: ${name}`) } catch (e) { log('Audio archive error: ' + e.message) }
+    }
+    async function unarchiveAudioTrack(name) {
+      try { const data = await apiFetch(`/audio/tracks/${encodeURIComponent(name)}/unarchive`, { method: 'POST' }); updateAudioUI(data.audio); log(`Desarchivado: ${name}`) } catch (e) { log('Audio unarchive error: ' + e.message) }
+    }
+    async function audioPlay() { try { const data = await apiFetch('/audio/play', { method: 'POST' }); updateAudioUI(data.audio); log('Audio catalogo activo') } catch (e) { log('Audio play error: ' + e.message) } }
+    async function audioMute() { try { const data = await apiFetch('/audio/mute', { method: 'POST' }); updateAudioUI(data.audio); log('Audio mute') } catch (e) { log('Audio mute error: ' + e.message) } }
+    async function audioStop() { try { const data = await apiFetch('/audio/stop', { method: 'POST' }); updateAudioUI(data.audio); log('Audio stop') } catch (e) { log('Audio stop error: ' + e.message) } }
+
+    async function loadSchedules() {
+      const data = await apiFetch('/schedules')
+      schedules = data.schedules || []
+      renderSchedules()
+    }
+    function renderScheduleSelects() {
+      document.getElementById('video-schedule-playlist').innerHTML = videoPlaylists.map((playlist) => `<option value="${escapeHtml(playlist.name)}">${escapeHtml(playlist.name)}</option>`).join('')
+      document.getElementById('audio-schedule-playlist').innerHTML = audioPlaylists.map((playlist) => `<option value="${escapeHtml(playlist.name)}">${escapeHtml(playlist.name)}</option>`).join('')
+    }
+    function peruInputToIso(value) {
+      if (!value) throw new Error('Fecha/hora requerida')
+      return new Date(`${value}:00-05:00`).toISOString()
+    }
+    async function createSchedule(channel) {
+      const playlistName = document.getElementById(`${channel}-schedule-playlist`).value
+      const startsAt = peruInputToIso(document.getElementById(`${channel}-schedule-start`).value)
+      try {
+        await apiFetch('/schedules', { method: 'POST', body: JSON.stringify({ channel, playlistName, startsAt }) })
+        log(`Programado ${channel}: ${playlistName}`)
+        await loadSchedules()
+      } catch (e) { log('Schedule error: ' + e.message) }
+    }
+    function renderSchedules() {
+      const el = document.getElementById('schedule-list')
+      el.innerHTML = schedules.length ? schedules.map((schedule) => `
+        <div class="item">
+          <span class="pill">${schedule.channel}</span>
+          <span class="item-main">${escapeHtml(schedule.playlistName)} - ${escapeHtml(schedule.startsAtPeru || schedule.startsAt)}</span>
+          <span class="pill">${schedule.enabled ? 'activo' : 'ejecutado/off'}</span>
+          <button onclick="toggleSchedule('${schedule.id}', ${schedule.enabled ? 'false' : 'true'})">${schedule.enabled ? 'Desactivar' : 'Activar'}</button>
+          <button class="btn-danger" onclick="deleteSchedule('${schedule.id}')">Borrar</button>
+        </div>`).join('') : '<div class="hint">No hay programaciones</div>'
+    }
+    async function toggleSchedule(id, enabled) {
+      try { await apiFetch(`/schedules/${id}/${enabled ? 'enable' : 'disable'}`, { method: 'POST' }); await loadSchedules() } catch (e) { log('Schedule toggle error: ' + e.message) }
+    }
+    async function deleteSchedule(id) {
+      try { await apiFetch(`/schedules/${id}`, { method: 'DELETE' }); await loadSchedules(); log('Programacion borrada') } catch (e) { log('Schedule delete error: ' + e.message) }
     }
 
-    // Enter key in URL input triggers switch
-    document.getElementById('url-input').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') doSwitch()
-    })
+    function dragStart(kind, index) { dragState = { kind, index } }
+    function dragDrop(kind, index) {
+      if (!dragState || dragState.kind !== kind || dragState.index === index) return
+      const list = kind === 'audio' ? audioEditorTracks : videoEditorItems
+      const [item] = list.splice(dragState.index, 1)
+      list.splice(index, 0, item)
+      dragState = null
+      kind === 'audio' ? renderAudioEditor() : renderVideoEditor()
+    }
 
-    // --- Overlay ---
     const OVERLAY_STYLE_LABELS = {
       'neon-burst': 'Neon Burst',
       'acid-fire': 'Acid Fire',
@@ -646,229 +715,49 @@
       'cosmic-pop': 'Cosmic Pop',
       'warning-siren': 'Warning Siren',
     }
-
-    function getOverlayStyleLabel(style) {
-      return OVERLAY_STYLE_LABELS[style] || OVERLAY_STYLE_LABELS['neon-burst']
-    }
-
     function updateOverlayUI(overlay) {
       const status = document.getElementById('overlay-status')
-      const styleInput = document.getElementById('overlay-style')
-      if (overlay?.style && styleInput) {
-        styleInput.value = overlay.style
-      }
-      if (!overlay || !overlay.visible) {
-        status.textContent = 'Sin mensaje activo'
-        return
-      }
-
-      const ms = Math.max(0, (overlay.expiresAt || 0) - Date.now())
-      const sec = Math.ceil(ms / 1000)
-      status.textContent = `Activo (${sec}s · ${getOverlayStyleLabel(overlay.style)}): ${overlay.text || ''}`
+      if (overlay?.style) document.getElementById('overlay-style').value = overlay.style
+      if (!overlay || !overlay.visible) { status.textContent = 'Sin mensaje activo'; return }
+      const sec = Math.ceil(Math.max(0, (overlay.expiresAt || 0) - Date.now()) / 1000)
+      status.textContent = `Activo (${sec}s - ${OVERLAY_STYLE_LABELS[overlay.style] || overlay.style}): ${overlay.text || ''}`
     }
-
     async function overlayShow() {
       const text = document.getElementById('overlay-input').value.trim()
       const style = document.getElementById('overlay-style').value
-      if (!text) return log('Overlay: el mensaje es requerido')
-
-      try {
-        const data = await apiFetch('/overlay/message', {
-          method: 'POST',
-          body: JSON.stringify({ text, style }),
-        })
-        log(`Overlay: mensaje enviado con estilo ${getOverlayStyleLabel(style)}`)
-        updateOverlayUI(data.overlay)
-        pollStatus()
-      } catch (e) {
-        log('Overlay error: ' + e.message)
-      }
+      if (!text) return log('Overlay: mensaje requerido')
+      try { const data = await apiFetch('/overlay/message', { method: 'POST', body: JSON.stringify({ text, style }) }); updateOverlayUI(data.overlay); log('Overlay enviado') } catch (e) { log('Overlay error: ' + e.message) }
     }
-
     async function overlayClear() {
-      try {
-        const data = await apiFetch('/overlay/clear', { method: 'POST' })
-        log('Overlay: mensaje ocultado')
-        updateOverlayUI(data.overlay)
-        pollStatus()
-      } catch (e) {
-        log('Overlay error: ' + e.message)
-      }
+      try { const data = await apiFetch('/overlay/clear', { method: 'POST' }); updateOverlayUI(data.overlay); log('Overlay ocultado') } catch (e) { log('Overlay error: ' + e.message) }
     }
-
-    document.getElementById('overlay-input').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') overlayShow()
-    })
-
-    // --- Sticker GIF ---
+    function sanitizeStickerUrl(rawUrl) {
+      const parsed = new URL(rawUrl)
+      const pathname = parsed.pathname.toLowerCase()
+      if (!STICKER_ALLOWED_EXTENSIONS.some((ext) => pathname.endsWith(ext))) throw new Error('La URL debe terminar en .gif, .png, .jpg, .jpeg o .webp')
+      parsed.search = ''
+      parsed.hash = ''
+      return parsed.href
+    }
     async function stickerShow() {
-      const gifUrl = document.getElementById('sticker-gif-input').value.trim()
-      if (!gifUrl) return log('Sticker: URL GIF requerida')
-
+      const rawUrl = document.getElementById('sticker-gif-input').value.trim()
+      if (!rawUrl) return log('Sticker: URL requerida')
       try {
-        await apiFetch('/overlay/sticker', {
-          method: 'POST',
-          body: JSON.stringify({ gifUrl }),
-        })
-        log('Sticker: enviado a transmisión')
-      } catch (e) {
-        log('Sticker error: ' + e.message)
-      }
-    }
-
-    document.getElementById('sticker-gif-input').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') stickerShow()
-    })
-
-    // --- Playlist ---
-    let _plItems = [], _plState = 'idle', _plCurrentIndex = null,
-        _plRemainingMs = null, _plCountdown = null
-
-    function updatePlaylistUI(data) {
-      if (!data.items) return
-      _plItems = data.items
-      _plState = data.playlistState
-      _plCurrentIndex = data.currentIndex
-      _plRemainingMs = data.remainingMs
-      renderPlList()
-      renderPlStatus()
-    }
-
-    function renderPlList() {
-      const container = document.getElementById('pl-list')
-      if (_plItems.length === 0) {
-        container.innerHTML = '<div style="color:#475569; font-size:0.8rem; padding: 4px 0;">Lista vacía</div>'
-        return
-      }
-      container.innerHTML = _plItems.map((item) => `
-        <div class="pl-item ${item.active ? 'active' : ''}">
-          <span class="pl-url" title="${item.url}">${item.url}</span>
-          <span class="pl-dur">${item.duracionSegundos}s</span>
-          <button class="pl-del" onclick="plRemove('${item.id}')">✕</button>
-        </div>
-      `).join('')
-    }
-
-    function renderPlStatus() {
-      clearInterval(_plCountdown)
-      const el = document.getElementById('pl-status')
-      if (_plState === 'idle') { el.textContent = 'Playlist inactiva'; return }
-      if (_plState === 'paused') {
-        const sec = _plRemainingMs !== null ? Math.ceil(_plRemainingMs / 1000) : '?'
-        el.textContent = `Pausado — ${sec}s restantes`
-        return
-      }
-      // running — countdown local entre polls
-      let ms = _plRemainingMs ?? 0
-      const total = _plItems.length
-      const idx = (_plCurrentIndex ?? 0) + 1
-      function tick() {
-        const sec = Math.max(0, Math.ceil(ms / 1000))
-        el.textContent = `Item ${idx}/${total} — ${sec}s restantes`
-        ms -= 500
-        if (ms <= 0) clearInterval(_plCountdown)
-      }
-      tick()
-      _plCountdown = setInterval(tick, 500)
-    }
-
-    async function plAdd() {
-      const url = document.getElementById('pl-url').value.trim()
-      const dur = parseInt(document.getElementById('pl-duracion').value, 10)
-      if (!url) return log('Playlist: URL es requerida')
-      if (!dur || dur < 5) return log('Playlist: duración debe ser >= 5 segundos')
-      try {
-        await apiFetch('/playlist/items', { method: 'POST', body: JSON.stringify({ url, duracionSegundos: dur }) })
-        document.getElementById('pl-url').value = ''
-        document.getElementById('pl-duracion').value = ''
-        log(`Playlist: agregado ${url} (${dur}s)`)
-        pollStatus()
-      } catch (e) { log('Playlist error: ' + e.message) }
-    }
-
-    async function plRemove(id) {
-      try {
-        await apiFetch('/playlist/items/' + id, { method: 'DELETE' })
-        pollStatus()
-      } catch (e) { log('Playlist error al eliminar: ' + e.message) }
-    }
-
-    async function plClear() {
-      try {
-        await apiFetch('/playlist/items', { method: 'DELETE' })
-        log('Playlist: lista limpiada')
-        pollStatus()
-      } catch (e) { log('Playlist error: ' + e.message) }
-    }
-
-    async function plStart() {
-      try {
-        await apiFetch('/playlist/start', { method: 'POST' })
-        log('Playlist: iniciada')
-        pollStatus()
-      } catch (e) { log('Playlist error: ' + e.message) }
-    }
-
-    async function plPause() {
-      try {
-        await apiFetch('/playlist/pause', { method: 'POST' })
-        log('Playlist: pausada')
-        pollStatus()
-      } catch (e) { log('Playlist error: ' + e.message) }
-    }
-
-    async function plStop() {
-      try {
-        await apiFetch('/playlist/stop', { method: 'POST' })
-        log('Playlist: detenida')
-        pollStatus()
-      } catch (e) { log('Playlist error: ' + e.message) }
-    }
-
-    function updateAudioUI(audio) {
-      const summary = document.getElementById('audio-summary')
-      const track = document.getElementById('audio-track')
-      const meta = document.getElementById('audio-meta')
-      const warnings = document.getElementById('audio-warnings')
-
-      if (!audio) {
-        summary.textContent = 'Audio no disponible'
-        track.textContent = ''
-        meta.textContent = ''
-        warnings.textContent = ''
-        return
-      }
-
-      const enabledLabel = audio.enabled ? 'Audio loop activo' : 'Sin audio (video-only)'
-      summary.textContent = `${enabledLabel} · ${audio.trackCount || 0} pista(s)`
-
-      if (audio.currentTrack) {
-        const dur = audio.currentTrack.durationSec ? ` (${Math.round(audio.currentTrack.durationSec)}s)` : ''
-        track.textContent = `Pista actual: ${audio.currentTrack.index + 1}. ${audio.currentTrack.name}${dur}`
-      } else {
-        track.textContent = 'Pista actual: —'
-      }
-
-      const scanText = audio.lastScanAt ? new Date(audio.lastScanAt).toLocaleString('es-PE') : '—'
-      meta.textContent = `Último escaneo: ${scanText}`
-
-      warnings.textContent = Array.isArray(audio.warnings) && audio.warnings.length
-        ? audio.warnings.join(' | ')
-        : ''
-    }
-
-    async function rescanAudio() {
-      try {
-        const data = await apiFetch('/audio/rescan', { method: 'POST' })
-        log('Audio: carpeta recargada')
-        updateAudioUI(data.audio)
-        pollStatus()
-      } catch (e) {
-        log('Audio error: ' + e.message)
-      }
+        const stickerUrl = sanitizeStickerUrl(rawUrl)
+        document.getElementById('sticker-gif-input').value = stickerUrl
+        await apiFetch('/overlay/sticker', { method: 'POST', body: JSON.stringify({ stickerUrl }) })
+        log('Sticker enviado')
+      } catch (e) { log('Sticker error: ' + e.message) }
     }
 
     document.getElementById('login-form').addEventListener('submit', doLogin)
+    document.getElementById('url-input').addEventListener('input', () => { urlDirty = true })
+    document.getElementById('url-input').addEventListener('blur', () => { setTimeout(() => { urlDirty = false }, 300) })
+    document.getElementById('url-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') doSwitch() })
+    document.getElementById('overlay-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') overlayShow() })
+    document.getElementById('sticker-gif-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') stickerShow() })
+    renderVideoEditor()
+    renderAudioEditor()
     bootstrapAuth()
   </script>
 </body>

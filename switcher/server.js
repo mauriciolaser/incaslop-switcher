@@ -1,14 +1,20 @@
 import 'dotenv/config'
+/* global process */
 import dotenv from 'dotenv'
+import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import express from 'express'
 import cors from 'cors'
+import multer from 'multer'
 import { StreamManager } from './stream-manager.js'
 import { PlaylistManager } from './playlist-manager.js'
 import { UserService } from './user-service.js'
 import { SwitcherLogManager } from './log-manager.js'
 import { TelegramNotifier } from './telegram-notifier.js'
+import { SettingsManager } from './settings-manager.js'
+import { NamedPlaylistStore, validatePlaylistName } from './named-playlist-store.js'
+import { ScheduleManager } from './schedule-manager.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 dotenv.config({ path: path.join(__dirname, '..', 'telegram', '.env') })
@@ -24,6 +30,14 @@ const GENERAL_LOG_MAX_LINES = Number(process.env.GENERAL_LOG_MAX_LINES || 100)
 
 const corsOptions = { origin: ALLOWED_ORIGIN }
 const app = express()
+const DATA_DIR = path.join(__dirname, 'data')
+const AUDIO_DIR = path.join(__dirname, 'audio')
+const AUDIO_PLAYLIST_DIR = path.join(__dirname, 'audio-playlist')
+const VIDEO_PLAYLIST_DIR = path.join(__dirname, 'video-playlist')
+fs.mkdirSync(AUDIO_DIR, { recursive: true })
+fs.mkdirSync(AUDIO_PLAYLIST_DIR, { recursive: true })
+fs.mkdirSync(VIDEO_PLAYLIST_DIR, { recursive: true })
+fs.mkdirSync(DATA_DIR, { recursive: true })
 const logger = new SwitcherLogManager({ baseDir: path.join(__dirname, 'logs') })
 const telegram = new TelegramNotifier({
   token: process.env.TELEGRAM_API || process.env.TELEGRAM_BOT_TOKEN,
@@ -35,13 +49,48 @@ app.use(express.json())
 app.use(cors(corsOptions))
 app.options('*', cors(corsOptions))
 
-const DEFAULT_URL = process.env.DEFAULT_URL || 'about:blank'
+const settings = new SettingsManager({
+  filePath: path.join(DATA_DIR, 'settings.json'),
+  defaultUrl: process.env.DEFAULT_URL || 'https://sinadef.incaslop.online',
+})
+const audioPlaylists = new NamedPlaylistStore({ dir: AUDIO_PLAYLIST_DIR, kind: 'audio' })
+const videoPlaylists = new NamedPlaylistStore({ dir: VIDEO_PLAYLIST_DIR, kind: 'video' })
+const DEFAULT_URL = settings.getDefaultUrl()
 const OVERLAY_DURATION_MS = 8000
 const OVERLAY_MAX_LENGTH = 180
 const OVERLAY_DEFAULT_STYLE = 'neon-burst'
 const OVERLAY_STYLE_PRESETS = new Set(['neon-burst', 'acid-fire', 'pixel-rave', 'cosmic-pop', 'warning-siren'])
 const STICKER_URL_MAX_LENGTH = 2048
+const STICKER_ALLOWED_EXTENSIONS = new Set(['.gif', '.png', '.jpg', '.jpeg', '.webp'])
+const AUDIO_UPLOAD_MAX_BYTES = 10 * 1024 * 1024
 const userService = new UserService()
+
+const audioUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      cb(null, AUDIO_DIR)
+    },
+    filename: (_req, file, cb) => {
+      const parsed = path.parse(file.originalname || 'audio.mp3')
+      const base = parsed.name
+        .normalize('NFKD')
+        .replace(/[^\w-]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 80) || 'audio'
+      const candidate = `${base}.mp3`
+      const finalName = fs.existsSync(path.join(AUDIO_DIR, candidate))
+        ? `${base}-${Date.now()}.mp3`
+        : candidate
+      cb(null, finalName)
+    },
+  }),
+  limits: { fileSize: AUDIO_UPLOAD_MAX_BYTES },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase()
+    if (ext !== '.mp3') return cb(new Error('Only .mp3 files are allowed'))
+    cb(null, true)
+  },
+})
 
 await userService.init()
 logger.info('server.init', 'User service initialized')
@@ -86,6 +135,23 @@ const playlist = new PlaylistManager({
       logger.error('playlist.switch.error', 'Playlist switch failed', { error: e.message, url })
       console.error('[playlist] switch error:', e.message)
     }
+  },
+})
+
+const schedules = new ScheduleManager({
+  filePath: path.join(DATA_DIR, 'schedules.json'),
+  onDue: async (schedule) => {
+    assertSchedulePlaylistExists(schedule.channel, schedule.playlistName)
+    if (schedule.channel === 'audio') {
+      await playAudioPlaylistByName(schedule.playlistName)
+    } else {
+      await playVideoPlaylistByName(schedule.playlistName)
+    }
+    logger.info('schedule.run', 'Scheduled playlist started', {
+      channel: schedule.channel,
+      playlistName: schedule.playlistName,
+      scheduleId: schedule.id,
+    })
   },
 })
 
@@ -214,22 +280,109 @@ function validateUrl(url) {
   }
 }
 
-function validateGifUrl(gifUrlRaw) {
-  if (typeof gifUrlRaw !== 'string') throw new Error('gifUrl must be a string')
-  const gifUrl = gifUrlRaw.trim()
-  if (!gifUrl) throw new Error('gifUrl is required')
-  if (gifUrl.length > STICKER_URL_MAX_LENGTH) {
-    throw new Error(`gifUrl exceeds ${STICKER_URL_MAX_LENGTH} characters`)
+function normalizeDurationSeconds(raw) {
+  const fromParts = Number(raw?.minutes || 0) * 60 + Number(raw?.seconds || 0)
+  const n = Number(raw?.durationSeconds ?? raw?.duracionSegundos ?? (fromParts || raw))
+  if (!Number.isFinite(n) || n < 5) throw new Error('durationSeconds must be >= 5')
+  return Math.floor(n)
+}
+
+function normalizeVideoItems(itemsRaw) {
+  if (!Array.isArray(itemsRaw)) throw new Error('items must be an array')
+  return itemsRaw.map((item) => ({
+    url: validateUrl(item?.url),
+    durationSeconds: normalizeDurationSeconds(item),
+  }))
+}
+
+function normalizeAudioTracks(tracksRaw) {
+  if (!Array.isArray(tracksRaw)) throw new Error('tracks must be an array')
+  const available = getAvailableAudioTrackNames()
+  const tracks = tracksRaw.map((nameRaw) => {
+    const name = typeof nameRaw === 'string' ? nameRaw.trim() : ''
+    if (!available.has(name)) throw new Error(`track not available: ${name}`)
+    return name
+  })
+  if (tracks.length === 0) throw new Error('tracks must contain at least one track')
+  return [...new Set(tracks)]
+}
+
+function getAvailableAudioTrackNames() {
+  return new Set((manager?.getAudioStatus()?.tracks || [])
+    .filter((track) => !track.archived)
+    .map((track) => track.name))
+}
+
+function publicAudioPlaylist(playlist) {
+  const available = getAvailableAudioTrackNames()
+  return {
+    ...playlist,
+    tracks: (playlist.tracks || []).filter((trackName) => available.has(trackName)),
+  }
+}
+
+function listAudioPlaylists() {
+  return audioPlaylists.list().map(publicAudioPlaylist)
+}
+
+function normalizePlaylistPayload(req, kind) {
+  const name = validatePlaylistName(req.params?.name || req.body?.name)
+  if (kind === 'audio') {
+    return { name, repeat: Boolean(req.body?.repeat), tracks: normalizeAudioTracks(req.body?.tracks) }
+  }
+  return { name, repeat: Boolean(req.body?.repeat), items: normalizeVideoItems(req.body?.items) }
+}
+
+async function playVideoPlaylistByName(name) {
+  const saved = videoPlaylists.get(name)
+  playlist.loadPlaylist({
+    name: saved.name,
+    repeat: saved.repeat,
+    items: saved.items,
+  })
+  playlist.start()
+  return playlist.getState()
+}
+
+async function playAudioPlaylistByName(name) {
+  const saved = publicAudioPlaylist(audioPlaylists.get(name))
+  if (!saved.tracks.length) throw new Error('audio playlist has no available tracks')
+  return manager.playAudioPlaylist({
+    name: saved.name,
+    repeat: saved.repeat,
+    tracks: saved.tracks,
+  })
+}
+
+function assertSchedulePlaylistExists(channel, playlistName) {
+  if (channel === 'audio') audioPlaylists.get(playlistName)
+  else if (channel === 'video') videoPlaylists.get(playlistName)
+  else throw new Error('channel must be audio or video')
+}
+
+function validateStickerUrl(stickerUrlRaw) {
+  if (typeof stickerUrlRaw !== 'string') throw new Error('stickerUrl must be a string')
+  const stickerUrl = stickerUrlRaw.trim()
+  if (!stickerUrl) throw new Error('stickerUrl is required')
+  if (stickerUrl.length > STICKER_URL_MAX_LENGTH) {
+    throw new Error(`stickerUrl exceeds ${STICKER_URL_MAX_LENGTH} characters`)
   }
 
-  const safeUrl = validateUrl(gifUrl)
+  const safeUrl = validateUrl(stickerUrl)
   const parsed = new URL(safeUrl)
   const pathname = (parsed.pathname || '').toLowerCase()
-  if (!pathname.endsWith('.gif')) {
-    throw new Error('Only .gif files are allowed')
+  const extension = [...STICKER_ALLOWED_EXTENSIONS].find((ext) => pathname.endsWith(ext))
+  if (!extension) {
+    throw new Error('Only .gif, .png, .jpg, .jpeg and .webp files are allowed')
   }
 
-  return safeUrl
+  parsed.search = ''
+  parsed.hash = ''
+  return {
+    url: parsed.href,
+    type: extension === '.gif' ? 'gif' : 'image',
+    extension: extension.slice(1),
+  }
 }
 
 function clearPeriodicRestart() {
@@ -403,7 +556,31 @@ app.get('/status', requireAuth, (req, res) => {
     hideOverlayState(now)
     clearOverlayTimer()
   }
-  res.json({ ...manager.getStatus(), ...playlist.getState(), audio: manager.getAudioStatus(), overlay: getOverlayState() })
+  res.json({
+    ...manager.getStatus(),
+    ...playlist.getState(),
+    audio: manager.getAudioStatus(),
+    overlay: getOverlayState(),
+    settings: settings.get(),
+  })
+})
+
+// GET /settings
+app.get('/settings', requireAuth, (_req, res) => {
+  res.json({ ok: true, settings: settings.get() })
+})
+
+// PUT /settings/default-url
+app.put('/settings/default-url', requireAuth, (req, res) => {
+  try {
+    const defaultUrl = validateUrl(req.body?.defaultUrl)
+    const next = settings.setDefaultUrl(defaultUrl)
+    playlist.setDefaultUrl(next.defaultUrl)
+    logger.info('settings.default-url.update', 'DEFAULT_URL updated', { defaultUrl: next.defaultUrl })
+    res.json({ ok: true, settings: next })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
 })
 
 // POST /stream/start
@@ -441,6 +618,76 @@ app.post('/switch', requireAuth, async (req, res) => {
   } catch (e) {
     res.status(400).json({ error: e.message })
   }
+})
+
+// GET /video/playlists
+app.get('/video/playlists', requireAuth, (_req, res) => {
+  res.json({ ok: true, playlists: videoPlaylists.list() })
+})
+
+// POST /video/playlists
+app.post('/video/playlists', requireAuth, (req, res) => {
+  try {
+    const payload = normalizePlaylistPayload(req, 'video')
+    const saved = videoPlaylists.upsert(payload.name, payload)
+    logger.info('video-playlist.save', 'Video playlist saved', { name: saved.name, itemCount: saved.items.length })
+    res.json({ ok: true, playlist: saved })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+// PUT /video/playlists/:name
+app.put('/video/playlists/:name', requireAuth, (req, res) => {
+  try {
+    const payload = normalizePlaylistPayload(req, 'video')
+    const saved = videoPlaylists.upsert(payload.name, payload)
+    logger.info('video-playlist.update', 'Video playlist updated', { name: saved.name, itemCount: saved.items.length })
+    res.json({ ok: true, playlist: saved })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+// DELETE /video/playlists/:name
+app.delete('/video/playlists/:name', requireAuth, (req, res) => {
+  try {
+    const name = validatePlaylistName(req.params.name)
+    videoPlaylists.delete(name)
+    logger.info('video-playlist.delete', 'Video playlist deleted', { name })
+    res.json({ ok: true, playlists: videoPlaylists.list() })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+// POST /video/playlists/:name/play
+app.post('/video/playlists/:name/play', requireAuth, async (req, res) => {
+  try {
+    const state = await playVideoPlaylistByName(req.params.name)
+    logger.info('video-playlist.play', 'Video playlist started', { name: req.params.name })
+    res.json({ ok: true, ...state })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+app.post('/video/playlist/pause', requireAuth, (_req, res) => {
+  playlist.pause()
+  logger.info('video-playlist.pause', 'Video playlist paused')
+  res.json({ ok: true, ...playlist.getState() })
+})
+
+app.post('/video/playlist/resume', requireAuth, (_req, res) => {
+  playlist.resume()
+  logger.info('video-playlist.resume', 'Video playlist resumed')
+  res.json({ ok: true, ...playlist.getState() })
+})
+
+app.post('/video/playlist/stop', requireAuth, (_req, res) => {
+  playlist.stop()
+  logger.info('video-playlist.stop', 'Video playlist stopped')
+  res.json({ ok: true, ...playlist.getState() })
 })
 
 // POST /playlist/items
@@ -503,6 +750,123 @@ app.post('/audio/rescan', requireAuth, async (req, res) => {
   } catch (e) {
     logger.error('audio.rescan.fail', 'Audio rescan failed', { error: e.message })
     res.status(500).json({ error: e.message })
+  }
+})
+
+// GET /audio/tracks
+app.get('/audio/tracks', requireAuth, (_req, res) => {
+  res.json({ ok: true, audio: manager.getAudioStatus(), tracks: manager.getAudioStatus().tracks || [] })
+})
+
+// POST /audio/upload
+app.post('/audio/upload', requireAuth, (req, res) => {
+  audioUpload.single('file')(req, res, async (err) => {
+    if (err) return res.status(400).json({ error: err.message })
+    if (!req.file) return res.status(400).json({ error: 'file is required' })
+    try {
+      const audio = await manager.rescanAudio()
+      logger.info('audio.upload', 'Audio file uploaded', { fileName: req.file.filename, size: req.file.size })
+      res.json({ ok: true, file: { name: req.file.filename, size: req.file.size }, audio })
+    } catch (e) {
+      res.status(500).json({ error: e.message })
+    }
+  })
+})
+
+app.post('/audio/tracks/:name/archive', requireAuth, async (req, res) => {
+  try {
+    const track = await manager.archiveAudioTrack(req.params.name)
+    logger.info('audio.track.archive', 'Audio track archived', { name: track.name })
+    res.json({ ok: true, track, audio: manager.getAudioStatus() })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+app.post('/audio/tracks/:name/unarchive', requireAuth, async (req, res) => {
+  try {
+    const track = await manager.unarchiveAudioTrack(req.params.name)
+    logger.info('audio.track.unarchive', 'Audio track unarchived', { name: track.name })
+    res.json({ ok: true, track, audio: manager.getAudioStatus() })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+app.post('/audio/play', requireAuth, async (_req, res) => {
+  try {
+    const audio = await manager.playAudioCatalog()
+    logger.info('audio.play', 'Audio catalog playback enabled')
+    res.json({ ok: true, audio })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+app.post('/audio/stop', requireAuth, async (_req, res) => {
+  try {
+    const audio = await manager.stopAudio()
+    logger.info('audio.stop', 'Audio stopped')
+    res.json({ ok: true, audio })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+app.post('/audio/mute', requireAuth, async (_req, res) => {
+  try {
+    const audio = await manager.muteAudio()
+    logger.info('audio.mute', 'Audio muted')
+    res.json({ ok: true, audio })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+app.get('/audio/playlists', requireAuth, (_req, res) => {
+  res.json({ ok: true, playlists: listAudioPlaylists() })
+})
+
+app.post('/audio/playlists', requireAuth, (req, res) => {
+  try {
+    const payload = normalizePlaylistPayload(req, 'audio')
+    const saved = audioPlaylists.upsert(payload.name, payload)
+    logger.info('audio-playlist.save', 'Audio playlist saved', { name: saved.name, trackCount: saved.tracks.length })
+    res.json({ ok: true, playlist: saved })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+app.put('/audio/playlists/:name', requireAuth, (req, res) => {
+  try {
+    const payload = normalizePlaylistPayload(req, 'audio')
+    const saved = audioPlaylists.upsert(payload.name, payload)
+    logger.info('audio-playlist.update', 'Audio playlist updated', { name: saved.name, trackCount: saved.tracks.length })
+    res.json({ ok: true, playlist: saved })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+app.delete('/audio/playlists/:name', requireAuth, (req, res) => {
+  try {
+    const name = validatePlaylistName(req.params.name)
+    audioPlaylists.delete(name)
+    logger.info('audio-playlist.delete', 'Audio playlist deleted', { name })
+    res.json({ ok: true, playlists: listAudioPlaylists() })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+app.post('/audio/playlists/:name/play', requireAuth, async (req, res) => {
+  try {
+    const audio = await playAudioPlaylistByName(req.params.name)
+    logger.info('audio-playlist.play', 'Audio playlist started', { name: req.params.name })
+    res.json({ ok: true, audio })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
   }
 })
 
@@ -569,12 +933,80 @@ app.post('/overlay/sticker', requireAuth, async (req, res) => {
   if (manager.getStatus().status !== 'streaming') return res.status(409).json({ error: 'Stream is not running' })
 
   try {
-    const safeGifUrl = validateGifUrl(req.body?.gifUrl)
-    await manager.showGifSticker({ gifUrl: safeGifUrl })
-    logger.info('sticker.show', 'Sticker launched', { gifUrl: safeGifUrl })
-    res.json({ ok: true, sticker: { gifUrl: safeGifUrl } })
+    const rawStickerUrl = req.body?.stickerUrl ?? req.body?.imageUrl ?? req.body?.gifUrl
+    const sticker = validateStickerUrl(rawStickerUrl)
+    await manager.showSticker({ stickerUrl: sticker.url, type: sticker.type })
+    logger.info('sticker.show', 'Sticker launched', { stickerUrl: sticker.url, type: sticker.type })
+    res.json({ ok: true, sticker: { stickerUrl: sticker.url, type: sticker.type, extension: sticker.extension } })
   } catch (e) {
     if (e.message === 'Stream is not running') return res.status(409).json({ error: e.message })
+    res.status(400).json({ error: e.message })
+  }
+})
+
+// GET /schedules
+app.get('/schedules', requireAuth, (_req, res) => {
+  res.json({ ok: true, schedules: schedules.list() })
+})
+
+// POST /schedules
+app.post('/schedules', requireAuth, (req, res) => {
+  try {
+    assertSchedulePlaylistExists(req.body?.channel, req.body?.playlistName)
+    const schedule = schedules.create(req.body)
+    logger.info('schedule.create', 'Schedule created', {
+      channel: schedule.channel,
+      playlistName: schedule.playlistName,
+      startsAt: schedule.startsAt,
+    })
+    res.json({ ok: true, schedule })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+// PUT /schedules/:id
+app.put('/schedules/:id', requireAuth, (req, res) => {
+  try {
+    const nextChannel = req.body?.channel
+    const nextPlaylistName = req.body?.playlistName
+    if (nextChannel || nextPlaylistName) {
+      const current = schedules.list().find((schedule) => schedule.id === req.params.id)
+      assertSchedulePlaylistExists(nextChannel || current?.channel, nextPlaylistName || current?.playlistName)
+    }
+    const schedule = schedules.update(req.params.id, req.body)
+    logger.info('schedule.update', 'Schedule updated', { id: schedule.id })
+    res.json({ ok: true, schedule })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+// DELETE /schedules/:id
+app.delete('/schedules/:id', requireAuth, (req, res) => {
+  try {
+    schedules.delete(req.params.id)
+    logger.info('schedule.delete', 'Schedule deleted', { id: req.params.id })
+    res.json({ ok: true, schedules: schedules.list() })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+app.post('/schedules/:id/enable', requireAuth, (req, res) => {
+  try {
+    const schedule = schedules.setEnabled(req.params.id, true)
+    res.json({ ok: true, schedule })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+app.post('/schedules/:id/disable', requireAuth, (req, res) => {
+  try {
+    const schedule = schedules.setEnabled(req.params.id, false)
+    res.json({ ok: true, schedule })
+  } catch (e) {
     res.status(400).json({ error: e.message })
   }
 })
@@ -668,6 +1100,7 @@ async function shutdown() {
   clearPeriodicRestart()
   clearWatchdog()
   clearLogMaintenance()
+  schedules.stop()
   playlist.stop()
   await stopStreaming('shutdown').catch(() => {})
   process.exit(0)
@@ -683,6 +1116,7 @@ app.listen(PORT, () => {
   })
   runWeeklyLogMaintenance()
   startLogMaintenance()
+  schedules.start()
 
   if (process.env.DEFAULT_URL) {
     startStreaming('auto-start').catch((e) => {

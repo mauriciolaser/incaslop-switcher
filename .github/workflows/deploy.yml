@@ -140,6 +140,11 @@ jobs:
           node --check switcher/stream-manager.js
           node --check switcher/playlist-manager.js
           node --check switcher/audio-loop-manager.js
+          node --check switcher/settings-manager.js
+          node --check switcher/named-playlist-store.js
+          node --check switcher/schedule-manager.js
+          node --check switcher/log-manager.js
+          node --check switcher/telegram-notifier.js
 
       - name: Armar paquete de deploy
         env:
@@ -170,10 +175,17 @@ jobs:
           cp switcher/stream-manager.js deploy_bundle/switcher/
           cp switcher/playlist-manager.js deploy_bundle/switcher/
           cp switcher/audio-loop-manager.js deploy_bundle/switcher/
+          cp switcher/settings-manager.js deploy_bundle/switcher/
+          cp switcher/named-playlist-store.js deploy_bundle/switcher/
+          cp switcher/schedule-manager.js deploy_bundle/switcher/
+          cp switcher/log-manager.js deploy_bundle/switcher/
+          cp switcher/telegram-notifier.js deploy_bundle/switcher/
           cp switcher/package.json deploy_bundle/switcher/
           cp switcher/ecosystem.config.cjs deploy_bundle/switcher/
           cp switcher/.env.example deploy_bundle/switcher/
           cp -r switcher/audio deploy_bundle/switcher/
+          cp -r switcher/audio-playlist deploy_bundle/switcher/
+          cp -r switcher/video-playlist deploy_bundle/switcher/
 
           {
             echo "PORT=$PORT"
@@ -239,15 +251,19 @@ jobs:
           sshpass -p "$SWITCHER_PASSWORD" ssh -p "$SWITCHER_PORT" -o StrictHostKeyChecking=no "$SWITCHER_USER@$SWITCHER_HOST" "
             set -euo pipefail
             SUDO_PW=\$(printf '%s' '$password_b64' | base64 -d)
-            mkdir -p '$SWITCHER_REMOTE_SERVICE_DIR/audio'
+            mkdir -p '$SWITCHER_REMOTE_SERVICE_DIR/audio' '$SWITCHER_REMOTE_SERVICE_DIR/audio-playlist' '$SWITCHER_REMOTE_SERVICE_DIR/video-playlist' '$SWITCHER_REMOTE_SERVICE_DIR/data'
             if [ '$SWITCHER_USER' = 'root' ]; then
               tar -xzf '$ARCHIVE_REMOTE' -C '$SWITCHER_REMOTE_BASE_DIR'
               rm -f '$ARCHIVE_REMOTE'
+              cd '$SWITCHER_REMOTE_SERVICE_DIR'
+              npm install --omit=dev
               pm2 restart all || pm2 start '$SWITCHER_REMOTE_SERVICE_DIR/ecosystem.config.cjs'
               pm2 list
             else
               printf '%s\n' \"\$SUDO_PW\" | sudo -S -p '' tar -xzf '$ARCHIVE_REMOTE' -C '$SWITCHER_REMOTE_BASE_DIR'
               printf '%s\n' \"\$SUDO_PW\" | sudo -S -p '' rm -f '$ARCHIVE_REMOTE'
+              cd '$SWITCHER_REMOTE_SERVICE_DIR'
+              printf '%s\n' \"\$SUDO_PW\" | sudo -S -p '' npm install --omit=dev
               printf '%s\n' \"\$SUDO_PW\" | sudo -S -p '' pm2 restart all || printf '%s\n' \"\$SUDO_PW\" | sudo -S -p '' pm2 start '$SWITCHER_REMOTE_SERVICE_DIR/ecosystem.config.cjs'
               printf '%s\n' \"\$SUDO_PW\" | sudo -S -p '' pm2 list
             fi

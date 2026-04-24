@@ -189,6 +189,9 @@ Write-Host 'Validando sintaxis Node...'
 & node --check (Join-Path $switcherDir 'stream-manager.js')
 & node --check (Join-Path $switcherDir 'playlist-manager.js')
 & node --check (Join-Path $switcherDir 'audio-loop-manager.js')
+& node --check (Join-Path $switcherDir 'settings-manager.js')
+& node --check (Join-Path $switcherDir 'named-playlist-store.js')
+& node --check (Join-Path $switcherDir 'schedule-manager.js')
 & node --check (Join-Path $switcherDir 'log-manager.js')
 & node --check (Join-Path $switcherDir 'telegram-notifier.js')
 
@@ -206,11 +209,16 @@ try {
       switcher/stream-manager.js `
       switcher/playlist-manager.js `
       switcher/audio-loop-manager.js `
+      switcher/settings-manager.js `
+      switcher/named-playlist-store.js `
+      switcher/schedule-manager.js `
       switcher/log-manager.js `
       switcher/telegram-notifier.js `
       switcher/package.json `
       switcher/ecosystem.config.cjs `
       switcher/audio `
+      switcher/audio-playlist `
+      switcher/video-playlist `
       switcher/.env.example
     if ($LASTEXITCODE -ne 0) {
       Fail-Step 'Fallo al crear el paquete tar.'
@@ -230,9 +238,10 @@ try {
   }
 
   Write-Host 'Aplicando paquete en servidor...'
-  Invoke-Remote -Password $Password -Port $Port -User $User -ServerHost $ServerHost -UseSudo $useSudo -Command "set -e; mkdir -p '$RemoteServiceDir/audio'"
+  Invoke-Remote -Password $Password -Port $Port -User $User -ServerHost $ServerHost -UseSudo $useSudo -Command "set -e; mkdir -p '$RemoteServiceDir/audio' '$RemoteServiceDir/audio-playlist' '$RemoteServiceDir/video-playlist' '$RemoteServiceDir/data'"
   Invoke-Remote -Password $Password -Port $Port -User $User -ServerHost $ServerHost -UseSudo $useSudo -Command "set -e; tar -xzf '$archiveRemote' -C '$RemoteBaseDir'"
   Invoke-Remote -Password $Password -Port $Port -User $User -ServerHost $ServerHost -UseSudo $useSudo -Command "set -e; rm -f '$archiveRemote'"
+  Invoke-Remote -Password $Password -Port $Port -User $User -ServerHost $ServerHost -UseSudo $useSudo -Command "set -e; cd '$RemoteServiceDir'; npm install --omit=dev"
 
   Write-Host 'Reiniciando PM2...'
   Invoke-Remote -Password $Password -Port $Port -User $User -ServerHost $ServerHost -UseSudo $useSudo -Command "set -e; pm2 restart all || pm2 start '$RemoteServiceDir/ecosystem.config.cjs'"

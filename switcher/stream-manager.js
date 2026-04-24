@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from 'child_process'
+/* global process */
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -29,9 +30,13 @@ function killProc(proc) {
   try {
     proc.kill('SIGTERM')
     setTimeout(() => {
-      try { proc.kill('SIGKILL') } catch {}
+      try { proc.kill('SIGKILL') } catch {
+        // Process may already be gone.
+      }
     }, 3000)
-  } catch {}
+  } catch {
+    // Process may already be gone.
+  }
 }
 
 
@@ -64,9 +69,11 @@ export class StreamManager {
   #audioTrackWatcherTimer = null
   #lastAudioTrackIndex = null
   #audioTrackWatcherInFlight = false
+  #audioFallbackTimer = null
   #sticker = {
     visible: false,
-    gifUrl: '',
+    stickerUrl: '',
+    type: 'image',
     expiresAt: null,
     position: { topPct: 24, leftPct: 30 },
   }
@@ -104,7 +111,9 @@ export class StreamManager {
       const raw = fs.readFileSync(STATE_FILE, 'utf8')
       const { currentUrl } = JSON.parse(raw)
       if (currentUrl) this.#currentUrl = currentUrl
-    } catch {}
+    } catch {
+      // Missing state is fine on first boot.
+    }
   }
 
   #saveState() {
@@ -121,7 +130,9 @@ export class StreamManager {
     for (const bin of candidates) {
       for (const p of paths) {
         const full = path.join(p, bin)
-        try { fs.accessSync(full, fs.constants.X_OK); return full } catch {}
+        try { fs.accessSync(full, fs.constants.X_OK); return full } catch {
+          // Try the next PATH candidate.
+        }
       }
     }
     return null
@@ -145,6 +156,42 @@ export class StreamManager {
       await this.#restartFfmpeg()
     }
     return this.getAudioStatus()
+  }
+
+  async playAudioCatalog() {
+    this.#audioLoop.playCatalog()
+    if (this.#status === 'streaming') await this.#restartFfmpeg()
+    return this.getAudioStatus()
+  }
+
+  async playAudioPlaylist(playlist) {
+    this.#audioLoop.playPlaylist(playlist)
+    if (this.#status === 'streaming') await this.#restartFfmpeg()
+    return this.getAudioStatus()
+  }
+
+  async muteAudio() {
+    this.#audioLoop.mute()
+    if (this.#status === 'streaming') await this.#restartFfmpeg()
+    return this.getAudioStatus()
+  }
+
+  async stopAudio() {
+    this.#audioLoop.stop()
+    if (this.#status === 'streaming') await this.#restartFfmpeg()
+    return this.getAudioStatus()
+  }
+
+  async archiveAudioTrack(name) {
+    const track = this.#audioLoop.archiveTrack(name)
+    if (this.#status === 'streaming') await this.#restartFfmpeg()
+    return track
+  }
+
+  async unarchiveAudioTrack(name) {
+    const track = this.#audioLoop.unarchiveTrack(name)
+    if (this.#status === 'streaming') await this.#restartFfmpeg()
+    return track
   }
 
   async start() {
@@ -175,7 +222,9 @@ export class StreamManager {
 
     try {
       // 1. Kill stale processes
-      try { spawn('pkill', ['-f', `Xvfb ${display}`], { stdio: 'ignore' }) } catch {}
+      try { spawn('pkill', ['-f', `Xvfb ${display}`], { stdio: 'ignore' }) } catch {
+        // Stale process cleanup is best-effort.
+      }
       await sleep(500)
 
       // 2. Start Xvfb
@@ -283,14 +332,16 @@ export class StreamManager {
     this.#nowPlayingOverlay.expiresAt = null
     this.#clearStickerTimer()
     this.#sticker.visible = false
-    this.#sticker.gifUrl = ''
+    this.#sticker.stickerUrl = ''
     this.#sticker.expiresAt = null
 
     await this.#stopFfmpeg()
 
     try {
       if (this.#browser) await this.#browser.disconnect()
-    } catch {}
+    } catch {
+      // Browser may already be disconnected during shutdown.
+    }
     this.#browser = null
     this.#page = null
 
@@ -315,7 +366,9 @@ export class StreamManager {
           .language-options, .infobars-container { display: none !important; }
         `
       })
-    } catch {}
+    } catch {
+      // Chromium UI hiding is best-effort.
+    }
   }
 
   async #syncOverlayToPage() {
@@ -724,15 +777,15 @@ export class StreamManager {
     const stillVisible = this.#sticker.visible
       && this.#sticker.expiresAt
       && this.#sticker.expiresAt > now
-      && this.#sticker.gifUrl
+      && this.#sticker.stickerUrl
 
     if (!stillVisible) {
       this.#sticker.visible = false
-      this.#sticker.gifUrl = ''
+      this.#sticker.stickerUrl = ''
       this.#sticker.expiresAt = null
     }
 
-    await this.#page.evaluate(({ visible, gifUrl, topPct, leftPct }) => {
+    await this.#page.evaluate(({ visible, stickerUrl, topPct, leftPct }) => {
       const STYLE_ID = 'incaslop-sticker-style'
       const ROOT_ID = 'incaslop-sticker-root'
       const IMG_ID = 'incaslop-sticker-img'
@@ -747,14 +800,16 @@ export class StreamManager {
             z-index: 2147483646;
             pointer-events: none;
             display: none;
-            width: min(320px, 24vw);
+            width: auto;
+            max-width: min(400px, 38vw);
             max-height: 40vh;
             transform: translate(-50%, -50%);
             filter: drop-shadow(0 12px 32px rgba(2, 6, 23, 0.62));
             animation: incaslop-sticker-pop 320ms cubic-bezier(0.22, 0.7, 0.19, 1);
           }
           #${IMG_ID} {
-            width: 100%;
+            display: block;
+            max-width: min(400px, 38vw);
             height: auto;
             max-height: 40vh;
             object-fit: contain;
@@ -765,7 +820,10 @@ export class StreamManager {
           }
           @media (max-width: 1200px) {
             #${ROOT_ID} {
-              width: min(240px, 38vw);
+              max-width: min(320px, 58vw);
+            }
+            #${IMG_ID} {
+              max-width: min(320px, 58vw);
             }
           }
         `
@@ -788,19 +846,19 @@ export class StreamManager {
       root.style.top = `${topPct}%`
       root.style.left = `${leftPct}%`
 
-      if (!visible || !gifUrl) {
+      if (!visible || !stickerUrl) {
         root.style.display = 'none'
         if (img) img.removeAttribute('src')
         return
       }
 
-      if (img && img.getAttribute('src') !== gifUrl) {
-        img.setAttribute('src', gifUrl)
+      if (img && img.getAttribute('src') !== stickerUrl) {
+        img.setAttribute('src', stickerUrl)
       }
       root.style.display = 'block'
     }, {
       visible: stillVisible,
-      gifUrl: this.#sticker.gifUrl,
+      stickerUrl: this.#sticker.stickerUrl,
       topPct: this.#sticker.position.topPct,
       leftPct: this.#sticker.position.leftPct,
     })
@@ -858,20 +916,21 @@ export class StreamManager {
     }
   }
 
-  #resolveStickerDurationMs(gifUrl) {
-    const probed = this.#probeGifDurationMs(gifUrl)
+  #resolveStickerDurationMs(stickerUrl, type = 'image') {
+    const probed = type === 'gif' ? this.#probeGifDurationMs(stickerUrl) : null
     const fallback = STICKER_DEFAULT_DURATION_MS
     const raw = probed || fallback
     return Math.min(STICKER_MAX_DURATION_MS, Math.max(1200, raw))
   }
 
-  async showGifSticker({ gifUrl }) {
+  async showSticker({ stickerUrl, type = 'image' }) {
     if (!this.#page) throw new Error('Stream is not running')
 
-    const durationMs = this.#resolveStickerDurationMs(gifUrl)
+    const durationMs = this.#resolveStickerDurationMs(stickerUrl, type)
     const now = Date.now()
     this.#sticker.visible = true
-    this.#sticker.gifUrl = gifUrl
+    this.#sticker.stickerUrl = stickerUrl
+    this.#sticker.type = type
     this.#sticker.expiresAt = now + durationMs
     this.#sticker.position = this.#pickStickerPosition()
     this.#clearStickerTimer()
@@ -879,12 +938,16 @@ export class StreamManager {
 
     this.#stickerTimer = setTimeout(() => {
       this.#sticker.visible = false
-      this.#sticker.gifUrl = ''
+      this.#sticker.stickerUrl = ''
       this.#sticker.expiresAt = null
       this.#syncStickerToPage().catch((e) => {
         console.warn('[sticker] auto-hide error:', e.message)
       })
     }, durationMs)
+  }
+
+  async showGifSticker({ gifUrl }) {
+    return this.showSticker({ stickerUrl: gifUrl, type: 'gif' })
   }
 
   #normalizeTrackLabel(trackName) {
@@ -925,6 +988,12 @@ export class StreamManager {
     clearInterval(this.#audioTrackWatcherTimer)
     this.#audioTrackWatcherTimer = null
     this.#audioTrackWatcherInFlight = false
+  }
+
+  #clearAudioFallbackTimer() {
+    if (!this.#audioFallbackTimer) return
+    clearTimeout(this.#audioFallbackTimer)
+    this.#audioFallbackTimer = null
   }
 
   #startAudioTrackWatcher() {
@@ -989,10 +1058,11 @@ export class StreamManager {
     proc.__intentionalStop = true
     this.#ffmpegProc = null
     this.#clearAudioTrackWatcher()
+    this.#clearAudioFallbackTimer()
     this.#lastAudioTrackIndex = null
     this.#clearStickerTimer()
     this.#sticker.visible = false
-    this.#sticker.gifUrl = ''
+    this.#sticker.stickerUrl = ''
     this.#sticker.expiresAt = null
     this.#audioLoop.clearLoopStart()
 
@@ -1055,6 +1125,7 @@ export class StreamManager {
       const initialTrack = this.#audioLoop.getStatus({ isStreaming: true }).currentTrack
       this.#lastAudioTrackIndex = initialTrack?.index ?? null
       this.#startAudioTrackWatcher()
+      this.#scheduleAudioFallbackIfNeeded(audio)
       console.log(`[audio] Loop activo con ${audio.trackCount} pista(s)`)
     } else {
       ffmpegArgs.push('-an')
@@ -1081,5 +1152,20 @@ export class StreamManager {
         this.#status = 'error'
       }
     })
+  }
+
+  #scheduleAudioFallbackIfNeeded(audio) {
+    this.#clearAudioFallbackTimer()
+    if (audio.mode !== 'playlist' || audio.repeat || !audio.finiteDurationSec) return
+    const delayMs = Math.max(1000, Math.ceil(audio.finiteDurationSec * 1000))
+    this.#audioFallbackTimer = setTimeout(async () => {
+      try {
+        this.#audioLoop.playCatalog()
+        if (this.#status === 'streaming') await this.#restartFfmpeg()
+        this.#log('info', 'audio.playlist.fallback', '[audio] Playlist terminada, volviendo al catalogo')
+      } catch (e) {
+        this.#log('warn', 'audio.playlist.fallback.fail', '[audio] No se pudo volver al catalogo', { error: e.message })
+      }
+    }, delayMs)
   }
 }
