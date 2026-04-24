@@ -45,13 +45,6 @@ const userService = new UserService()
 
 await userService.init()
 logger.info('server.init', 'User service initialized')
-const telegramStatus = await telegram.init()
-if (telegramStatus.enabled) {
-  logger.info('telegram.init.ok', 'Telegram notifier enabled', { chatId: telegramStatus.chatId })
-  await sendTelegramAlert('Notificador Telegram activado.')
-} else {
-  logger.warn('telegram.init.disabled', 'Telegram notifier disabled', { reason: telegramStatus.reason })
-}
 
 const manager = new StreamManager({
   DISPLAY_NUM: process.env.DISPLAY_NUM,
@@ -132,6 +125,21 @@ async function sendTelegramAlert(message) {
   const sent = await telegram.send(message)
   if (!sent) {
     logger.warn('telegram.send.fail', 'Telegram alert could not be delivered', { message })
+  }
+}
+
+async function initTelegramAsync() {
+  if (!telegram.enabled) {
+    logger.warn('telegram.init.disabled', 'Telegram notifier disabled', { reason: 'missing-token' })
+    return
+  }
+
+  const telegramStatus = await telegram.init()
+  if (telegramStatus.enabled) {
+    logger.info('telegram.init.ok', 'Telegram notifier enabled', { chatId: telegramStatus.chatId })
+    await sendTelegramAlert('Notificador Telegram activado.')
+  } else {
+    logger.warn('telegram.init.disabled', 'Telegram notifier disabled', { reason: telegramStatus.reason })
   }
 }
 
@@ -670,6 +678,9 @@ process.on('SIGINT', shutdown)
 app.listen(PORT, () => {
   logger.info('server.listen', 'Switcher listening', { port: PORT })
   console.log(`[server] Switcher listening on port ${PORT}`)
+  initTelegramAsync().catch((e) => {
+    logger.warn('telegram.init.fail', 'Telegram init failed', { error: e.message })
+  })
   runWeeklyLogMaintenance()
   startLogMaintenance()
 

@@ -3,12 +3,14 @@ export class TelegramNotifier {
   #chatId
   #enabled
   #appName
+  #timeoutMs
 
-  constructor({ token, chatId, appName = 'incaslop-switcher' }) {
+  constructor({ token, chatId, appName = 'incaslop-switcher', timeoutMs = 5000 }) {
     this.#token = token ? String(token).trim() : ''
     this.#chatId = chatId ? String(chatId).trim() : ''
     this.#enabled = Boolean(this.#token)
     this.#appName = appName
+    this.#timeoutMs = Math.max(1000, Number(timeoutMs) || 5000)
   }
 
   get enabled() {
@@ -42,6 +44,7 @@ export class TelegramNotifier {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(this.#timeoutMs),
       })
       return res.ok
     } catch {
@@ -51,7 +54,9 @@ export class TelegramNotifier {
 
   async #discoverChatId() {
     try {
-      const res = await fetch(this.#url('getUpdates'))
+      const res = await fetch(this.#url('getUpdates'), {
+        signal: AbortSignal.timeout(this.#timeoutMs),
+      })
       if (!res.ok) return ''
       const data = await res.json()
       const updates = Array.isArray(data?.result) ? data.result : []
