@@ -48,6 +48,7 @@ export class StreamManager {
   #runtime = null
   #audioLoop = null
   #config = {}
+  #logger = null
   #overlay = {
     visible: false,
     text: '',
@@ -73,8 +74,29 @@ export class StreamManager {
 
   constructor(config) {
     this.#config = config
+    this.#logger = config.logger || null
     this.#audioLoop = new AudioLoopManager()
     this.#loadState()
+  }
+
+  #log(level, event, message, meta = {}) {
+    if (level === 'error') console.error(message, meta)
+    else if (level === 'warn') console.warn(message, meta)
+    else console.log(message, meta)
+
+    if (this.#logger && typeof this.#logger.log === 'function') {
+      this.#logger.log(level, event, message, meta)
+    }
+  }
+
+  #logPipe(event, prefix, chunk) {
+    const text = chunk.toString()
+    process.stdout.write(`${prefix}${text}`)
+    if (!this.#logger || typeof this.#logger.debug !== 'function') return
+    const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+    for (const line of lines) {
+      this.#logger.debug(event, line)
+    }
   }
 
   #loadState() {
@@ -164,7 +186,7 @@ export class StreamManager {
       this.#xvfbProc.on('error', (e) => console.error('[xvfb] error:', e.message))
       this.#xvfbProc.on('close', (code) => {
         if (this.#status === 'streaming') {
-          console.error('[xvfb] exited unexpectedly, code:', code)
+          this.#log('error', 'xvfb.close', '[xvfb] exited unexpectedly', { code })
           this.#status = 'error'
         }
       })
@@ -174,11 +196,11 @@ export class StreamManager {
       const wmBin = this.#findBin('fluxbox', 'openbox', 'twm', 'icewm')
       if (wmBin) {
         this.#wmProc = spawn(wmBin, [], { stdio: 'ignore', env })
-        this.#wmProc.on('error', (e) => console.error('[wm] error:', e.message))
+        this.#wmProc.on('error', (e) => this.#log('error', 'wm.error', '[wm] error', { error: e.message }))
         await sleep(1000)
-        console.log(`[wm] Started: ${wmBin}`)
+        this.#log('info', 'wm.start', '[wm] Started', { wmBin })
       } else {
-        console.warn('[wm] No window manager found — JS rendering may be degraded')
+        this.#log('warn', 'wm.missing', '[wm] No window manager found — JS rendering may be degraded')
       }
 
       // 4. Start Chromium directly (not via Puppeteer) for proper rendering
@@ -209,13 +231,13 @@ export class StreamManager {
       this.#chromiumProc.stderr.on('data', (d) => {
         const msg = d.toString()
         if (!msg.includes('DevTools') && !msg.includes('Xlib')) {
-          process.stdout.write(`[chromium] ${msg}`)
+          this.#logPipe('chromium.stderr', '[chromium] ', d)
         }
       })
-      this.#chromiumProc.on('error', (e) => console.error('[chromium] error:', e.message))
+      this.#chromiumProc.on('error', (e) => this.#log('error', 'chromium.error', '[chromium] error', { error: e.message }))
       this.#chromiumProc.on('close', (code) => {
         if (this.#status === 'streaming') {
-          console.error('[chromium] exited unexpectedly, code:', code)
+          this.#log('error', 'chromium.close', '[chromium] exited unexpectedly', { code })
           this.#status = 'error'
         }
       })
@@ -239,11 +261,11 @@ export class StreamManager {
 
       this.#status = 'streaming'
       this.#startedAt = Date.now()
-      console.log('[stream] Started, broadcasting:', url)
+      this.#log('info', 'stream.start.ok', '[stream] Started, broadcasting', { url })
 
     } catch (e) {
       this.#status = 'error'
-      console.error('[stream] Failed to start:', e.message)
+      this.#log('error', 'stream.start.fail', '[stream] Failed to start', { error: e.message })
       throw e
     }
   }
@@ -282,7 +304,7 @@ export class StreamManager {
     this.#xvfbProc = null
     this.#runtime = null
 
-    console.log('[stream] Stopped')
+    this.#log('info', 'stream.stop', '[stream] Stopped')
   }
 
   async #hideChromiumUI() {
@@ -950,14 +972,14 @@ export class StreamManager {
     await this.#syncOverlayToPage()
     this.#currentUrl = url
     this.#saveState()
-    console.log('[stream] Switched to:', url)
+    this.#log('info', 'stream.switch', '[stream] Switched URL', { url })
   }
 
   async #restartFfmpeg() {
     if (!this.#runtime) return
     await this.#stopFfmpeg()
     await this.#startFfmpeg()
-    console.log('[audio] FFmpeg reiniciado para aplicar cambios de playlist')
+    this.#log('info', 'audio.ffmpeg.restart', '[audio] FFmpeg reiniciado para aplicar cambios de playlist')
   }
 
   async #stopFfmpeg() {
@@ -1049,12 +1071,13 @@ export class StreamManager {
     const proc = spawn('ffmpeg', ffmpegArgs, { stdio: ['ignore', 'pipe', 'pipe'], env })
     this.#ffmpegProc = proc
 
-    proc.stderr.on('data', (d) => process.stdout.write(`[ffmpeg] ${d}`))
-    proc.on('error', (e) => console.error('[ffmpeg] error:', e.message))
+    proc.stderr.removeAllListeners('data')
+    proc.stderr.on('data', (d) => this.#logPipe('ffmpeg.stderr', '[ffmpeg] ', d))
+    proc.on('error', (e) => this.#log('error', 'ffmpeg.error', '[ffmpeg] error', { error: e.message }))
     proc.on('close', (code) => {
       if (proc.__intentionalStop) return
       if (this.#status === 'streaming') {
-        console.error('[ffmpeg] exited unexpectedly, code:', code)
+        this.#log('error', 'ffmpeg.close', '[ffmpeg] exited unexpectedly', { code })
         this.#status = 'error'
       }
     })

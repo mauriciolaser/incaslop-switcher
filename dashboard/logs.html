@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IncaSlop Switcher — Logs</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .hidden { display: none !important; }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    h1 { font-size: 1.2rem; color: #fff; }
+    .topbar-right { display: flex; align-items: center; gap: 8px; color: #94a3b8; font-size: 0.85rem; }
+    .btn {
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .btn-muted { background: #374151; color: #e2e8f0; }
+    .btn-danger { background: #ef4444; }
+    .grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      margin-bottom: 12px;
+    }
+    .card {
+      background: #1a1d27;
+      border: 1px solid #2d3148;
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .card h2 {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #64748b;
+      margin-bottom: 10px;
+    }
+    .meta {
+      color: #cbd5e1;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    select {
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 6px;
+      color: #e2e8f0;
+      padding: 8px 10px;
+      min-width: 260px;
+    }
+    pre {
+      background: #0a0c12;
+      border: 1px solid #1e2235;
+      border-radius: 6px;
+      padding: 12px;
+      min-height: 360px;
+      max-height: 62vh;
+      overflow: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      line-height: 1.45;
+      color: #d1d5db;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    #login-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 12, 18, 0.84);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 50;
+    }
+    .login-box {
+      width: 100%;
+      max-width: 420px;
+      background: #151926;
+      border: 1px solid #2d3148;
+      border-radius: 12px;
+      padding: 22px;
+    }
+    .login-box h2 { font-size: 1rem; color: #fff; margin-bottom: 8px; }
+    .login-box p { color: #94a3b8; font-size: 0.85rem; margin-bottom: 16px; }
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 6px;
+      padding: 9px 12px;
+      color: #e2e8f0;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+    }
+    #login-error { color: #f87171; font-size: 0.8rem; min-height: 1em; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <div id="login-modal">
+    <div class="login-box">
+      <h2>Iniciar sesión</h2>
+      <p>Acceso interno al visor de logs.</p>
+      <form id="login-form">
+        <input type="text" id="login-username" placeholder="Usuario" autocomplete="username" required />
+        <input type="password" id="login-password" placeholder="Password" autocomplete="current-password" required />
+        <div id="login-error"></div>
+        <button type="submit" class="btn">Entrar</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="app-shell" class="hidden">
+    <div class="topbar">
+      <h1>Logs de Switcher</h1>
+      <div class="topbar-right">
+        <span id="session-user">—</span>
+        <a href="index.html" class="btn btn-muted">Dashboard</a>
+        <button class="btn btn-danger" onclick="doLogout()">Cerrar sesión</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Estado de Logs</h2>
+        <div class="meta" id="summary-meta">Cargando...</div>
+      </div>
+      <div class="card">
+        <h2>Descargas</h2>
+        <div class="controls">
+          <button class="btn btn-muted" onclick="downloadLatest()">Descargar último log</button>
+          <button class="btn btn-muted" onclick="downloadGeneral()">Descargar general.log</button>
+          <button class="btn btn-muted" onclick="downloadSelectedRun()">Descargar run seleccionado</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Últimas 20 líneas</h2>
+      <div class="controls">
+        <button class="btn" onclick="refreshAll()">Actualizar</button>
+        <select id="run-select"></select>
+        <button class="btn btn-muted" onclick="viewSelectedRun()">Ver run seleccionado</button>
+      </div>
+      <pre id="log-preview">Cargando...</pre>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script>
+    const API = (window.SWITCHER_API || 'http://localhost:3000').replace(/\/$/, '')
+    const SESSION_STORAGE_KEY = 'incaslop.switcher.session'
+    let SESSION_TOKEN = ''
+    let latestSource = null
+    let selectedRunId = ''
+
+    async function apiFetch(path, options = {}) {
+      const { suppressAuthRedirect = false, ...requestOptions } = options
+      const res = await fetch(API + path, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(SESSION_TOKEN ? { Authorization: 'Bearer ' + SESSION_TOKEN } : {}),
+          ...(requestOptions.headers || {}),
+        },
+        ...requestOptions,
+      })
+      const text = await res.text()
+      let data
+      try { data = JSON.parse(text) } catch { data = { error: text } }
+      if (res.status === 401 && !suppressAuthRedirect) {
+        await handleUnauthorized()
+      }
+      if (!res.ok) throw new Error(data.error || res.statusText)
+      return data
+    }
+
+    function saveSession(session) {
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
+    }
+
+    function readStoredSession() {
+      const raw = localStorage.getItem(SESSION_STORAGE_KEY)
+      if (!raw) return null
+      try { return JSON.parse(raw) } catch { return null }
+    }
+
+    function clearSession() {
+      SESSION_TOKEN = ''
+      localStorage.removeItem(SESSION_STORAGE_KEY)
+    }
+
+    function showLogin() {
+      document.getElementById('login-modal').classList.remove('hidden')
+      document.getElementById('app-shell').classList.add('hidden')
+      document.getElementById('login-password').value = ''
+    }
+
+    function showApp(user) {
+      document.getElementById('session-user').textContent = user ? `Usuario: ${user}` : 'Usuario: —'
+      document.getElementById('login-modal').classList.add('hidden')
+      document.getElementById('app-shell').classList.remove('hidden')
+    }
+
+    function setLoginError(message = '') {
+      document.getElementById('login-error').textContent = message
+    }
+
+    async function handleUnauthorized() {
+      clearSession()
+      showLogin()
+      setLoginError('Sesión expirada. Vuelve a iniciar sesión.')
+    }
+
+    async function verifySession() {
+      const data = await apiFetch('/auth/session', { method: 'GET', suppressAuthRedirect: true })
+      const user = data?.user || 'inca'
+      saveSession({ token: SESSION_TOKEN, user, expiresAt: data?.expiresAt || null })
+      showApp(user)
+      await refreshAll()
+    }
+
+    async function bootstrapAuth() {
+      const stored = readStoredSession()
+      if (!stored?.token) return showLogin()
+      SESSION_TOKEN = stored.token
+      try {
+        await verifySession()
+      } catch {
+        clearSession()
+        showLogin()
+      }
+    }
+
+    async function doLogin(event) {
+      event.preventDefault()
+      const username = document.getElementById('login-username').value.trim()
+      const password = document.getElementById('login-password').value
+      if (!username || !password) return setLoginError('Completa usuario y password.')
+      setLoginError('')
+
+      try {
+        const data = await fetch(API + '/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        }).then(async (res) => {
+          const text = await res.text()
+          let body
+          try { body = JSON.parse(text) } catch { body = { error: text } }
+          if (!res.ok) throw new Error(body.error || res.statusText)
+          return body
+        })
+
+        SESSION_TOKEN = data.token
+        saveSession({ token: data.token, user: data.user, expiresAt: data.expiresAt || null })
+        showApp(data.user)
+        await refreshAll()
+      } catch (e) {
+        setLoginError(e.message || 'No se pudo iniciar sesión')
+      }
+    }
+
+    async function doLogout() {
+      try {
+        if (SESSION_TOKEN) {
+          await apiFetch('/auth/logout', { method: 'POST', suppressAuthRedirect: true })
+        }
+      } catch {}
+      clearSession()
+      showLogin()
+      setLoginError('')
+    }
+
+    function renderSummary(summary) {
+      latestSource = {
+        kind: summary.latestSource,
+        runId: summary.latestRunId,
+      }
+      const text = [
+        `Fuente actual: ${summary.latestSource || 'general'}`,
+        `Run activo: ${summary.currentRun?.id || 'ninguno'}`,
+        `Último run: ${summary.latestRun?.id || 'ninguno'}`,
+        `Reinicio periódico: ${(summary.restartPolicy?.periodicMs || 0) / 3600000}h`,
+        `Watchdog: ${(summary.restartPolicy?.watchdogMs || 0) / 1000}s`,
+        `Retención runs: ${summary.logPolicy?.runRetentionDays || 7} día(s)`,
+        `General max líneas: ${summary.logPolicy?.generalMaxLines || 100}`,
+      ].join('\n')
+      document.getElementById('summary-meta').textContent = text
+    }
+
+    function renderRuns(runs) {
+      const select = document.getElementById('run-select')
+      if (!runs.length) {
+        select.innerHTML = '<option value="">Sin runs disponibles</option>'
+        selectedRunId = ''
+        return
+      }
+      select.innerHTML = runs.map((run) => {
+        const label = `${run.id} (${Math.round((run.size || 0) / 1024)} KB)`
+        return `<option value="${run.id}">${label}</option>`
+      }).join('')
+      selectedRunId = runs[0].id
+      select.value = selectedRunId
+    }
+
+    function renderLatestLines(title, lines) {
+      const preview = document.getElementById('log-preview')
+      preview.textContent = `${title}\n\n${(lines || []).join('\n') || '(sin contenido)'}`.trim()
+      preview.scrollTop = preview.scrollHeight
+    }
+
+    async function refreshAll() {
+      const [summary, latest, runsResult] = await Promise.all([
+        apiFetch('/logs/summary'),
+        apiFetch('/logs/latest?lines=20'),
+        apiFetch('/logs/runs?limit=40'),
+      ])
+      renderSummary(summary)
+      renderRuns(runsResult.runs || [])
+      renderLatestLines(`Vista: último log (${latest.fileName})`, latest.lines || [])
+    }
+
+    async function viewSelectedRun() {
+      const runId = document.getElementById('run-select').value
+      if (!runId) return
+      selectedRunId = runId
+      const data = await apiFetch(`/logs/runs/${encodeURIComponent(runId)}?lines=20`)
+      renderLatestLines(`Vista: run ${runId}`, data.lines || [])
+    }
+
+    async function downloadWithAuth(path, fallbackName) {
+      const res = await fetch(API + path, {
+        headers: SESSION_TOKEN ? { Authorization: 'Bearer ' + SESSION_TOKEN } : {},
+      })
+      if (res.status === 401) {
+        await handleUnauthorized()
+        return
+      }
+      if (!res.ok) throw new Error(`Descarga falló (${res.status})`)
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = fallbackName
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    }
+
+    async function downloadLatest() {
+      const fileName = latestSource?.kind === 'run' && latestSource?.runId
+        ? `run-${latestSource.runId}.log`
+        : 'general.log'
+      await downloadWithAuth('/logs/latest/download', fileName)
+    }
+
+    async function downloadGeneral() {
+      await downloadWithAuth('/logs/general/download', 'general.log')
+    }
+
+    async function downloadSelectedRun() {
+      const runId = document.getElementById('run-select').value
+      if (!runId) return
+      await downloadWithAuth(`/logs/runs/${encodeURIComponent(runId)}/download`, `run-${runId}.log`)
+    }
+
+    document.getElementById('run-select').addEventListener('change', (event) => {
+      selectedRunId = event.target.value
+    })
+    document.getElementById('login-form').addEventListener('submit', doLogin)
+    bootstrapAuth()
+  </script>
+</body>
+</html>
