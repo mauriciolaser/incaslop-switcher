@@ -189,6 +189,8 @@ Write-Host 'Validando sintaxis Node...'
 & node --check (Join-Path $switcherDir 'stream-manager.js')
 & node --check (Join-Path $switcherDir 'playlist-manager.js')
 & node --check (Join-Path $switcherDir 'audio-loop-manager.js')
+& node --check (Join-Path $switcherDir 'log-manager.js')
+& node --check (Join-Path $switcherDir 'telegram-notifier.js')
 
 $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $archiveLocal = Join-Path $env:TEMP "switcher-deploy-$timestamp.tgz"
@@ -204,6 +206,8 @@ try {
       switcher/stream-manager.js `
       switcher/playlist-manager.js `
       switcher/audio-loop-manager.js `
+      switcher/log-manager.js `
+      switcher/telegram-notifier.js `
       switcher/package.json `
       switcher/ecosystem.config.cjs `
       switcher/audio `
