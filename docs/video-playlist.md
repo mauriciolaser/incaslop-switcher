@@ -13,9 +13,9 @@ Los archivos JSON se guardan en `switcher/video-playlist/<nombre>.json` en el se
   "name": "programa-tarde",
   "repeat": false,
   "items": [
-    { "url": "https://stream.ejemplo.com/fuente1", "duration": 3600 },
-    { "url": "https://stream.ejemplo.com/fuente2", "duration": 1800 },
-    { "url": "rtmp://live.ejemplo.com/canal", "duration": 600 }
+    { "url": "https://stream.ejemplo.com/fuente1", "durationSeconds": 3600 },
+    { "url": "https://stream.ejemplo.com/fuente2", "durationSeconds": 1800 },
+    { "url": "rtmp://live.ejemplo.com/canal", "durationSeconds": 600 }
   ]
 }
 ```
@@ -33,7 +33,7 @@ Los archivos JSON se guardan en `switcher/video-playlist/<nombre>.json` en el se
 | Campo | Tipo | Requerido | Descripción |
 |---|---|---|---|
 | `url` | string | sí | URL de la fuente de video (HTTP, HTTPS o RTMP). |
-| `duration` | number | sí | Duración en segundos. Debe ser un número entero positivo. |
+| `durationSeconds` | number | sí | Duración en segundos. Debe ser un número entero positivo. |
 
 ## Nombre de la playlist
 
@@ -66,7 +66,7 @@ Crear el archivo JSON con el formato indicado y subirlo al servidor en `switcher
   "name": "test",
   "repeat": false,
   "items": [
-    { "url": "https://www.youtube.com/watch?v=ejemplo", "duration": 300 }
+    { "url": "https://www.youtube.com/watch?v=ejemplo", "durationSeconds": 300 }
   ]
 }
 ```
@@ -87,7 +87,7 @@ Body para crear/reemplazar (sin el campo `name`, se toma del parámetro de ruta)
 {
   "repeat": false,
   "items": [
-    { "url": "https://stream.ejemplo.com/fuente1", "duration": 3600 }
+    { "url": "https://stream.ejemplo.com/fuente1", "durationSeconds": 3600 }
   ]
 }
 ```
@@ -95,7 +95,7 @@ Body para crear/reemplazar (sin el campo `name`, se toma del parámetro de ruta)
 ## Comportamiento de reproducción
 
 - Al ejecutar `play`, el `PlaylistManager` comienza desde el primer item.
-- Cada item dura exactamente `duration` segundos según el timer interno.
+- Cada item dura exactamente `durationSeconds` segundos según el timer interno.
 - Al terminar un item se llama el callback `onSwitch`, que hace `POST /switch` con la siguiente URL.
 - Si la playlist termina sin `repeat`, el switcher vuelve al `DEFAULT_URL`.
 - Si el stream se detiene mientras una playlist está activa, al reiniciar retoma desde `DEFAULT_URL` (no reanuda la playlist).
