@@ -1105,6 +1105,7 @@ export class StreamManager {
     ffmpegArgs.push(
       '-c:v', 'libx264',
       '-preset', PRESET || 'veryfast',
+      '-tune', 'zerolatency',
       '-b:v', VIDEO_BITRATE || '4500k',
       '-maxrate', MAXRATE || '4500k',
       '-bufsize', BUFSIZE || '9000k',
