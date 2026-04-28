@@ -44,7 +44,7 @@ Variables principales:
 | `KICK_STREAM_KEY` | Stream key |
 | `ALLOWED_ORIGIN` | Origen CORS permitido |
 | `API_TOKEN` | Token Bearer para acceso técnico |
-| `CHROMIUM_EXECUTABLE_PATH` | Ruta al ejecutable de Chromium |
+| `CHROMIUM_EXECUTABLE_PATH` | Ruta al ejecutable de Chromium (`/usr/bin/chromium-browser` en AlmaLinux) |
 | `DISPLAY_NUM` | Número de display virtual Xvfb |
 | `DEFAULT_URL` | URL por defecto al iniciar o al terminar una playlist sin repeat |
 
