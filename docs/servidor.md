@@ -10,6 +10,8 @@ ssh mauri@159.198.65.35 -p 22
 
 ## Gestión del proceso
 
+**IMPORTANTE: PM2 siempre debe ejecutarse como usuario `mauri` (no root).**
+
 ```bash
 pm2 list                    # ver estado
 pm2 logs --lines 100        # ver logs recientes
@@ -17,6 +19,15 @@ pm2 restart all             # reiniciar
 pm2 stop all                # detener
 pm2 start ~/switcher/ecosystem.config.cjs  # iniciar desde cero
 ```
+
+### Si PM2 está ejecutándose como root, reiniciarlo como mauri:
+
+```bash
+sudo pm2 kill               # Detener daemon de root
+pm2 start ~/switcher/ecosystem.config.cjs  # Iniciar como mauri (usuario normal)
+```
+
+**Razón**: El directorio `~/switcher/data/` es propiedad de `mauri`. Si PM2 corre como `root`, no puede escribir en los archivos de estado y el proceso falla.
 
 ## Verificar la API
 
@@ -87,3 +98,49 @@ Authorization: Bearer <token>
 ## Notificaciones Telegram
 
 El servidor puede enviar alertas a Telegram ante eventos críticos (inicio/fin de stream, errores). Se configura en `switcher/telegram-notifier.js`. Ver el README de Telegram para instrucciones de setup del bot.
+
+## Fixes aplicados (2026-04-28)
+
+### Problema 1: Permisos de directorio data/
+
+**Síntoma**: Error `EACCES: permission denied` al escribir en `~/switcher/data/settings.json`
+
+**Causa**: El directorio `data/` era propiedad de `root`, pero PM2 corre como `mauri`
+
+**Solución**:
+```bash
+sudo chown -R mauri:mauri ~/switcher/data/
+sudo chown -R mauri:mauri ~/switcher/
+```
+
+### Problema 2: Ruta incorrecta de Chromium
+
+**Síntoma**: `[ERROR] [chromium.error] error="spawn /usr/bin/chromium ENOENT"`
+
+**Causa**: En AlmaLinux, Chromium se instala como `chromium-browser`, no `chromium`
+
+**Solución**: Actualizar variable de entorno en GitHub Secrets:
+- Variable: `CHROMIUM_EXECUTABLE_PATH`
+- Valor: `/usr/bin/chromium-browser` (antes era `/usr/bin/chromium`)
+
+### Problema 3: PM2 ejecutándose como root después del deployment
+
+**Síntoma**: Permisos y PATH problemáticos cuando PM2 corre como root
+
+**Causa**: El workflow de deployment ejecutó como root
+
+**Solución**: Siempre reiniciar PM2 como usuario `mauri`:
+```bash
+sudo pm2 kill
+pm2 start ~/switcher/ecosystem.config.cjs
+```
+
+## Configuración correcta del servidor
+
+- **OS**: AlmaLinux 9.7
+- **Node**: v22.22.2
+- **PM2 usuario**: `mauri` (nunca root)
+- **Directorio data**: propiedad de `mauri:mauri`
+- **Chromium**: `/usr/bin/chromium-browser`
+- **FFmpeg**: `/usr/local/bin/ffmpeg`
+- **Xvfb**: `/usr/bin/Xvfb`
