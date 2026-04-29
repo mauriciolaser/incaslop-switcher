@@ -213,7 +213,10 @@ Notas:
 - Este fallback despliega backend + audios y opcionalmente dashboard FTP.
 - Las credenciales se leen automaticamente desde `.env` en la raiz del repo.
   Variables usadas: `BACKEND_HOST`, `BACKEND_PORT`, `BACKEND_USER`, `BACKEND_PASS`,
-  `FRONTEND_FTP_HOST`, `FRONTEND_FTP_USER`, `FRONTEND_FTP_PASS`, `FRONTEND_FTP_DESTINATION`.
+  `API_FTP_HOST`, `API_FTP_USER`, `API_FTP_PASS`, `API_FTP_DESTINATION`.
+  Compatibilidad legacy: `FRONTEND_FTP_HOST`, `FRONTEND_FTP_USER`, `FRONTEND_FTP_PASS`, `FRONTEND_FTP_DESTINATION`.
+  Prioridad de resolucion FTP: primero `API_FTP_*`; si no existen, usa `FRONTEND_FTP_*`.
+  Para publicar en `api-switcher`, configurar `API_FTP_DESTINATION` (ejemplo: `api-switcher.incaslop.online/`).
   Ver `.env.example` para el formato esperado.
 - No se requiere `credenciales.txt` ni ningun parametro adicional si `.env` esta completo.
 - Para omitir dashboard:

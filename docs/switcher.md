@@ -96,6 +96,15 @@ Si `PORT` no es `3000`, usar el puerto configurado en secret.
 npm run deploy:switcher
 ```
 
+Variables `.env` para FTP en fallback local:
+
+- `API_FTP_HOST`
+- `API_FTP_USER`
+- `API_FTP_PASS`
+- `API_FTP_DESTINATION`
+
+Compatibilidad: si no estan definidas, el script usa `FRONTEND_FTP_*`.
+
 Opciones utiles:
 
 ```powershell

@@ -51,6 +51,10 @@ function Get-CredentialsFromEnv {
       'BACKEND_PASS'         { $cred.kv['backend_pass'] = $v }
       'BACKEND_HOST'         { $cred.kv['backend_host'] = $v }
       'BACKEND_PORT'         { $cred.kv['backend_port'] = $v }
+      'API_FTP_HOST'         { $cred.kv['api_ftp_host'] = $v }
+      'API_FTP_USER'         { $cred.kv['api_ftp_user'] = $v }
+      'API_FTP_PASS'         { $cred.kv['api_ftp_pass'] = $v }
+      'API_FTP_DESTINATION'  { $cred.kv['api_ftp_destination'] = $v }
       'FRONTEND_FTP_HOST'    { $cred.kv['frontend_ftp_host'] = $v }
       'FRONTEND_FTP_USER'    { $cred.kv['frontend_ftp_user'] = $v }
       'FRONTEND_FTP_PASS'    { $cred.kv['frontend_ftp_pass'] = $v }
@@ -140,14 +144,26 @@ if ([string]::IsNullOrWhiteSpace($User) -or [string]::IsNullOrWhiteSpace($Passwo
   if ($Port -eq 22 -and $fileCred.kv.ContainsKey('backend_port')) {
     $Port = [int]$fileCred.kv['backend_port']
   }
+  if ([string]::IsNullOrWhiteSpace($FtpHost) -and $fileCred.kv.ContainsKey('api_ftp_host')) {
+    $FtpHost = $fileCred.kv['api_ftp_host']
+  }
   if ([string]::IsNullOrWhiteSpace($FtpHost) -and $fileCred.kv.ContainsKey('frontend_ftp_host')) {
     $FtpHost = $fileCred.kv['frontend_ftp_host']
+  }
+  if ([string]::IsNullOrWhiteSpace($FtpUser) -and $fileCred.kv.ContainsKey('api_ftp_user')) {
+    $FtpUser = $fileCred.kv['api_ftp_user']
   }
   if ([string]::IsNullOrWhiteSpace($FtpUser) -and $fileCred.kv.ContainsKey('frontend_ftp_user')) {
     $FtpUser = $fileCred.kv['frontend_ftp_user']
   }
+  if ([string]::IsNullOrWhiteSpace($FtpPassword) -and $fileCred.kv.ContainsKey('api_ftp_pass')) {
+    $FtpPassword = $fileCred.kv['api_ftp_pass']
+  }
   if ([string]::IsNullOrWhiteSpace($FtpPassword) -and $fileCred.kv.ContainsKey('frontend_ftp_pass')) {
     $FtpPassword = $fileCred.kv['frontend_ftp_pass']
+  }
+  if ([string]::IsNullOrWhiteSpace($FtpDestination) -and $fileCred.kv.ContainsKey('api_ftp_destination')) {
+    $FtpDestination = $fileCred.kv['api_ftp_destination']
   }
   if ([string]::IsNullOrWhiteSpace($FtpDestination) -and $fileCred.kv.ContainsKey('frontend_ftp_destination')) {
     $FtpDestination = $fileCred.kv['frontend_ftp_destination']

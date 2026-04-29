@@ -47,3 +47,12 @@ curl -T dashboard/index.html "ftp://$FTP_HOST/$FTP_DESTINATION" --user "$FTP_USE
 curl -T dashboard/config.js "ftp://$FTP_HOST/$FTP_DESTINATION" --user "$FTP_USERNAME:$FTP_PASSWORD"
 curl -T dashboard/.htaccess "ftp://$FTP_HOST/$FTP_DESTINATION" --user "$FTP_USERNAME:$FTP_PASSWORD"
 ```
+
+En fallback local con `.env`, tambien se soporta el set:
+
+- `API_FTP_HOST`
+- `API_FTP_USER`
+- `API_FTP_PASS`
+- `API_FTP_DESTINATION`
+
+Para `api-switcher`, usar `API_FTP_DESTINATION=api-switcher.incaslop.online/`.
