@@ -2,6 +2,12 @@
 
 El backend corre en el VPS como proceso PM2. El código vive en `~/switcher/` y se gestiona con `ecosystem.config.cjs`.
 
+## Política de usuario operativo (obligatoria)
+
+- Nunca correr el proceso ni tareas operativas del switcher como `root`.
+- Todo debe ejecutarse como el usuario `mauri` (PM2, despliegues, reinicios, diagnósticos y mantenimiento).
+- Si en algún caso parece necesario usar `root` para entender el servidor, remitirse al resto de la documentación del proyecto antes de proceder.
+
 ## Conexión SSH
 
 ```bash
